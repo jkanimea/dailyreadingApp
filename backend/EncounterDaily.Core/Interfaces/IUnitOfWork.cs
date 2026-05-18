@@ -1,3 +1,4 @@
+using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Repositories;
 
 namespace EncounterDaily.Core.Interfaces
@@ -8,6 +9,7 @@ namespace EncounterDaily.Core.Interfaces
         IProgressRepository Progress { get; }
         IBookmarkRepository Bookmarks { get; }
         ISeriesRepository Series { get; }
+        IRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> CompleteAsync();
     }
 }

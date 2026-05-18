@@ -1,3 +1,4 @@
+using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Repositories;
 using EncounterDaily.Infrastructure.Data;
@@ -8,6 +9,7 @@ namespace EncounterDaily.Infrastructure
     public class UnitOfWork : IUnitOfWork
     {
         private readonly AppDbContext _context;
+        private readonly Dictionary<Type, object> _repositories = new();
         private IReadingRepository? _readings;
         private IProgressRepository? _progress;
         private IBookmarkRepository? _bookmarks;
@@ -22,6 +24,17 @@ namespace EncounterDaily.Infrastructure
         public IProgressRepository Progress => _progress ??= new ProgressRepository(_context);
         public IBookmarkRepository Bookmarks => _bookmarks ??= new BookmarkRepository(_context);
         public ISeriesRepository Series => _series ??= new SeriesRepository(_context);
+
+        public IRepository<T> Repository<T>() where T : BaseEntity
+        {
+            var type = typeof(T);
+            if (_repositories.TryGetValue(type, out var existing))
+                return (IRepository<T>)existing;
+
+            var repo = new GenericRepository<T>(_context);
+            _repositories[type] = repo;
+            return repo;
+        }
 
         public async Task<int> CompleteAsync()
         {

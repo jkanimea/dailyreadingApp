@@ -30,10 +30,15 @@
 - Implement `IUnitOfWork` and `UnitOfWork`
 - Enums (`SeriesType`, `BookType`)
 - Base entity class (`BaseEntity`)
+- Abstract Service layer: `IService<T>` (generic interface), `BaseService<T>` (generic implementation), specific service interfaces and implementations for Series, Reading, Progress, Bookmark
+- Abstract Controller layer: `BaseController<T>` (generic controller), specific controllers for Series, Reading, Progress, Bookmark
+- DI registration for DbContext, UnitOfWork, and all services
 
 **Tests to run after:**
 - Backend unit tests on entities
 - Backend unit tests on `GenericRepository<T>`
+- Backend unit tests on `BaseService<T>` and specific services
+- Backend unit tests on `BaseController<T>` and specific controllers
 - `dotnet test backend/ --filter "Category=Unit"`
 
 ---
