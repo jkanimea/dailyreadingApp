@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EncounterDaily.Core.Enums;
 
 namespace EncounterDaily.Core.Entities
 {
@@ -11,6 +12,8 @@ namespace EncounterDaily.Core.Entities
         [Required]
         [MaxLength(100)]
         public string Author { get; set; } = "Ellen G. White";
+
+        public BookType BookType { get; set; }
 
         [MaxLength(500)]
         public string FullTextSource { get; set; } = string.Empty;

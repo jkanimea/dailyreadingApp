@@ -6,11 +6,17 @@ namespace EncounterDaily.Tests.UnitTests.Core.Enums
     public class BookTypeTests
     {
         [Fact]
-        public void BookType_ShouldHaveFiveValues()
+        public void BookType_ShouldHaveSixValues()
         {
             var values = Enum.GetValues<BookType>();
 
-            values.Should().HaveCount(5);
+            values.Should().HaveCount(6);
+        }
+
+        [Fact]
+        public void BookType_ShouldHaveDefaultNone()
+        {
+            ((int)BookType.None).Should().Be(0);
         }
     }
 }

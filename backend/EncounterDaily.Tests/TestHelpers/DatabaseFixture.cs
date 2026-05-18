@@ -21,6 +21,26 @@ namespace EncounterDaily.Tests.TestHelpers
             return new GenericRepository<T>(context);
         }
 
+        public SeriesRepository CreateSeriesRepository(AppDbContext context)
+        {
+            return new SeriesRepository(context);
+        }
+
+        public ReadingRepository CreateReadingRepository(AppDbContext context)
+        {
+            return new ReadingRepository(context);
+        }
+
+        public ProgressRepository CreateProgressRepository(AppDbContext context)
+        {
+            return new ProgressRepository(context);
+        }
+
+        public BookmarkRepository CreateBookmarkRepository(AppDbContext context)
+        {
+            return new BookmarkRepository(context);
+        }
+
         public void Dispose() { }
     }
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EncounterDaily.Core.Enums;
 
 namespace EncounterDaily.Core.Entities
 {
@@ -14,6 +15,8 @@ namespace EncounterDaily.Core.Entities
 
         [MaxLength(500)]
         public string Description { get; set; } = string.Empty;
+
+        public SeriesType SeriesType { get; set; }
 
         public int PrimaryBookId { get; set; }
         public Book PrimaryBook { get; set; } = null!;

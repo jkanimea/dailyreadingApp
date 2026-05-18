@@ -6,11 +6,17 @@ namespace EncounterDaily.Tests.UnitTests.Core.Enums
     public class SeriesTypeTests
     {
         [Fact]
-        public void SeriesType_ShouldHaveFourValues()
+        public void SeriesType_ShouldHaveFiveValues()
         {
             var values = Enum.GetValues<SeriesType>();
 
-            values.Should().HaveCount(4);
+            values.Should().HaveCount(5);
+        }
+
+        [Fact]
+        public void SeriesType_ShouldHaveDefaultNone()
+        {
+            ((int)SeriesType.None).Should().Be(0);
         }
 
         [Theory]
