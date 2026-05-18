@@ -28,6 +28,10 @@ See [docs/setup-guide.md](docs/setup-guide.md)
 
 See [docs/testing-guide.md](docs/testing-guide.md)
 
+## Development Phases
+
+See [MarkdownSpecification/OverallPlanPhase.md](MarkdownSpecification/OverallPlanPhase.md) for the complete phased implementation plan.
+
 ## API Documentation
 
 Swagger available at `/swagger` when running the API locally.
