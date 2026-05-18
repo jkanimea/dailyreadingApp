@@ -2,6 +2,7 @@ using EncounterDaily.Core.DTOs.Auth;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EncounterDaily.API.Controllers
 {
@@ -77,6 +78,7 @@ namespace EncounterDaily.API.Controllers
         }
 
         [Authorize]
+        [EnableRateLimiting("PerUser")]
         [HttpGet("me")]
         public async Task<ActionResult<UserDto>> GetCurrentUser()
         {
