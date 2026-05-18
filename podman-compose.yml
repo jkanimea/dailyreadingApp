@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: encounter-daily-sql
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourStrong@Passw0rd
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql-data:/var/opt/mssql
+    networks:
+      - encounter-daily-net
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: ../Containerfile
+    container_name: encounter-daily-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=EncounterDaily;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+    ports:
+      - "5000:80"
+    depends_on:
+      - sqlserver
+    networks:
+      - encounter-daily-net
+
+volumes:
+  sql-data:
+
+networks:
+  encounter-daily-net:
+    driver: bridge

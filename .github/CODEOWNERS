@@ -1,0 +1,14 @@
+# Default owner for all files
+* @jkanimea
+
+# Backend code
+/backend/ @jkanimea
+
+# Frontend code
+/frontend/ @jkanimea
+
+# CI/CD workflows
+/.github/ @jkanimea
+
+# Database scripts
+/database/ @jkanimea

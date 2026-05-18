@@ -1,0 +1,34 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.db
+*.log
+
+# Angular / Node
+node_modules/
+dist/
+.tmp/
+.angular/
+coverage/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+appsettings.Development.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Capacitor
+ios/
+android/
