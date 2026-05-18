@@ -1,0 +1,64 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [develop, main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build .NET API
+        run: dotnet publish backend/ -c Release -o publish/api
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Build Angular app
+        run: |
+          cd frontend
+          npm ci
+          ng build --configuration production
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: publish/
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/develop'
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.encounterdaily.com
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-output
+      - name: Deploy to Azure App Service (Staging)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: encounter-daily-staging
+          slot-name: staging
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main'
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://encounterdaily.com
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-output
+      - name: Deploy to Azure App Service (Production)
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: encounter-daily-prod
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PRODUCTION }}

@@ -1,0 +1,52 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore dependencies
+        run: dotnet restore backend/
+      - name: Run unit tests
+        run: dotnet test backend/ --filter "Category=Unit" --no-restore --verbosity normal
+      - name: Run integration tests
+        run: dotnet test backend/ --filter "Category=Integration" --no-restore --verbosity normal
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Run unit tests
+        run: cd frontend && ng test --watch=false --browsers=ChromeHeadless
+      - name: Run linting
+        run: cd frontend && ng lint
+
+  e2e-tests:
+    runs-on: macos-latest
+    needs: [backend-tests, frontend-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Run E2E tests (iOS)
+        run: cd frontend && npm run e2e:ios -- --headless
