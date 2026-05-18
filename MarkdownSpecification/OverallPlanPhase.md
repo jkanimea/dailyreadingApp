@@ -58,10 +58,21 @@
 - Auth guard (`auth.guard.ts`)
 
 **Tests to run after:**
-- Auth service unit tests
-- Auth integration tests (login flow)
+- Auth service unit tests (GetCurrentUser, RefreshToken rotation, reuse detection)
+- Auth controller unit tests (login, refresh, error handling)
 - E2E: AUTH-01 to AUTH-05
 - **Full test suite re-run**
+
+**Implemented backend:**
+- `RefreshToken` entity with reuse tracking (revoke after 3 reuses)
+- `IUserRepository` + `UserRepository` (find by OAuth provider)
+- Auth DTOs: `LoginRequest`, `TokenResponse`, `RefreshRequest`, `UserDto`
+- `IAuthService` + `AuthService`: Google/Facebook login, RS256 JWT (15min), refresh token rotation (30 days), `/auth/me`
+- `AuthController` with `POST /api/v1/auth/google`, `POST /api/v1/auth/facebook`, `POST /api/v1/auth/refresh`, `GET /api/v1/auth/me`
+- JWT validation middleware, CORS, RSA key singleton
+- 11 new auth tests (service + controller)
+
+**Frontend** (Angular/Ionic): Not yet scaffolded — directory stubs exist
 
 ---
 

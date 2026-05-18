@@ -15,6 +15,7 @@ namespace EncounterDaily.Infrastructure.Data
         public DbSet<UserBookmark> UserBookmarks { get; set; } = null!;
         public DbSet<UserSeriesPreference> UserSeriesPreferences { get; set; } = null!;
         public DbSet<SearchHistory> SearchHistory { get; set; } = null!;
+        public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -104,6 +105,15 @@ namespace EncounterDaily.Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.SeriesId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+                entity.HasIndex(e => e.Token).IsUnique();
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

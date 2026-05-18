@@ -9,6 +9,7 @@ namespace EncounterDaily.Core.Interfaces
         IProgressRepository Progress { get; }
         IBookmarkRepository Bookmarks { get; }
         ISeriesRepository Series { get; }
+        IUserRepository Users { get; }
         IRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> CompleteAsync();
     }
