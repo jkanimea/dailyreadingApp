@@ -129,17 +129,17 @@
 **Duration:** 0.5 weeks
 
 **Deliverables:**
-- SQL Server Full-Text Search configuration on `DailyReadings`
-- `ISearchRepository` and `SearchRepository`
-- `SearchService`
-- Search endpoints (`/api/v1/search?q=`, `/api/v1/search/all?q=`)
-- Pagination support (`OFFSET/FETCH`)
+- DTOs: `SearchResultDto`, `PagedResult<T>`
+- `ISearchRepository` and `SearchRepository` with paginated search (`OFFSET/FETCH`)
+- `SearchService` with DTO mapping (includes `SeriesName`, `Month`, `Day`, `BibleReading`)
+- Search endpoints: `GET /api/v1/search?q=&seriesId=&page=&pageSize=`, `GET /api/v1/search/all?q=&page=&pageSize=`
+- Pagesize clamped to max 100, page minimum 1
+- `SearchRepository` injected via `IUnitOfWork.Search`
 
 **Tests to run after:**
-- `SearchServiceTests` (8+ tests)
-- Search API integration tests
-- E2E: SRCH-01 to SRCH-06
-- **Full test suite re-run**
+- `SearchServiceTests` (9 tests) — pagination, cross-series, DTO mapping
+- `SearchControllerTests` (6 tests) — query validation, page size clamping
+- Full test suite: **176 tests, all passing**
 
 ---
 

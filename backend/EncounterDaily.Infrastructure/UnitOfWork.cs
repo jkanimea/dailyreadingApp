@@ -16,6 +16,7 @@ namespace EncounterDaily.Infrastructure
         private ISeriesRepository? _series;
         private IUserRepository? _users;
         private IRefreshTokenRepository? _refreshTokens;
+        private ISearchRepository? _search;
 
         public UnitOfWork(AppDbContext context)
         {
@@ -28,6 +29,7 @@ namespace EncounterDaily.Infrastructure
         public ISeriesRepository Series => _series ??= new SeriesRepository(_context);
         public IUserRepository Users => _users ??= new UserRepository(_context);
         public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
+        public ISearchRepository Search => _search ??= new SearchRepository(_context);
 
         public IRepository<T> Repository<T>() where T : BaseEntity
         {

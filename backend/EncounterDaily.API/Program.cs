@@ -107,6 +107,7 @@ builder.Services.AddHttpClient("FacebookGraph", client =>
     client.BaseAddress = new Uri("https://graph.facebook.com");
 });
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ISearchService, SearchService>();
 
 var app = builder.Build();
 

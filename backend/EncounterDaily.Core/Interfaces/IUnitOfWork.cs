@@ -11,6 +11,7 @@ namespace EncounterDaily.Core.Interfaces
         ISeriesRepository Series { get; }
         IUserRepository Users { get; }
         IRefreshTokenRepository RefreshTokens { get; }
+        ISearchRepository Search { get; }
         IRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> CompleteAsync();
     }
