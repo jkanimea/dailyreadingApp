@@ -110,6 +110,7 @@ namespace EncounterDaily.Infrastructure.Data
             modelBuilder.Entity<RefreshToken>(entity =>
             {
                 entity.HasIndex(e => e.Token).IsUnique();
+                entity.HasIndex(e => new { e.ExpiresAt, e.IsRevoked });
                 entity.HasOne(e => e.User)
                     .WithMany()
                     .HasForeignKey(e => e.UserId)

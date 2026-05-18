@@ -15,6 +15,7 @@ namespace EncounterDaily.Infrastructure
         private IBookmarkRepository? _bookmarks;
         private ISeriesRepository? _series;
         private IUserRepository? _users;
+        private IRefreshTokenRepository? _refreshTokens;
 
         public UnitOfWork(AppDbContext context)
         {
@@ -26,6 +27,7 @@ namespace EncounterDaily.Infrastructure
         public IBookmarkRepository Bookmarks => _bookmarks ??= new BookmarkRepository(_context);
         public ISeriesRepository Series => _series ??= new SeriesRepository(_context);
         public IUserRepository Users => _users ??= new UserRepository(_context);
+        public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
 
         public IRepository<T> Repository<T>() where T : BaseEntity
         {

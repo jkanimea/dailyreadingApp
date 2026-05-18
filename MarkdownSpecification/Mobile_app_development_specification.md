@@ -788,7 +788,7 @@ All books are publicly available from the Ellen G. White Estate:
 
 | Phase           | Duration              | Tasks                                                                     |
 | --------------- | --------------------- | ------------------------------------------------------------------------- |
-| Phase 1         | 1.5 weeks             | Database design, generic repository pattern, Unit of Work, authentication |
+| Phase 1         | 1.5 weeks             | Database design, generic repository/service/controller patterns, Unit of Work, authentication |
 | Phase 2         | 1.5 weeks             | Import all 4 series readings (approx. 1,460 daily records), extract text  |
 | Phase 3         | 2 weeks               | Generate summaries for all 4 series (AI-assisted)                         |
 | Phase 4         | 2 weeks               | Build reusable Angular components + base classes                          |

@@ -17,7 +17,7 @@ namespace EncounterDaily.Core.Entities
 
         public DateTime? RevokedAt { get; set; }
 
-        [MaxLength(50)]
+        [MaxLength(500)]
         public string? ReplacedByToken { get; set; }
 
         public int ReuseCount { get; set; }

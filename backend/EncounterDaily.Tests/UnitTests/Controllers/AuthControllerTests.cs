@@ -1,7 +1,8 @@
+using System.Reflection;
 using EncounterDaily.API.Controllers;
 using EncounterDaily.Core.DTOs.Auth;
 using EncounterDaily.Core.Interfaces.Services;
-using Google.Apis.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -44,7 +45,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public async Task LoginWithGoogle_ShouldReturnUnauthorized_WhenInvalidToken()
         {
             _mockService.Setup(s => s.LoginWithGoogleAsync("bad-token"))
-                .ThrowsAsync(new InvalidJwtException("Invalid token"));
+                .ThrowsAsync(new UnauthorizedAccessException("Invalid Google token"));
 
             var result = await _controller.LoginWithGoogle(new LoginRequest { IdToken = "bad-token" });
 
@@ -115,6 +116,38 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
             var statusResult = result.Result as UnauthorizedObjectResult;
             statusResult.Should().NotBeNull();
             statusResult!.StatusCode.Should().Be(401);
+        }
+
+        [Fact]
+        public void GoogleEndpoint_ShouldHaveAllowAnonymousAttribute()
+        {
+            var method = typeof(AuthController).GetMethod("LoginWithGoogle");
+            var attr = method?.GetCustomAttribute<AllowAnonymousAttribute>();
+            attr.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void FacebookEndpoint_ShouldHaveAllowAnonymousAttribute()
+        {
+            var method = typeof(AuthController).GetMethod("LoginWithFacebook");
+            var attr = method?.GetCustomAttribute<AllowAnonymousAttribute>();
+            attr.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void RefreshEndpoint_ShouldHaveAllowAnonymousAttribute()
+        {
+            var method = typeof(AuthController).GetMethod("Refresh");
+            var attr = method?.GetCustomAttribute<AllowAnonymousAttribute>();
+            attr.Should().NotBeNull();
+        }
+
+        [Fact]
+        public void GetCurrentUserEndpoint_ShouldHaveAuthorizeAttribute()
+        {
+            var method = typeof(AuthController).GetMethod("GetCurrentUser");
+            var attr = method?.GetCustomAttribute<AuthorizeAttribute>();
+            attr.Should().NotBeNull();
         }
     }
 }

@@ -10,6 +10,7 @@ namespace EncounterDaily.Core.Interfaces
         IBookmarkRepository Bookmarks { get; }
         ISeriesRepository Series { get; }
         IUserRepository Users { get; }
+        IRefreshTokenRepository RefreshTokens { get; }
         IRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> CompleteAsync();
     }

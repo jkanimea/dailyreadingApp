@@ -1,6 +1,5 @@
 using EncounterDaily.Core.DTOs.Auth;
 using EncounterDaily.Core.Interfaces.Services;
-using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +16,7 @@ namespace EncounterDaily.API.Controllers
             _authService = authService;
         }
 
+        [AllowAnonymous]
         [HttpPost("google")]
         public async Task<ActionResult<TokenResponse>> LoginWithGoogle([FromBody] LoginRequest request)
         {
@@ -25,12 +25,13 @@ namespace EncounterDaily.API.Controllers
                 var result = await _authService.LoginWithGoogleAsync(request.IdToken);
                 return Ok(result);
             }
-            catch (InvalidJwtException)
+            catch (UnauthorizedAccessException)
             {
                 return Unauthorized(new { message = "Invalid Google token" });
             }
         }
 
+        [AllowAnonymous]
         [HttpPost("facebook")]
         public async Task<ActionResult<TokenResponse>> LoginWithFacebook([FromBody] LoginRequest request)
         {
@@ -45,6 +46,7 @@ namespace EncounterDaily.API.Controllers
             }
         }
 
+        [AllowAnonymous]
         [HttpPost("refresh")]
         public async Task<ActionResult<TokenResponse>> Refresh([FromBody] RefreshRequest request)
         {

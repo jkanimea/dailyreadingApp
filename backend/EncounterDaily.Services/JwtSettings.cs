@@ -7,5 +7,7 @@ namespace EncounterDaily.Services
         public int AccessTokenExpirationMinutes { get; set; } = 15;
         public int RefreshTokenExpirationDays { get; set; } = 30;
         public string RsaPrivateKey { get; set; } = string.Empty;
+        public string GoogleClientId { get; set; } = string.Empty;
+        public string FacebookAppSecret { get; set; } = string.Empty;
     }
 }

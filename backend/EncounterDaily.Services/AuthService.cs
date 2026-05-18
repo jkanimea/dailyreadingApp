@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
 using EncounterDaily.Core.DTOs.Auth;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces;
@@ -17,17 +18,32 @@ namespace EncounterDaily.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly JwtSettings _jwtSettings;
         private readonly RSA _rsa;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public AuthService(IUnitOfWork unitOfWork, IOptions<JwtSettings> jwtSettings, RSA rsa)
+        public AuthService(IUnitOfWork unitOfWork, IOptions<JwtSettings> jwtSettings, RSA rsa, IHttpClientFactory httpClientFactory)
         {
             _unitOfWork = unitOfWork;
             _jwtSettings = jwtSettings.Value;
             _rsa = rsa;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<TokenResponse> LoginWithGoogleAsync(string idToken)
         {
-            var payload = await GoogleJsonWebSignature.ValidateAsync(idToken);
+            var validationSettings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience = new[] { _jwtSettings.GoogleClientId }
+            };
+
+            GoogleJsonWebSignature.Payload payload;
+            try
+            {
+                payload = await GoogleJsonWebSignature.ValidateAsync(idToken, validationSettings);
+            }
+            catch (InvalidJwtException)
+            {
+                throw new UnauthorizedAccessException("Invalid Google token");
+            }
 
             var user = await _unitOfWork.Users.GetByProviderAsync("google", payload.Subject);
             if (user == null)
@@ -54,10 +70,25 @@ namespace EncounterDaily.Services
 
         public async Task<TokenResponse> LoginWithFacebookAsync(string accessToken)
         {
-            using var http = new HttpClient();
-            var fbUrl = $"https://graph.facebook.com/me?fields=id,name,email&access_token={accessToken}";
-            var response = await http.GetFromJsonAsync<FacebookUserResponse>(fbUrl)
-                ?? throw new UnauthorizedAccessException("Invalid Facebook token");
+            FacebookUserResponse response;
+            try
+            {
+                var http = _httpClientFactory.CreateClient("FacebookGraph");
+                var fbUrl = $"/me?fields=id,name,email&access_token={accessToken}";
+
+                if (!string.IsNullOrEmpty(_jwtSettings.FacebookAppSecret))
+                {
+                    var appSecretProof = ComputeAppSecretProof(accessToken, _jwtSettings.FacebookAppSecret);
+                    fbUrl += $"&appsecret_proof={appSecretProof}";
+                }
+
+                response = await http.GetFromJsonAsync<FacebookUserResponse>(fbUrl)
+                    ?? throw new UnauthorizedAccessException("Invalid Facebook token");
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new UnauthorizedAccessException("Facebook token verification failed", ex);
+            }
 
             var user = await _unitOfWork.Users.GetByProviderAsync("facebook", response.Id);
             if (user == null)
@@ -84,13 +115,9 @@ namespace EncounterDaily.Services
 
         public async Task<TokenResponse> RefreshTokenAsync(string refreshToken)
         {
-            var storedToken = await _unitOfWork.Repository<RefreshToken>()
-                .GetAllAsync();
+            var token = await _unitOfWork.RefreshTokens.GetByTokenAsync(refreshToken);
 
-            var token = storedToken.FirstOrDefault(t =>
-                t.Token == refreshToken && !t.IsRevoked && t.ExpiresAt > DateTime.UtcNow);
-
-            if (token == null)
+            if (token == null || token.IsRevoked || token.ExpiresAt <= DateTime.UtcNow)
                 throw new UnauthorizedAccessException("Invalid or expired refresh token");
 
             token.ReuseCount++;
@@ -111,13 +138,8 @@ namespace EncounterDaily.Services
 
             var tokens = await GenerateTokensAsync(user);
 
-            var oldToken = (await _unitOfWork.Repository<RefreshToken>().GetAllAsync())
-                .FirstOrDefault(t => t.Token == tokens.RefreshToken);
-            if (oldToken != null)
-            {
-                oldToken.ReplacedByToken = refreshToken;
-                await _unitOfWork.CompleteAsync();
-            }
+            token.ReplacedByToken = tokens.RefreshToken;
+            await _unitOfWork.CompleteAsync();
 
             return tokens;
         }
@@ -151,6 +173,7 @@ namespace EncounterDaily.Services
 
             var claims = new[]
             {
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.DisplayName),
@@ -181,10 +204,19 @@ namespace EncounterDaily.Services
                 IsRevoked = false
             };
 
-            await _unitOfWork.Repository<RefreshToken>().AddAsync(refreshToken);
+            await _unitOfWork.RefreshTokens.AddAsync(refreshToken);
             await _unitOfWork.CompleteAsync();
 
             return token;
+        }
+
+        private static string ComputeAppSecretProof(string accessToken, string appSecret)
+        {
+            var keyBytes = Encoding.ASCII.GetBytes(appSecret);
+            var tokenBytes = Encoding.ASCII.GetBytes(accessToken);
+            using var hmac = new HMACSHA256(keyBytes);
+            var hash = hmac.ComputeHash(tokenBytes);
+            return Convert.ToHexString(hash).ToLower();
         }
 
         private static UserDto MapToDto(User user)

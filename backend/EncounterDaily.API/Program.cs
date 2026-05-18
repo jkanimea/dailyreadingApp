@@ -5,12 +5,17 @@ using EncounterDaily.Infrastructure;
 using EncounterDaily.Infrastructure.Data;
 using EncounterDaily.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add(new AuthorizeFilter());
+});
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -60,6 +65,10 @@ builder.Services.AddScoped<ISeriesService, SeriesService>();
 builder.Services.AddScoped<IReadingService, ReadingService>();
 builder.Services.AddScoped<IProgressService, ProgressService>();
 builder.Services.AddScoped<IBookmarkService, BookmarkService>();
+builder.Services.AddHttpClient("FacebookGraph", client =>
+{
+    client.BaseAddress = new Uri("https://graph.facebook.com");
+});
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
