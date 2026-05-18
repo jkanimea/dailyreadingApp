@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using EncounterDaily.API.Controllers;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -16,29 +18,26 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         {
             _mockService = new Mock<IProgressService>();
             _controller = new ProgressController(_mockService.Object);
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, "1")
+                    }))
+                }
+            };
         }
 
         [Fact]
-        public async Task GetUserReadingProgress_ShouldReturnOk_WhenFound()
+        public async Task GetSeriesProgress_ShouldReturnOk()
         {
-            var progress = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1 };
-            _mockService.Setup(s => s.GetUserReadingProgressAsync(1, 1)).ReturnsAsync(progress);
+            _mockService.Setup(s => s.GetUserProgressForSeriesAsync(1, 1)).ReturnsAsync(new List<UserProgress>());
 
-            var result = await _controller.GetUserReadingProgress(1, 1);
+            var result = await _controller.GetSeriesProgress(1);
 
-            var okResult = result.Result as OkObjectResult;
-            okResult.Should().NotBeNull();
-            okResult!.StatusCode.Should().Be(200);
-        }
-
-        [Fact]
-        public async Task GetUserReadingProgress_ShouldReturnNotFound_WhenMissing()
-        {
-            _mockService.Setup(s => s.GetUserReadingProgressAsync(1, 999)).ReturnsAsync((UserProgress?)null);
-
-            var result = await _controller.GetUserReadingProgress(1, 999);
-
-            result.Result.Should().BeOfType<NotFoundResult>();
+            result.Result.Should().BeOfType<OkObjectResult>();
         }
 
         [Fact]
@@ -46,7 +45,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         {
             _mockService.Setup(s => s.GetStreakAsync(1, 1)).ReturnsAsync(3);
 
-            var result = await _controller.GetStreak(1, 1);
+            var result = await _controller.GetStreak(1);
 
             var okResult = result.Result as OkObjectResult;
             okResult.Should().NotBeNull();
@@ -55,26 +54,36 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         }
 
         [Fact]
-        public async Task GetUserProgressForSeries_ShouldReturnOk()
+        public async Task MarkComplete_ShouldReturnOk_WhenValid()
         {
-            _mockService.Setup(s => s.GetUserProgressForSeriesAsync(1, 1)).ReturnsAsync(new List<UserProgress>());
+            var progress = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, IsCompleted = true };
+            _mockService.Setup(s => s.MarkCompleteAsync(1, 1)).ReturnsAsync(progress);
 
-            var result = await _controller.GetUserProgressForSeries(1, 1);
-
-            result.Result.Should().BeOfType<OkObjectResult>();
-        }
-
-        [Fact]
-        public async Task GetCompletionPercentage_ShouldReturnOk()
-        {
-            _mockService.Setup(s => s.GetCompletionPercentageAsync(1, 1)).ReturnsAsync(75.0);
-
-            var result = await _controller.GetCompletionPercentage(1, 1);
+            var result = await _controller.MarkComplete(1);
 
             var okResult = result.Result as OkObjectResult;
             okResult.Should().NotBeNull();
             okResult!.StatusCode.Should().Be(200);
-            okResult.Value.Should().Be(75.0);
+        }
+
+        [Fact]
+        public async Task MarkComplete_ShouldReturnNotFound_WhenReadingMissing()
+        {
+            _mockService.Setup(s => s.MarkCompleteAsync(1, 999)).ThrowsAsync(new KeyNotFoundException("Reading 999 not found"));
+
+            var result = await _controller.MarkComplete(999);
+
+            result.Result.Should().BeOfType<NotFoundObjectResult>();
+        }
+
+        [Fact]
+        public async Task UnmarkComplete_ShouldReturnNoContent()
+        {
+            _mockService.Setup(s => s.UnmarkCompleteAsync(1, 1)).Returns(Task.CompletedTask);
+
+            var result = await _controller.UnmarkComplete(1);
+
+            result.Should().BeOfType<NoContentResult>();
         }
     }
 }

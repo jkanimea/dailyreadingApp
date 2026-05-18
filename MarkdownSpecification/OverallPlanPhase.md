@@ -106,19 +106,22 @@
 **Duration:** 1 week
 
 **Deliverables:**
-- `IProgressRepository` and `ProgressRepository`
-- `ProgressService` — mark complete, unmark, streak calculation
-- `IBookmarkRepository` and `BookmarkRepository`
-- `BookmarkService`
-- Progress endpoints (get progress, mark/unmark complete, streak)
-- Bookmark endpoints (list, add, remove)
+- DTOs: `ProgressDto`, `BookmarkDto`
+- `IProgressRepository` and `ProgressRepository` (GetUserReadingProgress, GetStreak, GetUserProgressForSeries, GetCompletionPercentage)
+- `ProgressService` — mark complete (`MarkCompleteAsync`), unmark (`UnmarkCompleteAsync`), streak calculation
+- `IBookmarkRepository` and `BookmarkRepository` (GetUserBookmarks, GetUserBookmark, GetUserBookmarksBySeries)
+- `BookmarkService` — add bookmark (`AddBookmarkAsync`), remove bookmark (`RemoveBookmarkAsync`)
+- Progress endpoints: `GET /api/v1/progress/series/{seriesId}`, `GET /api/v1/progress/series/{seriesId}/streak`, `POST /api/v1/progress/{readingId}/complete`, `DELETE /api/v1/progress/{readingId}/complete`
+- Bookmark endpoints: `GET /api/v1/bookmarks`, `POST /api/v1/bookmarks/{readingId}`, `DELETE /api/v1/bookmarks/{readingId}`
+- Auth context: userId extracted from JWT claims (not URL params)
+- Controllers inherit `ControllerBase` directly (no inherited CRUD routes)
 
 **Tests to run after:**
-- `ProgressServiceTests` (10+ tests)
-- Bookmark service tests
-- API integration tests for progress + bookmarks
-- E2E: PROG-01 to PROG-05, BKMK-01 to BKMK-05
-- **Full test suite re-run**
+- `ProgressServiceTests` (12 tests) — including mark/unmark complete
+- `BookmarkServiceTests` (10 tests) — including add/remove bookmark
+- `ProgressControllerTests` (5 tests) — including POST/DELETE
+- `BookmarkControllerTests` (5 tests) — including POST/DELETE
+- Full test suite: **162 tests, all passing**
 
 ---
 

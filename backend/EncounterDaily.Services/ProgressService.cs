@@ -27,5 +27,46 @@ namespace EncounterDaily.Services
         {
             return await _unitOfWork.Progress.GetCompletionPercentageAsync(userId, seriesId);
         }
+
+        public async Task<UserProgress> MarkCompleteAsync(int userId, int readingId)
+        {
+            var reading = await _unitOfWork.Readings.GetByIdAsync(readingId)
+                ?? throw new KeyNotFoundException($"Reading {readingId} not found");
+
+            var progress = await _unitOfWork.Progress.GetUserReadingProgressAsync(userId, readingId);
+            if (progress != null)
+            {
+                progress.IsCompleted = true;
+                progress.CompletedAt = DateTime.UtcNow;
+                await _unitOfWork.Progress.UpdateAsync(progress);
+            }
+            else
+            {
+                progress = new UserProgress
+                {
+                    UserId = userId,
+                    SeriesId = reading.SeriesId,
+                    DailyReadingId = readingId,
+                    IsCompleted = true,
+                    CompletedAt = DateTime.UtcNow
+                };
+                await _unitOfWork.Progress.AddAsync(progress);
+            }
+
+            await _unitOfWork.CompleteAsync();
+            return progress;
+        }
+
+        public async Task UnmarkCompleteAsync(int userId, int readingId)
+        {
+            var progress = await _unitOfWork.Progress.GetUserReadingProgressAsync(userId, readingId);
+            if (progress != null)
+            {
+                progress.IsCompleted = false;
+                progress.CompletedAt = null;
+                await _unitOfWork.Progress.UpdateAsync(progress);
+                await _unitOfWork.CompleteAsync();
+            }
+        }
     }
 }
