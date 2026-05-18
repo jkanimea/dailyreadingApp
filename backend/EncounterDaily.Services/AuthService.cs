@@ -144,6 +144,17 @@ namespace EncounterDaily.Services
             return tokens;
         }
 
+        public async Task RevokeTokenAsync(string refreshToken)
+        {
+            var token = await _unitOfWork.RefreshTokens.GetByTokenAsync(refreshToken);
+            if (token == null)
+                throw new UnauthorizedAccessException("Refresh token not found");
+
+            token.IsRevoked = true;
+            token.RevokedAt = DateTime.UtcNow;
+            await _unitOfWork.CompleteAsync();
+        }
+
         public async Task<UserDto> GetCurrentUserAsync(int userId)
         {
             var user = await _unitOfWork.Users.GetByIdAsync(userId)

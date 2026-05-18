@@ -144,6 +144,38 @@ namespace EncounterDaily.Tests.UnitTests.Services
         }
 
         [Fact]
+        public async Task RevokeTokenAsync_ShouldRevokeToken_WhenTokenFound()
+        {
+            var token = new RefreshToken
+            {
+                Id = 1,
+                UserId = 1,
+                Token = "revocable-token",
+                ExpiresAt = DateTime.UtcNow.AddDays(1),
+                IsRevoked = false
+            };
+            _mockRefreshRepo.Setup(r => r.GetByTokenAsync("revocable-token"))
+                .ReturnsAsync(token);
+            _mockUow.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
+
+            await _service.RevokeTokenAsync("revocable-token");
+
+            token.IsRevoked.Should().BeTrue();
+            token.RevokedAt.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task RevokeTokenAsync_ShouldThrow_WhenTokenNotFound()
+        {
+            _mockRefreshRepo.Setup(r => r.GetByTokenAsync("missing-token"))
+                .ReturnsAsync((RefreshToken?)null);
+
+            await _service.Invoking(s => s.RevokeTokenAsync("missing-token"))
+                .Should().ThrowAsync<UnauthorizedAccessException>()
+                .WithMessage("Refresh token not found");
+        }
+
+        [Fact]
         public async Task GenerateAccessToken_ShouldIncludeJtiClaim()
         {
             var user = new User { Id = 1, Email = "jti@test.com", DisplayName = "JTI User", Provider = "google" };

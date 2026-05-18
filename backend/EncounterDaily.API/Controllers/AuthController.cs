@@ -61,6 +61,21 @@ namespace EncounterDaily.API.Controllers
             }
         }
 
+        [AllowAnonymous]
+        [HttpPost("logout")]
+        public async Task<ActionResult> Logout([FromBody] RefreshRequest request)
+        {
+            try
+            {
+                await _authService.RevokeTokenAsync(request.RefreshToken);
+                return Ok(new { message = "Logged out successfully" });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
         [Authorize]
         [HttpGet("me")]
         public async Task<ActionResult<UserDto>> GetCurrentUser()

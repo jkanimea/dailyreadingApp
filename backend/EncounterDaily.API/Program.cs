@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Threading.RateLimiting;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Services;
 using EncounterDaily.Infrastructure;
@@ -7,6 +8,7 @@ using EncounterDaily.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -53,9 +55,33 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMobileApp", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyHeader()
+        policy.AllowAnyHeader()
               .AllowAnyMethod();
+        if (builder.Environment.IsDevelopment())
+            policy.AllowAnyOrigin();
+        else
+            policy.WithOrigins(
+                builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                ?? Array.Empty<string>());
+    });
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("PerUser", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("PerIp", opt =>
+    {
+        opt.PermitLimit = 1000;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
     });
 });
 
@@ -80,6 +106,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowMobileApp");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

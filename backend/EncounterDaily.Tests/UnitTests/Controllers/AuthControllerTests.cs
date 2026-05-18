@@ -119,6 +119,39 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         }
 
         [Fact]
+        public async Task Logout_ShouldReturnOk_WhenValidToken()
+        {
+            _mockService.Setup(s => s.RevokeTokenAsync("valid-token")).Returns(Task.CompletedTask);
+
+            var result = await _controller.Logout(new RefreshRequest { RefreshToken = "valid-token" });
+
+            var okResult = result as OkObjectResult;
+            okResult.Should().NotBeNull();
+            okResult!.StatusCode.Should().Be(200);
+        }
+
+        [Fact]
+        public async Task Logout_ShouldReturnUnauthorized_WhenInvalidToken()
+        {
+            _mockService.Setup(s => s.RevokeTokenAsync("bad-token"))
+                .ThrowsAsync(new UnauthorizedAccessException("Refresh token not found"));
+
+            var result = await _controller.Logout(new RefreshRequest { RefreshToken = "bad-token" });
+
+            var statusResult = result as UnauthorizedObjectResult;
+            statusResult.Should().NotBeNull();
+            statusResult!.StatusCode.Should().Be(401);
+        }
+
+        [Fact]
+        public void LogoutEndpoint_ShouldHaveAllowAnonymousAttribute()
+        {
+            var method = typeof(AuthController).GetMethod("Logout");
+            var attr = method?.GetCustomAttribute<AllowAnonymousAttribute>();
+            attr.Should().NotBeNull();
+        }
+
+        [Fact]
         public void GoogleEndpoint_ShouldHaveAllowAnonymousAttribute()
         {
             var method = typeof(AuthController).GetMethod("LoginWithGoogle");
