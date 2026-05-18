@@ -111,6 +111,40 @@ namespace EncounterDaily.Tests.UnitTests.Repositories
         }
 
         [Fact]
+        public async Task GetByIdAsync_ShouldIncludeSeriesNavigation()
+        {
+            using var context = _fixture.CreateInMemoryContext();
+            var repo = _fixture.CreateReadingRepository(context);
+
+            var book = new Book { Title = "B", Author = "A" };
+            context.Books.Add(book);
+            await context.SaveChangesAsync();
+
+            var series = new Series { Name = "My Series", ShortName = "MS", PrimaryBookId = book.Id, SortOrder = 1 };
+            context.Series.Add(series);
+            await context.SaveChangesAsync();
+
+            var reading = new DailyReading
+            {
+                SeriesId = series.Id,
+                Month = 6,
+                Day = 1,
+                BibleReading = "Acts 1:8",
+                PrimaryBookPageRange = "AA 1-5",
+                PrimaryBookPageStart = 1,
+                PrimaryBookPageEnd = 5
+            };
+            context.DailyReadings.Add(reading);
+            await context.SaveChangesAsync();
+
+            var result = await repo.GetByIdAsync(reading.Id);
+
+            result.Should().NotBeNull();
+            result!.Series.Should().NotBeNull();
+            result.Series.Name.Should().Be("My Series");
+        }
+
+        [Fact]
         public async Task SearchByTextAsync_ShouldMatchBibleReading()
         {
             using var context = _fixture.CreateInMemoryContext();

@@ -9,6 +9,13 @@ namespace EncounterDaily.Infrastructure.Repositories
     {
         public ReadingRepository(AppDbContext context) : base(context) { }
 
+        public override async Task<DailyReading?> GetByIdAsync(int id)
+        {
+            return await _dbSet
+                .Include(r => r.Series)
+                .FirstOrDefaultAsync(r => r.Id == id);
+        }
+
         public async Task<DailyReading?> GetBySeriesDateAsync(int seriesId, int month, int day)
         {
             return await _dbSet

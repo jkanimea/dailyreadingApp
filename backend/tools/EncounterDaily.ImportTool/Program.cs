@@ -5,20 +5,22 @@ using EncounterDaily.Core.Entities;
 using EncounterDaily.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
-var command = args.Length > 0 ? args[0] : "help";
+var argsList = args.ToList();
+var force = argsList.Remove("--force") || argsList.Remove("-y");
+var command = argsList.Count > 0 ? argsList[0] : "help";
 
 switch (command)
 {
     case "generate":
-        await GenerateSeedCsvAsync(args.Length > 1 ? args[1] : "seed-data");
+        await GenerateSeedCsvAsync(argsList.Count > 1 ? argsList[1] : "seed-data");
         break;
     case "import":
-        await ImportCsvAsync(args.ElementAtOrDefault(1) ?? "");
+        await ImportCsvAsync(argsList.ElementAtOrDefault(1) ?? "", force);
         break;
     default:
         Console.WriteLine("Usage:");
         Console.WriteLine("  dotnet run -- generate [output-dir]");
-        Console.WriteLine("  dotnet run -- import <csv-file>");
+        Console.WriteLine("  dotnet run -- [--force|-y] import <csv-file>");
         break;
 }
 
@@ -38,11 +40,12 @@ static Task GenerateSeedCsvAsync(string outputDir)
     {
         var records = new List<CsvReadingRecord>();
         var rng = new Random(series.SeriesId);
+        var daysPerMonth = new int[] { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
         int page = 1;
 
         for (int month = 1; month <= 12; month++)
         {
-            int daysInMonth = DateTime.DaysInMonth(2024, month);
+            int daysInMonth = daysPerMonth[month - 1];
             for (int day = 1; day <= daysInMonth; day++)
             {
                 int pageEnd = Math.Min(page + rng.Next(3, 6), series.Pages);
@@ -94,7 +97,7 @@ static Task GenerateSeedCsvAsync(string outputDir)
     return Task.CompletedTask;
 }
 
-static async Task ImportCsvAsync(string csvPath)
+static async Task ImportCsvAsync(string csvPath, bool force)
 {
     if (!File.Exists(csvPath))
     {
@@ -123,7 +126,7 @@ static async Task ImportCsvAsync(string csvPath)
 
     var seriesId = records[0].SeriesId;
     var existingCount = await context.Set<DailyReading>().CountAsync(r => r.SeriesId == seriesId);
-    if (existingCount > 0)
+    if (existingCount > 0 && !force)
     {
         Console.Write($"Series {seriesId} already has {existingCount} readings. Overwrite? (y/N): ");
         var response = Console.ReadLine()?.Trim().ToLower();
@@ -132,6 +135,10 @@ static async Task ImportCsvAsync(string csvPath)
             Console.WriteLine("Import cancelled.");
             return;
         }
+        context.Set<DailyReading>().RemoveRange(context.Set<DailyReading>().Where(r => r.SeriesId == seriesId));
+    }
+    else if (existingCount > 0)
+    {
         context.Set<DailyReading>().RemoveRange(context.Set<DailyReading>().Where(r => r.SeriesId == seriesId));
     }
 
