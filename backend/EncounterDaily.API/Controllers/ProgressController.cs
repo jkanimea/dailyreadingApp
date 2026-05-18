@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using EncounterDaily.Core.Entities;
+using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,7 +17,7 @@ namespace EncounterDaily.API.Controllers
         }
 
         [HttpGet("series/{seriesId}")]
-        public async Task<ActionResult<IEnumerable<UserProgress>>> GetSeriesProgress(int seriesId)
+        public async Task<ActionResult<IEnumerable<ProgressDto>>> GetSeriesProgress(int seriesId)
         {
             var userId = GetUserId();
             var items = await _progressService.GetUserProgressForSeriesAsync(userId, seriesId);
@@ -32,8 +32,16 @@ namespace EncounterDaily.API.Controllers
             return Ok(streak);
         }
 
+        [HttpGet("series/{seriesId}/percentage")]
+        public async Task<ActionResult<double>> GetCompletionPercentage(int seriesId)
+        {
+            var userId = GetUserId();
+            var percentage = await _progressService.GetCompletionPercentageAsync(userId, seriesId);
+            return Ok(percentage);
+        }
+
         [HttpPost("{readingId}/complete")]
-        public async Task<ActionResult<UserProgress>> MarkComplete(int readingId)
+        public async Task<ActionResult<ProgressDto>> MarkComplete(int readingId)
         {
             var userId = GetUserId();
             try

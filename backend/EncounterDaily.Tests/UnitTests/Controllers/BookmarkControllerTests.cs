@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using EncounterDaily.API.Controllers;
-using EncounterDaily.Core.Entities;
+using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -33,7 +33,8 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         [Fact]
         public async Task GetBookmarks_ShouldReturnOk()
         {
-            _mockService.Setup(s => s.GetUserBookmarksAsync(1)).ReturnsAsync(new List<UserBookmark>());
+            var items = new List<BookmarkDto>().AsEnumerable();
+            _mockService.Setup(s => s.GetUserBookmarksAsync(1)).ReturnsAsync(items);
 
             var result = await _controller.GetBookmarks();
 
@@ -43,7 +44,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         [Fact]
         public async Task AddBookmark_ShouldReturnCreated_WhenValid()
         {
-            var bookmark = new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1 };
+            var bookmark = new BookmarkDto { Id = 1, ReadingId = 1 };
             _mockService.Setup(s => s.AddBookmarkAsync(1, 1)).ReturnsAsync(bookmark);
 
             var result = await _controller.AddBookmark(1);

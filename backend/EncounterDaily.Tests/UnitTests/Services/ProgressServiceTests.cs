@@ -1,3 +1,4 @@
+using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Repositories;
@@ -31,13 +32,14 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task GetUserReadingProgressAsync_ShouldReturnProgress()
         {
-            var progress = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1 };
+            var dailyReading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
+            var progress = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, DailyReading = dailyReading };
             _mockProgressRepo.Setup(r => r.GetUserReadingProgressAsync(1, 1)).ReturnsAsync(progress);
 
             var result = await _service.GetUserReadingProgressAsync(1, 1);
 
             result.Should().NotBeNull();
-            result!.UserId.Should().Be(1);
+            result!.ReadingId.Should().Be(1);
         }
 
         [Fact]
@@ -73,10 +75,11 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task GetUserProgressForSeriesAsync_ShouldReturnProgressList()
         {
+            var dailyReading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
             var progressList = new List<UserProgress>
             {
-                new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, IsCompleted = true },
-                new UserProgress { Id = 2, UserId = 1, DailyReadingId = 2, IsCompleted = false }
+                new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, IsCompleted = true, DailyReading = dailyReading },
+                new UserProgress { Id = 2, UserId = 1, DailyReadingId = 2, IsCompleted = false, DailyReading = dailyReading }
             };
             _mockProgressRepo.Setup(r => r.GetUserProgressForSeriesAsync(1, 1)).ReturnsAsync(progressList);
 
@@ -128,8 +131,8 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task MarkCompleteAsync_ShouldUpdateExistingProgress_WhenExists()
         {
-            var reading = new DailyReading { Id = 1, SeriesId = 1, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
-            var existing = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, IsCompleted = false, CompletedAt = null };
+            var reading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
+            var existing = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, IsCompleted = false, CompletedAt = null, DailyReading = reading };
             _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
             _mockProgressRepo.Setup(r => r.GetUserReadingProgressAsync(1, 1)).ReturnsAsync(existing);
             _mockUow.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
@@ -153,7 +156,8 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task UnmarkCompleteAsync_ShouldSetIncomplete_WhenExists()
         {
-            var existing = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, IsCompleted = true, CompletedAt = DateTime.UtcNow };
+            var reading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
+            var existing = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, IsCompleted = true, CompletedAt = DateTime.UtcNow, DailyReading = reading };
             _mockProgressRepo.Setup(r => r.GetUserReadingProgressAsync(1, 1)).ReturnsAsync(existing);
             _mockUow.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
 

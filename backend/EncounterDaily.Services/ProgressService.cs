@@ -1,3 +1,4 @@
+using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Services;
@@ -8,9 +9,10 @@ namespace EncounterDaily.Services
     {
         public ProgressService(IUnitOfWork unitOfWork) : base(unitOfWork) { }
 
-        public async Task<UserProgress?> GetUserReadingProgressAsync(int userId, int readingId)
+        public async Task<ProgressDto?> GetUserReadingProgressAsync(int userId, int readingId)
         {
-            return await _unitOfWork.Progress.GetUserReadingProgressAsync(userId, readingId);
+            var progress = await _unitOfWork.Progress.GetUserReadingProgressAsync(userId, readingId);
+            return progress == null ? null : MapToDto(progress);
         }
 
         public async Task<int> GetStreakAsync(int userId, int seriesId)
@@ -18,9 +20,10 @@ namespace EncounterDaily.Services
             return await _unitOfWork.Progress.GetStreakAsync(userId, seriesId);
         }
 
-        public async Task<IEnumerable<UserProgress>> GetUserProgressForSeriesAsync(int userId, int seriesId)
+        public async Task<IEnumerable<ProgressDto>> GetUserProgressForSeriesAsync(int userId, int seriesId)
         {
-            return await _unitOfWork.Progress.GetUserProgressForSeriesAsync(userId, seriesId);
+            var items = await _unitOfWork.Progress.GetUserProgressForSeriesAsync(userId, seriesId);
+            return items.Select(MapToDto);
         }
 
         public async Task<double> GetCompletionPercentageAsync(int userId, int seriesId)
@@ -28,7 +31,7 @@ namespace EncounterDaily.Services
             return await _unitOfWork.Progress.GetCompletionPercentageAsync(userId, seriesId);
         }
 
-        public async Task<UserProgress> MarkCompleteAsync(int userId, int readingId)
+        public async Task<ProgressDto> MarkCompleteAsync(int userId, int readingId)
         {
             var reading = await _unitOfWork.Readings.GetByIdAsync(readingId)
                 ?? throw new KeyNotFoundException($"Reading {readingId} not found");
@@ -54,7 +57,7 @@ namespace EncounterDaily.Services
             }
 
             await _unitOfWork.CompleteAsync();
-            return progress;
+            return MapToDto(progress);
         }
 
         public async Task UnmarkCompleteAsync(int userId, int readingId)
@@ -67,6 +70,20 @@ namespace EncounterDaily.Services
                 await _unitOfWork.Progress.UpdateAsync(progress);
                 await _unitOfWork.CompleteAsync();
             }
+        }
+
+        private static ProgressDto MapToDto(UserProgress p)
+        {
+            return new ProgressDto
+            {
+                ReadingId = p.DailyReadingId,
+                SeriesId = p.SeriesId,
+                IsCompleted = p.IsCompleted,
+                CompletedAt = p.CompletedAt,
+                Month = p.DailyReading?.Month ?? 0,
+                Day = p.DailyReading?.Day ?? 0,
+                BibleReading = p.DailyReading?.BibleReading ?? string.Empty
+            };
         }
     }
 }

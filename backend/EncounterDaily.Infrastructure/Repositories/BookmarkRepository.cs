@@ -21,6 +21,7 @@ namespace EncounterDaily.Infrastructure.Repositories
         public async Task<UserBookmark?> GetUserBookmarkAsync(int userId, int readingId)
         {
             return await _dbSet
+                .Include(b => b.DailyReading)
                 .FirstOrDefaultAsync(b => b.UserId == userId && b.DailyReadingId == readingId);
         }
 

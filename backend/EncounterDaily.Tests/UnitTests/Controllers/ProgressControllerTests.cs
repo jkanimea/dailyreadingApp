@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using EncounterDaily.API.Controllers;
-using EncounterDaily.Core.Entities;
+using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -33,7 +33,8 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         [Fact]
         public async Task GetSeriesProgress_ShouldReturnOk()
         {
-            _mockService.Setup(s => s.GetUserProgressForSeriesAsync(1, 1)).ReturnsAsync(new List<UserProgress>());
+            var items = new List<ProgressDto>().AsEnumerable();
+            _mockService.Setup(s => s.GetUserProgressForSeriesAsync(1, 1)).ReturnsAsync(items);
 
             var result = await _controller.GetSeriesProgress(1);
 
@@ -56,7 +57,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         [Fact]
         public async Task MarkComplete_ShouldReturnOk_WhenValid()
         {
-            var progress = new UserProgress { Id = 1, UserId = 1, DailyReadingId = 1, IsCompleted = true };
+            var progress = new ProgressDto { ReadingId = 1, IsCompleted = true };
             _mockService.Setup(s => s.MarkCompleteAsync(1, 1)).ReturnsAsync(progress);
 
             var result = await _controller.MarkComplete(1);

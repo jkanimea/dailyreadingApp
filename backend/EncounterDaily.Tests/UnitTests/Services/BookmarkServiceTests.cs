@@ -1,3 +1,4 @@
+using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Repositories;
@@ -31,10 +32,11 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task GetUserBookmarksAsync_ShouldReturnBookmarks()
         {
+            var dailyReading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
             var bookmarks = new List<UserBookmark>
             {
-                new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1 },
-                new UserBookmark { Id = 2, UserId = 1, DailyReadingId = 2 }
+                new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1, SeriesId = 1, DailyReading = dailyReading },
+                new UserBookmark { Id = 2, UserId = 1, DailyReadingId = 2, SeriesId = 1, DailyReading = dailyReading }
             };
             _mockBookmarkRepo.Setup(r => r.GetUserBookmarksAsync(1)).ReturnsAsync(bookmarks);
 
@@ -56,7 +58,8 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task GetUserBookmarkAsync_ShouldReturnBookmark()
         {
-            var bookmark = new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1 };
+            var dailyReading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
+            var bookmark = new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1, SeriesId = 1, DailyReading = dailyReading };
             _mockBookmarkRepo.Setup(r => r.GetUserBookmarkAsync(1, 1)).ReturnsAsync(bookmark);
 
             var result = await _service.GetUserBookmarkAsync(1, 1);
@@ -78,9 +81,10 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task GetUserBookmarksBySeriesAsync_ShouldReturnBookmarks()
         {
+            var dailyReading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
             var bookmarks = new List<UserBookmark>
             {
-                new UserBookmark { Id = 1, UserId = 1, SeriesId = 1 }
+                new UserBookmark { Id = 1, UserId = 1, SeriesId = 1, DailyReadingId = 1, DailyReading = dailyReading }
             };
             _mockBookmarkRepo.Setup(r => r.GetUserBookmarksBySeriesAsync(1, 1)).ReturnsAsync(bookmarks);
 
@@ -92,8 +96,8 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task AddBookmarkAsync_ShouldCreateNew_WhenNotExists()
         {
-            var reading = new DailyReading { Id = 1, SeriesId = 1, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
-            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
+            var dailyReading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(dailyReading);
             _mockBookmarkRepo.Setup(r => r.GetUserBookmarkAsync(1, 1)).ReturnsAsync((UserBookmark?)null);
             _mockBookmarkRepo.Setup(r => r.AddAsync(It.IsAny<UserBookmark>())).ReturnsAsync((UserBookmark b) => b);
             _mockUow.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
@@ -101,16 +105,15 @@ namespace EncounterDaily.Tests.UnitTests.Services
             var result = await _service.AddBookmarkAsync(1, 1);
 
             result.Should().NotBeNull();
-            result.UserId.Should().Be(1);
-            result.DailyReadingId.Should().Be(1);
+            result.ReadingId.Should().Be(1);
         }
 
         [Fact]
         public async Task AddBookmarkAsync_ShouldReturnExisting_WhenAlreadyBookmarked()
         {
-            var reading = new DailyReading { Id = 1, SeriesId = 1, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
-            var existing = new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1 };
-            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
+            var dailyReading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
+            var existing = new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1, SeriesId = 1, DailyReading = dailyReading };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(dailyReading);
             _mockBookmarkRepo.Setup(r => r.GetUserBookmarkAsync(1, 1)).ReturnsAsync(existing);
 
             var result = await _service.AddBookmarkAsync(1, 1);
@@ -130,7 +133,8 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task RemoveBookmarkAsync_ShouldDelete_WhenExists()
         {
-            var bookmark = new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1 };
+            var dailyReading = new DailyReading { Id = 1, SeriesId = 1, Month = 3, Day = 15, BibleReading = "John 3:16", PrimaryBookPageRange = "DA 1-5" };
+            var bookmark = new UserBookmark { Id = 1, UserId = 1, DailyReadingId = 1, SeriesId = 1, DailyReading = dailyReading };
             _mockBookmarkRepo.Setup(r => r.GetUserBookmarkAsync(1, 1)).ReturnsAsync(bookmark);
             _mockUow.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
 

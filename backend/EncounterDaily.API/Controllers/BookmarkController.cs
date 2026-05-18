@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using EncounterDaily.Core.Entities;
+using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,7 +17,7 @@ namespace EncounterDaily.API.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<UserBookmark>>> GetBookmarks()
+        public async Task<ActionResult<IEnumerable<BookmarkDto>>> GetBookmarks()
         {
             var userId = GetUserId();
             var items = await _bookmarkService.GetUserBookmarksAsync(userId);
@@ -25,7 +25,7 @@ namespace EncounterDaily.API.Controllers
         }
 
         [HttpPost("{readingId}")]
-        public async Task<ActionResult<UserBookmark>> AddBookmark(int readingId)
+        public async Task<ActionResult<BookmarkDto>> AddBookmark(int readingId)
         {
             var userId = GetUserId();
             try

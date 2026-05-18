@@ -12,6 +12,7 @@ namespace EncounterDaily.Infrastructure.Repositories
         public async Task<UserProgress?> GetUserReadingProgressAsync(int userId, int readingId)
         {
             return await _dbSet
+                .Include(p => p.DailyReading)
                 .FirstOrDefaultAsync(p => p.UserId == userId && p.DailyReadingId == readingId);
         }
 
@@ -21,12 +22,13 @@ namespace EncounterDaily.Infrastructure.Repositories
                 .Where(p => p.UserId == userId && p.SeriesId == seriesId && p.IsCompleted)
                 .OrderByDescending(p => p.CompletedAt)
                 .Select(p => p.CompletedAt!.Value.Date)
+                .Distinct()
                 .ToListAsync();
 
             if (!completedReadings.Any()) return 0;
 
             int streak = 1;
-            var today = DateTime.Today;
+            var today = DateTime.UtcNow.Date;
             var expectedDate = completedReadings.First();
 
             if (expectedDate < today.AddDays(-1)) return 0;
@@ -49,6 +51,7 @@ namespace EncounterDaily.Infrastructure.Repositories
         public async Task<IEnumerable<UserProgress>> GetUserProgressForSeriesAsync(int userId, int seriesId)
         {
             return await _dbSet
+                .Include(p => p.DailyReading)
                 .Where(p => p.UserId == userId && p.SeriesId == seriesId)
                 .ToListAsync();
         }
