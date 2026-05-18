@@ -1,0 +1,181 @@
+﻿using System.Globalization;
+using CsvHelper;
+using CsvHelper.Configuration;
+using EncounterDaily.Core.Entities;
+using EncounterDaily.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+var command = args.Length > 0 ? args[0] : "help";
+
+switch (command)
+{
+    case "generate":
+        await GenerateSeedCsvAsync(args.Length > 1 ? args[1] : "seed-data");
+        break;
+    case "import":
+        await ImportCsvAsync(args.ElementAtOrDefault(1) ?? "");
+        break;
+    default:
+        Console.WriteLine("Usage:");
+        Console.WriteLine("  dotnet run -- generate [output-dir]");
+        Console.WriteLine("  dotnet run -- import <csv-file>");
+        break;
+}
+
+static Task GenerateSeedCsvAsync(string outputDir)
+{
+    Directory.CreateDirectory(outputDir);
+
+    var seriesConfigs = new List<SeriesConfigInfo>
+    {
+        new(1, "Christ The Way", "Desire of Ages", null, 900, null),
+        new(2, "Christ The Church", "Acts of the Apostles", "The Great Controversy", 600, 700),
+        new(3, "Christ Our Redemption", "Patriarchs and Prophets", null, 800, null),
+        new(4, "Christ Our Hope", "Prophets and Kings", null, 750, null)
+    };
+
+    foreach (var series in seriesConfigs)
+    {
+        var records = new List<CsvReadingRecord>();
+        var rng = new Random(series.SeriesId);
+        int page = 1;
+
+        for (int month = 1; month <= 12; month++)
+        {
+            int daysInMonth = DateTime.DaysInMonth(2024, month);
+            for (int day = 1; day <= daysInMonth; day++)
+            {
+                int pageEnd = Math.Min(page + rng.Next(3, 6), series.Pages);
+                string bibleRef = series.SeriesId switch
+                {
+                    1 => $"Matt {rng.Next(1, 28)}:{rng.Next(1, 20)}",
+                    2 => $"Acts {rng.Next(1, 28)}:{rng.Next(1, 20)}",
+                    3 => $"Gen {rng.Next(1, 50)}:{rng.Next(1, 20)}",
+                    4 => $"1 Kings {rng.Next(1, 22)}:{rng.Next(1, 20)}",
+                    _ => "Psalm 119:105"
+                };
+
+                records.Add(new CsvReadingRecord
+                {
+                    SeriesId = series.SeriesId,
+                    Month = month,
+                    Day = day,
+                    BibleReading = bibleRef,
+                    PrimaryBookPageRange = $"{series.PrimaryBook} pp. {page}-{pageEnd}",
+                    PrimaryBookPageStart = page,
+                    PrimaryBookPageEnd = pageEnd,
+                    SortOrder = (month * 100) + day,
+                    FullTextPrimary = $"Sample text from {series.PrimaryBook} pages {page}-{pageEnd}. This is placeholder content for the daily reading.",
+                    SummaryPoints = $"- Reading covers {series.PrimaryBook} pages {page}-{pageEnd}\n- Key theme: Faith and obedience\n- Application: Reflect on God's guidance"
+                });
+
+                if (series.SecondaryBook != null && series.PagesSecondary.HasValue)
+                {
+                    int secPage = rng.Next(1, series.PagesSecondary.Value);
+                    int secPageEnd = Math.Min(secPage + rng.Next(2, 4), series.PagesSecondary.Value);
+                    records[^1].SecondaryBookPageRange = $"{series.SecondaryBook} pp. {secPage}-{secPageEnd}";
+                    records[^1].SecondaryBookPageStart = secPage;
+                    records[^1].SecondaryBookPageEnd = secPageEnd;
+                    records[^1].FullTextSecondary = $"Sample text from {series.SecondaryBook} pages {secPage}-{secPageEnd}.";
+                }
+
+                page = pageEnd + 1;
+                if (page > series.Pages) page = 1;
+            }
+        }
+
+        var csvPath = Path.Combine(outputDir, $"series-{series.SeriesId}-readings.csv");
+        using var writer = new StreamWriter(csvPath);
+        using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+        csv.WriteRecords(records);
+        Console.WriteLine($"Generated {csvPath} ({records.Count} readings)");
+    }
+
+    return Task.CompletedTask;
+}
+
+static async Task ImportCsvAsync(string csvPath)
+{
+    if (!File.Exists(csvPath))
+    {
+        Console.Error.WriteLine($"File not found: {csvPath}");
+        return;
+    }
+
+    var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+        ?? "Server=(localdb)\\mssqllocaldb;Database=EncounterDaily;Trusted_Connection=True;";
+
+    var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+    optionsBuilder.UseSqlServer(connectionString);
+
+    using var context = new AppDbContext(optionsBuilder.Options);
+    await context.Database.EnsureCreatedAsync();
+
+    using var reader = new StreamReader(csvPath);
+    using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+    {
+        HeaderValidated = null,
+        MissingFieldFound = null
+    });
+
+    var records = csv.GetRecords<CsvReadingRecord>().ToList();
+    Console.WriteLine($"Read {records.Count} records from CSV");
+
+    var seriesId = records[0].SeriesId;
+    var existingCount = await context.Set<DailyReading>().CountAsync(r => r.SeriesId == seriesId);
+    if (existingCount > 0)
+    {
+        Console.Write($"Series {seriesId} already has {existingCount} readings. Overwrite? (y/N): ");
+        var response = Console.ReadLine()?.Trim().ToLower();
+        if (response != "y" && response != "yes")
+        {
+            Console.WriteLine("Import cancelled.");
+            return;
+        }
+        context.Set<DailyReading>().RemoveRange(context.Set<DailyReading>().Where(r => r.SeriesId == seriesId));
+    }
+
+    foreach (var record in records)
+    {
+        context.Set<DailyReading>().Add(new DailyReading
+        {
+            SeriesId = record.SeriesId,
+            Month = record.Month,
+            Day = record.Day,
+            BibleReading = record.BibleReading,
+            PrimaryBookPageRange = record.PrimaryBookPageRange,
+            PrimaryBookPageStart = record.PrimaryBookPageStart,
+            PrimaryBookPageEnd = record.PrimaryBookPageEnd,
+            SecondaryBookPageRange = record.SecondaryBookPageRange,
+            SecondaryBookPageStart = record.SecondaryBookPageStart,
+            SecondaryBookPageEnd = record.SecondaryBookPageEnd,
+            FullTextPrimary = record.FullTextPrimary,
+            FullTextSecondary = record.FullTextSecondary,
+            SummaryPoints = record.SummaryPoints,
+            SortOrder = record.SortOrder
+        });
+    }
+
+    await context.SaveChangesAsync();
+    Console.WriteLine($"Imported {records.Count} readings for series {seriesId}");
+}
+
+public record SeriesConfigInfo(int SeriesId, string Name, string PrimaryBook, string? SecondaryBook, int Pages, int? PagesSecondary);
+
+public class CsvReadingRecord
+{
+    public int SeriesId { get; set; }
+    public int Month { get; set; }
+    public int Day { get; set; }
+    public string BibleReading { get; set; } = string.Empty;
+    public string PrimaryBookPageRange { get; set; } = string.Empty;
+    public int PrimaryBookPageStart { get; set; }
+    public int PrimaryBookPageEnd { get; set; }
+    public string? SecondaryBookPageRange { get; set; }
+    public int? SecondaryBookPageStart { get; set; }
+    public int? SecondaryBookPageEnd { get; set; }
+    public int SortOrder { get; set; }
+    public string? FullTextPrimary { get; set; }
+    public string? FullTextSecondary { get; set; }
+    public string? SummaryPoints { get; set; }
+}

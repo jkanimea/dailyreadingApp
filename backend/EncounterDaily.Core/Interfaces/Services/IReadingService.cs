@@ -1,3 +1,4 @@
+using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 
 namespace EncounterDaily.Core.Interfaces.Services
@@ -8,5 +9,8 @@ namespace EncounterDaily.Core.Interfaces.Services
         Task<IEnumerable<DailyReading>> GetBySeriesMonthAsync(int seriesId, int month);
         Task<IEnumerable<DailyReading>> GetBySeriesYearAsync(int seriesId);
         Task<IEnumerable<DailyReading>> SearchByTextAsync(int seriesId, string searchTerm);
+        Task<DailyReadingDto> GetTodayReadingAsync(int seriesId);
+        Task<ReadingDetailDto> GetFullReadingAsync(int readingId);
+        Task<SummaryDto> GetSummaryAsync(int readingId);
     }
 }

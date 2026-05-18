@@ -1,4 +1,5 @@
 using EncounterDaily.API.Controllers;
+using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,29 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         {
             _mockService = new Mock<IReadingService>();
             _controller = new ReadingController(_mockService.Object);
+        }
+
+        [Fact]
+        public async Task GetToday_ShouldReturnOk_WhenFound()
+        {
+            var dto = new DailyReadingDto { Id = 1, SeriesId = 1, BibleReading = "John 3:16" };
+            _mockService.Setup(s => s.GetTodayReadingAsync(1)).ReturnsAsync(dto);
+
+            var result = await _controller.GetToday(1);
+
+            var okResult = result.Result as OkObjectResult;
+            okResult.Should().NotBeNull();
+            okResult!.StatusCode.Should().Be(200);
+        }
+
+        [Fact]
+        public async Task GetToday_ShouldReturnNotFound_WhenNoReading()
+        {
+            _mockService.Setup(s => s.GetTodayReadingAsync(1)).ThrowsAsync(new KeyNotFoundException());
+
+            var result = await _controller.GetToday(1);
+
+            result.Result.Should().BeOfType<NotFoundObjectResult>();
         }
 
         [Fact]
@@ -59,6 +83,52 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
             var result = await _controller.GetBySeriesYear(1);
 
             result.Result.Should().BeOfType<OkObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetFullReading_ShouldReturnOk_WhenFound()
+        {
+            var detail = new ReadingDetailDto { Id = 1, BibleReading = "John 3:16" };
+            _mockService.Setup(s => s.GetFullReadingAsync(1)).ReturnsAsync(detail);
+
+            var result = await _controller.GetFullReading(1);
+
+            var okResult = result.Result as OkObjectResult;
+            okResult.Should().NotBeNull();
+            okResult!.StatusCode.Should().Be(200);
+        }
+
+        [Fact]
+        public async Task GetFullReading_ShouldReturnNotFound_WhenMissing()
+        {
+            _mockService.Setup(s => s.GetFullReadingAsync(999)).ThrowsAsync(new KeyNotFoundException());
+
+            var result = await _controller.GetFullReading(999);
+
+            result.Result.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task GetSummary_ShouldReturnOk_WhenFound()
+        {
+            var summary = new SummaryDto { Id = 1, SummaryPoints = "- Point" };
+            _mockService.Setup(s => s.GetSummaryAsync(1)).ReturnsAsync(summary);
+
+            var result = await _controller.GetSummary(1);
+
+            var okResult = result.Result as OkObjectResult;
+            okResult.Should().NotBeNull();
+            okResult!.StatusCode.Should().Be(200);
+        }
+
+        [Fact]
+        public async Task GetSummary_ShouldReturnNotFound_WhenMissing()
+        {
+            _mockService.Setup(s => s.GetSummaryAsync(999)).ThrowsAsync(new KeyNotFoundException());
+
+            var result = await _controller.GetSummary(999);
+
+            result.Result.Should().BeOfType<NotFoundResult>();
         }
 
         [Fact]

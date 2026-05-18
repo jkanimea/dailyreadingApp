@@ -36,9 +36,12 @@ namespace EncounterDaily.Infrastructure.Repositories
         public async Task<IEnumerable<DailyReading>> SearchByTextAsync(int seriesId, string searchTerm)
         {
             return await _dbSet
+                .Include(r => r.Series)
                 .Where(r => r.SeriesId == seriesId &&
                     (r.BibleReading.Contains(searchTerm) ||
-                     r.FullTextPrimary != null && r.FullTextPrimary.Contains(searchTerm)))
+                     r.FullTextPrimary != null && r.FullTextPrimary.Contains(searchTerm) ||
+                     r.FullTextSecondary != null && r.FullTextSecondary.Contains(searchTerm) ||
+                     r.SummaryPoints != null && r.SummaryPoints.Contains(searchTerm)))
                 .ToListAsync();
         }
     }

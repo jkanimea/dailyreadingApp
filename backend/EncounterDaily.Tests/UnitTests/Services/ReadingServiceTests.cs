@@ -83,5 +83,100 @@ namespace EncounterDaily.Tests.UnitTests.Services
 
             result.Should().HaveCount(1);
         }
+
+        [Fact]
+        public async Task GetTodayReadingAsync_ShouldReturnDto()
+        {
+            var now = DateTime.UtcNow;
+            var reading = new DailyReading
+            {
+                Id = 1,
+                SeriesId = 1,
+                Month = now.Month,
+                Day = now.Day,
+                BibleReading = "John 3:16",
+                PrimaryBookPageRange = "DA 1-5",
+                Series = new Series { Id = 1, Name = "Christ The Way", ShortName = "S1" }
+            };
+            _mockReadingRepo.Setup(r => r.GetBySeriesDateAsync(1, now.Month, now.Day)).ReturnsAsync(reading);
+
+            var result = await _service.GetTodayReadingAsync(1);
+
+            result.Should().NotBeNull();
+            result.Id.Should().Be(1);
+            result.SeriesName.Should().Be("Christ The Way");
+            result.BibleReading.Should().Be("John 3:16");
+        }
+
+        [Fact]
+        public async Task GetTodayReadingAsync_ShouldThrow_WhenNoReading()
+        {
+            var now = DateTime.UtcNow;
+            _mockReadingRepo.Setup(r => r.GetBySeriesDateAsync(1, now.Month, now.Day)).ReturnsAsync((DailyReading?)null);
+
+            await _service.Invoking(s => s.GetTodayReadingAsync(1))
+                .Should().ThrowAsync<KeyNotFoundException>();
+        }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldReturnDetail()
+        {
+            var reading = new DailyReading
+            {
+                Id = 1,
+                SeriesId = 1,
+                Month = 3,
+                Day = 15,
+                BibleReading = "John 3:16",
+                FullTextPrimary = "Full text...",
+                PrimaryBookPageRange = "DA 1-5",
+                Series = new Series { Id = 1, Name = "Christ The Way", ShortName = "S1" }
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
+
+            var result = await _service.GetFullReadingAsync(1);
+
+            result.Should().NotBeNull();
+            result.Id.Should().Be(1);
+            result.FullTextPrimary.Should().Be("Full text...");
+            result.HasSecondaryReading.Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldThrow_WhenNotFound()
+        {
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((DailyReading?)null);
+
+            await _service.Invoking(s => s.GetFullReadingAsync(999))
+                .Should().ThrowAsync<KeyNotFoundException>();
+        }
+
+        [Fact]
+        public async Task GetSummaryAsync_ShouldReturnSummary()
+        {
+            var reading = new DailyReading
+            {
+                Id = 1,
+                SummaryPoints = "- Point 1\n- Point 2",
+                BibleReading = "John 3:16",
+                PrimaryBookPageRange = "DA 1-5"
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
+
+            var result = await _service.GetSummaryAsync(1);
+
+            result.Should().NotBeNull();
+            result.Id.Should().Be(1);
+            result.SummaryPoints.Should().Contain("Point 1");
+        }
+
+        [Fact]
+        public async Task GetSummaryAsync_ShouldThrow_WhenNotFound()
+        {
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(999)).ReturnsAsync((DailyReading?)null);
+
+            await _service.Invoking(s => s.GetSummaryAsync(999))
+                .Should().ThrowAsync<KeyNotFoundException>();
+        }
     }
 }

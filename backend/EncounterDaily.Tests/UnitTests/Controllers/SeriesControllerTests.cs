@@ -1,4 +1,5 @@
 using EncounterDaily.API.Controllers;
+using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,16 +11,18 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
     public class SeriesControllerTests
     {
         private readonly Mock<ISeriesService> _mockService;
+        private readonly Mock<ISeriesFactory> _mockFactory;
         private readonly SeriesController _controller;
 
         public SeriesControllerTests()
         {
             _mockService = new Mock<ISeriesService>();
-            _controller = new SeriesController(_mockService.Object);
+            _mockFactory = new Mock<ISeriesFactory>();
+            _controller = new SeriesController(_mockService.Object, _mockFactory.Object);
         }
 
         [Fact]
-        public async Task GetAllWithBooks_ShouldReturnOk()
+        public async Task GetAll_ShouldReturnOk()
         {
             var seriesList = new List<Series>
             {
@@ -28,7 +31,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
             };
             _mockService.Setup(s => s.GetAllSeriesWithBooksAsync()).ReturnsAsync(seriesList);
 
-            var result = await _controller.GetAllWithBooks();
+            var result = await _controller.GetAll();
 
             var okResult = result.Result as OkObjectResult;
             okResult.Should().NotBeNull();
@@ -38,12 +41,12 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         }
 
         [Fact]
-        public async Task GetWithBooks_ShouldReturnOk_WhenFound()
+        public async Task GetById_ShouldReturnOk_WhenFound()
         {
             var series = new Series { Id = 1, Name = "Test" };
             _mockService.Setup(s => s.GetSeriesWithBooksAsync(1)).ReturnsAsync(series);
 
-            var result = await _controller.GetWithBooks(1);
+            var result = await _controller.GetById(1);
 
             var okResult = result.Result as OkObjectResult;
             okResult.Should().NotBeNull();
@@ -53,13 +56,28 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         }
 
         [Fact]
-        public async Task GetWithBooks_ShouldReturnNotFound_WhenMissing()
+        public async Task GetById_ShouldReturnNotFound_WhenMissing()
         {
             _mockService.Setup(s => s.GetSeriesWithBooksAsync(999)).ReturnsAsync((Series?)null);
 
-            var result = await _controller.GetWithBooks(999);
+            var result = await _controller.GetById(999);
 
             result.Result.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
+        public async Task GetConfig_ShouldReturnOk()
+        {
+            var config = new SeriesConfig { SeriesId = 1, PrimaryBookTitle = "Desire of Ages" };
+            _mockFactory.Setup(f => f.CreateConfigAsync(1)).ReturnsAsync(config);
+
+            var result = await _controller.GetConfig(1);
+
+            var okResult = result.Result as OkObjectResult;
+            okResult.Should().NotBeNull();
+            okResult!.StatusCode.Should().Be(200);
+            var value = okResult.Value as SeriesConfig;
+            value!.PrimaryBookTitle.Should().Be("Desire of Ages");
         }
     }
 }

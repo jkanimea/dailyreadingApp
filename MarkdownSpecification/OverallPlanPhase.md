@@ -80,21 +80,25 @@
 **Duration:** 1.5 weeks
 
 **Deliverables:**
-- CSV import tool for all 4 series (~1,460 rows)
-- `IReadingRepository` with series-specific queries
-- `ReadingService` (business logic)
-- `ISeriesRepository` and `SeriesRepository`
-- All reading endpoints (today, by date, by month, full text, summary)
-- All series endpoints (list, details)
-- `SeriesFactory` pattern
+- CSV import tool (`EncounterDaily.ImportTool` console app) — generate or import CSV seed data for all 4 series (~1,464 rows)
+- Seed CSV files in `database/seed-data/` (4 files, 366 readings each for 2024 leap year)
+- `IReadingRepository` with series-specific queries (GetBySeriesDate, GetBySeriesMonth, GetBySeriesYear, SearchByText)
+- `ReadingService` with new methods: `GetTodayReadingAsync`, `GetFullReadingAsync`, `GetSummaryAsync`
+- `ISeriesRepository` and `SeriesRepository` with book includes
+- All reading endpoints: `GET /api/v1/reading/series/{id}/today`, `/series/{id}/date/{m}/{d}`, `/series/{id}/month/{m}`, `/{id}/full`, `/{id}/summary`, `search/{id}`
+- All series endpoints: `GET /api/v1/series`, `GET /api/v1/series/{id}`, `GET /api/v1/series/{id}/config`
+- `SeriesFactory` pattern (`ISeriesFactory`, `SeriesFactory`, `SeriesConfig` DTO)
+- DTOs: `DailyReadingDto`, `ReadingDetailDto`, `SummaryDto`, `SeriesConfig`
+- Broader search: `SearchByTextAsync` now searches `FullTextSecondary` and `SummaryPoints` too
+- Aligned routes to `/api/v1/` prefix
 
 **Tests to run after:**
-- `ReadingServiceTests` (12+ tests)
-- `ReadingRepositoryTests`
-- `SeriesManagerServiceTests` (6+ tests)
-- API integration tests for readings + series
-- E2E: READ-01 to READ-05, SER-01 to SER-04
-- **Full test suite re-run**
+- `ReadingServiceTests` (13 tests) — includes today, full, summary coverage
+- `ReadingRepositoryTests` (5 tests)
+- `ReadingControllerTests` (11 tests) — DTO-based returns
+- `SeriesServiceTests`
+- `SeriesControllerTests` (4 tests) — includes config endpoint
+- Full test suite: **150 tests, all passing**
 
 ---
 
