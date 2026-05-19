@@ -1,0 +1,30 @@
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { ApiService } from './api.service';
+import { DailyReading, ReadingDetail, ReadingSummary } from '../models/reading.model';
+import { HttpParams } from '@angular/common/http';
+
+@Injectable({ providedIn: 'root' })
+export class ReadingService {
+  constructor(private api: ApiService) {}
+
+  getToday(seriesId: number): Observable<DailyReading> {
+    return this.api.get<DailyReading>(`/reading/series/${seriesId}/today`);
+  }
+
+  getByDate(seriesId: number, month: number, day: number): Observable<DailyReading> {
+    return this.api.get<DailyReading>(`/reading/series/${seriesId}/date/${month}/${day}`);
+  }
+
+  getByMonth(seriesId: number, month: number): Observable<DailyReading[]> {
+    return this.api.get<DailyReading[]>(`/reading/series/${seriesId}/month/${month}`);
+  }
+
+  getFullReading(readingId: number): Observable<ReadingDetail> {
+    return this.api.get<ReadingDetail>(`/reading/${readingId}/full`);
+  }
+
+  getSummary(readingId: number): Observable<ReadingSummary> {
+    return this.api.get<ReadingSummary>(`/reading/${readingId}/summary`);
+  }
+}

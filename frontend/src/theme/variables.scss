@@ -1,0 +1,14 @@
+:root {
+  --app-font-size: 17px;
+  --app-line-height: 1.6;
+}
+
+body.dark {
+  --ion-background-color: #121212;
+  --ion-text-color: #ffffff;
+}
+
+body.light {
+  --ion-background-color: #ffffff;
+  --ion-text-color: #000000;
+}
