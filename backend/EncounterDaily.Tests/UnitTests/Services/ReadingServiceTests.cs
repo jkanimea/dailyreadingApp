@@ -1,8 +1,11 @@
 using EncounterDaily.Core.Entities;
+using EncounterDaily.Core.Enums;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Repositories;
 using EncounterDaily.Core.Interfaces.Services;
+using EncounterDaily.Infrastructure.Data;
 using EncounterDaily.Services;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 
 namespace EncounterDaily.Tests.UnitTests.Services
@@ -144,6 +147,157 @@ namespace EncounterDaily.Tests.UnitTests.Services
             result.HasSecondaryReading.Should().BeFalse();
         }
 
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldAssembleEgwTextFromMultiplePages()
+        {
+            var book = new Book { Id = 10, BookType = BookType.DesireOfAges, Title = "Desire of Ages" };
+            var series = new Series { Id = 1, PrimaryBookId = 10, PrimaryBook = book };
+            var reading = new DailyReading
+            {
+                Id = 1, SeriesId = 1, Month = 3, Day = 15,
+                BibleReading = "John 3:16",
+                PrimaryBookPageRange = "DA 1-5",
+                PrimaryBookPageStart = 1, PrimaryBookPageEnd = 5,
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
+
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            ctx.EgwPages.AddRange(
+                new EgwPage { BookId = 10, PageNumber = 1, Text = "Page one content." },
+                new EgwPage { BookId = 10, PageNumber = 2, Text = "Page two content." },
+                new EgwPage { BookId = 10, PageNumber = 3, Text = "Page three content." },
+                new EgwPage { BookId = 10, PageNumber = 4, Text = "Page four content." },
+                new EgwPage { BookId = 10, PageNumber = 5, Text = "Page five content." });
+            await ctx.SaveChangesAsync();
+            var mockEgwRepo = new Mock<IRepository<EgwPage>>();
+            mockEgwRepo.Setup(r => r.Query()).Returns(ctx.EgwPages);
+            _mockUow.Setup(u => u.Repository<EgwPage>()).Returns(mockEgwRepo.Object);
+
+            var result = await _service.GetFullReadingAsync(1);
+
+            result.FullTextPrimary.Should().Be("Page one content. Page two content. Page three content. Page four content. Page five content.");
+        }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldReturnEmptyEgwText_WhenNoBookId()
+        {
+            var series = new Series { Id = 1, PrimaryBookId = 0 };
+            var reading = new DailyReading
+            {
+                Id = 2, SeriesId = 1, Month = 6, Day = 1,
+                BibleReading = "Psalm 119:105",
+                PrimaryBookPageRange = "none",
+                PrimaryBookPageStart = 1, PrimaryBookPageEnd = 5,
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(2)).ReturnsAsync(reading);
+
+            var result = await _service.GetFullReadingAsync(2);
+
+            result.FullTextPrimary.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldReturnEmptyEgwText_WhenPageRangeNull()
+        {
+            var series = new Series { Id = 1, PrimaryBookId = 10 };
+            var reading = new DailyReading
+            {
+                Id = 3, SeriesId = 1, Month = 1, Day = 1,
+                BibleReading = "Gen 1:1",
+                PrimaryBookPageRange = "DA 1-5",
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(3)).ReturnsAsync(reading);
+
+            var result = await _service.GetFullReadingAsync(3);
+
+            result.FullTextPrimary.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldReturnEmptyEgwText_WhenStartAfterEnd()
+        {
+            var series = new Series { Id = 1, PrimaryBookId = 10 };
+            var reading = new DailyReading
+            {
+                Id = 4, SeriesId = 1, Month = 2, Day = 15,
+                BibleReading = "Matt 5:9",
+                PrimaryBookPageRange = "DA 10-5",
+                PrimaryBookPageStart = 10, PrimaryBookPageEnd = 5,
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(4)).ReturnsAsync(reading);
+
+            var result = await _service.GetFullReadingAsync(4);
+
+            result.FullTextPrimary.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldAssembleSecondaryEgwText()
+        {
+            var book = new Book { Id = 20, BookType = BookType.GreatControversy, Title = "The Great Controversy" };
+            var series = new Series { Id = 2, SecondaryBookId = 20, SecondaryBook = book };
+            var reading = new DailyReading
+            {
+                Id = 5, SeriesId = 2, Month = 4, Day = 10,
+                BibleReading = "Acts 1:8",
+                PrimaryBookPageRange = "AA 1-5",
+                SecondaryBookPageRange = "GC 100-101",
+                SecondaryBookPageStart = 100, SecondaryBookPageEnd = 101,
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(5)).ReturnsAsync(reading);
+
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            ctx.EgwPages.AddRange(
+                new EgwPage { BookId = 20, PageNumber = 100, Text = "Great Controversy page 100." },
+                new EgwPage { BookId = 20, PageNumber = 101, Text = "Great Controversy page 101." });
+            await ctx.SaveChangesAsync();
+            var mockEgwRepo = new Mock<IRepository<EgwPage>>();
+            mockEgwRepo.Setup(r => r.Query()).Returns(ctx.EgwPages);
+            _mockUow.Setup(u => u.Repository<EgwPage>()).Returns(mockEgwRepo.Object);
+
+            var result = await _service.GetFullReadingAsync(5);
+
+            result.FullTextSecondary.Should().Be("Great Controversy page 100. Great Controversy page 101.");
+            result.HasSecondaryReading.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldSkipMissingPages()
+        {
+            var book = new Book { Id = 10 };
+            var series = new Series { Id = 1, PrimaryBookId = 10, PrimaryBook = book };
+            var reading = new DailyReading
+            {
+                Id = 6, SeriesId = 1, Month = 5, Day = 5,
+                BibleReading = "Matt 5:5",
+                PrimaryBookPageRange = "DA 1-5",
+                PrimaryBookPageStart = 1, PrimaryBookPageEnd = 5,
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(6)).ReturnsAsync(reading);
+
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            ctx.EgwPages.AddRange(
+                new EgwPage { BookId = 10, PageNumber = 1, Text = "Page one." },
+                new EgwPage { BookId = 10, PageNumber = 3, Text = "Page three." },
+                new EgwPage { BookId = 10, PageNumber = 5, Text = "Page five." });
+            await ctx.SaveChangesAsync();
+            var mockEgwRepo = new Mock<IRepository<EgwPage>>();
+            mockEgwRepo.Setup(r => r.Query()).Returns(ctx.EgwPages);
+            _mockUow.Setup(u => u.Repository<EgwPage>()).Returns(mockEgwRepo.Object);
+
+            var result = await _service.GetFullReadingAsync(6);
+
+            result.FullTextPrimary.Should().Be("Page one. Page three. Page five.");
+        }
         [Fact]
         public async Task GetFullReadingAsync_ShouldThrow_WhenNotFound()
         {
