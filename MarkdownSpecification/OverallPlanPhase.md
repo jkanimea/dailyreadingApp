@@ -1,6 +1,6 @@
 # Overall Implementation Plan — Encounter Daily
 
-**Last updated:** 2026-05-18
+**Last updated:** 2026-05-19
 
 ## Project Scope
 
@@ -134,12 +134,15 @@
 - `SearchService` with DTO mapping (includes `SeriesName`, `Month`, `Day`, `BibleReading`)
 - Search endpoints: `GET /api/v1/search?q=&seriesId=&page=&pageSize=`, `GET /api/v1/search/all?q=&page=&pageSize=`
 - Pagesize clamped to max 100, page minimum 1
+- Search term minimum 2 characters (prevents single-char DoS)
 - `SearchRepository` injected via `IUnitOfWork.Search`
+- Search history logged to `SearchHistory` table on per-series searches
+- **Search method**: Uses EF Core `.Contains()` (SQL `LIKE '%term%'`) rather than SQL Server Full-Text Search — chosen for database portability (works with SQLite/LocalDB without FTS configuration). Update to `EF.Functions.FreeText()` if deploying to SQL Server with FTS enabled.
 
 **Tests to run after:**
-- `SearchServiceTests` (9 tests) — pagination, cross-series, DTO mapping
-- `SearchControllerTests` (6 tests) — query validation, page size clamping
-- Full test suite: **176 tests, all passing**
+- `SearchServiceTests` (10 tests) — pagination, cross-series, DTO mapping, history logging
+- `SearchControllerTests` (8 tests) — query validation, min-length, page size clamping
+- Full test suite: **179 tests, all passing**
 
 ---
 

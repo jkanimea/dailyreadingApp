@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using EncounterDaily.API.Controllers;
 using EncounterDaily.Core.DTOs.Search;
 using EncounterDaily.Core.Interfaces.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 
@@ -16,6 +18,16 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         {
             _mockService = new Mock<ISearchService>();
             _controller = new SearchController(_mockService.Object);
+            _controller.ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, "1")
+                    }))
+                }
+            };
         }
 
         [Fact]
@@ -29,7 +41,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
                 },
                 TotalCount = 1, Page = 1, PageSize = 20
             };
-            _mockService.Setup(s => s.SearchAsync(1, "Mark", 1, 20)).ReturnsAsync(paged);
+            _mockService.Setup(s => s.SearchAsync(1, 1, "Mark", 1, 20)).ReturnsAsync(paged);
 
             var result = await _controller.Search("Mark", 1, 1, 20);
 
@@ -55,6 +67,14 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         }
 
         [Fact]
+        public async Task Search_ShouldReturnBadRequest_WhenQueryTooShort()
+        {
+            var result = await _controller.Search("a", 1, 1, 20);
+
+            result.Result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
         public async Task SearchAll_ShouldReturnOk_WithResults()
         {
             var paged = new PagedResult<SearchResultDto>
@@ -66,7 +86,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
                 },
                 TotalCount = 2, Page = 1, PageSize = 20
             };
-            _mockService.Setup(s => s.SearchAllAsync("Jesus", 1, 20)).ReturnsAsync(paged);
+            _mockService.Setup(s => s.SearchAllAsync(1, "Jesus", 1, 20)).ReturnsAsync(paged);
 
             var result = await _controller.SearchAll("Jesus", 1, 20);
 
@@ -84,6 +104,14 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         }
 
         [Fact]
+        public async Task SearchAll_ShouldReturnBadRequest_WhenQueryTooShort()
+        {
+            var result = await _controller.SearchAll("x", 1, 20);
+
+            result.Result.Should().BeOfType<BadRequestObjectResult>();
+        }
+
+        [Fact]
         public async Task Search_ShouldClampPageSize()
         {
             var paged = new PagedResult<SearchResultDto>
@@ -91,11 +119,11 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
                 Items = new List<SearchResultDto>(),
                 TotalCount = 0, Page = 1, PageSize = 100
             };
-            _mockService.Setup(s => s.SearchAsync(1, "Mark", 1, 100)).ReturnsAsync(paged);
+            _mockService.Setup(s => s.SearchAsync(1, 1, "Mark", 1, 100)).ReturnsAsync(paged);
 
             var result = await _controller.Search("Mark", 1, 1, 200);
 
-            _mockService.Verify(s => s.SearchAsync(1, "Mark", 1, 100), Times.Once);
+            _mockService.Verify(s => s.SearchAsync(1, 1, "Mark", 1, 100), Times.Once);
         }
     }
 }

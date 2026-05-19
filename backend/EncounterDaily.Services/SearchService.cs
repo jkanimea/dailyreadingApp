@@ -1,4 +1,5 @@
 using EncounterDaily.Core.DTOs.Search;
+using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Services;
 
@@ -13,16 +14,31 @@ namespace EncounterDaily.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<PagedResult<SearchResultDto>> SearchAsync(int seriesId, string searchTerm, int page, int pageSize)
+        public async Task<PagedResult<SearchResultDto>> SearchAsync(int userId, int seriesId, string searchTerm, int page, int pageSize)
         {
             var result = await _unitOfWork.Search.SearchAsync(seriesId, searchTerm, page, pageSize);
+
+            await LogSearchHistory(userId, seriesId, searchTerm);
+
             return MapToDto(result);
         }
 
-        public async Task<PagedResult<SearchResultDto>> SearchAllAsync(string searchTerm, int page, int pageSize)
+        public async Task<PagedResult<SearchResultDto>> SearchAllAsync(int userId, string searchTerm, int page, int pageSize)
         {
             var result = await _unitOfWork.Search.SearchAllAsync(searchTerm, page, pageSize);
             return MapToDto(result);
+        }
+
+        private async Task LogSearchHistory(int userId, int seriesId, string searchTerm)
+        {
+            var history = new SearchHistory
+            {
+                UserId = userId,
+                SeriesId = seriesId,
+                SearchTerm = searchTerm
+            };
+            await _unitOfWork.Repository<SearchHistory>().AddAsync(history);
+            await _unitOfWork.CompleteAsync();
         }
 
         private static PagedResult<SearchResultDto> MapToDto(PagedResult<Core.Entities.DailyReading> paged)

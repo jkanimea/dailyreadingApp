@@ -13,6 +13,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
     {
         private readonly Mock<IUnitOfWork> _mockUow;
         private readonly Mock<ISearchRepository> _mockSearchRepo;
+        private readonly Mock<IRepository<SearchHistory>> _mockHistoryRepo;
         private readonly ISearchService _service;
         private readonly Series _series;
         private readonly DailyReading _exodusReading;
@@ -33,8 +34,11 @@ namespace EncounterDaily.Tests.UnitTests.Services
                 FullTextPrimary = "The beginning of the gospel of Jesus Christ"
             };
             _mockSearchRepo = new Mock<ISearchRepository>();
+            _mockHistoryRepo = new Mock<IRepository<SearchHistory>>();
             _mockUow = new Mock<IUnitOfWork>();
             _mockUow.Setup(u => u.Search).Returns(_mockSearchRepo.Object);
+            _mockUow.Setup(u => u.Repository<SearchHistory>()).Returns(_mockHistoryRepo.Object);
+            _mockUow.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
             _service = new SearchService(_mockUow.Object);
         }
 
@@ -48,7 +52,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             };
             _mockSearchRepo.Setup(r => r.SearchAsync(1, "Exodus", 1, 20)).ReturnsAsync(paged);
 
-            var result = await _service.SearchAsync(1, "Exodus", 1, 20);
+            var result = await _service.SearchAsync(1, 1, "Exodus", 1, 20);
 
             result.Should().NotBeNull();
             result.Items.Should().HaveCount(1);
@@ -66,7 +70,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             };
             _mockSearchRepo.Setup(r => r.SearchAsync(1, "NonExistent", 1, 20)).ReturnsAsync(paged);
 
-            var result = await _service.SearchAsync(1, "NonExistent", 1, 20);
+            var result = await _service.SearchAsync(1, 1, "NonExistent", 1, 20);
 
             result.Items.Should().BeEmpty();
             result.TotalCount.Should().Be(0);
@@ -82,7 +86,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             };
             _mockSearchRepo.Setup(r => r.SearchAsync(1, "Mark", 1, 20)).ReturnsAsync(paged);
 
-            var result = await _service.SearchAsync(1, "Mark", 1, 20);
+            var result = await _service.SearchAsync(1, 1, "Mark", 1, 20);
 
             result.Items.First().SeriesName.Should().Be("Daily Audio Bible");
         }
@@ -103,7 +107,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             };
             _mockSearchRepo.Setup(r => r.SearchAsync(1, "Reading", 1, 10)).ReturnsAsync(paged);
 
-            var result = await _service.SearchAsync(1, "Reading", 1, 10);
+            var result = await _service.SearchAsync(1, 1, "Reading", 1, 10);
 
             result.Items.Should().HaveCount(10);
             result.TotalCount.Should().Be(50);
@@ -127,7 +131,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             };
             _mockSearchRepo.Setup(r => r.SearchAllAsync("Jesus", 1, 20)).ReturnsAsync(paged);
 
-            var result = await _service.SearchAllAsync("Jesus", 1, 20);
+            var result = await _service.SearchAllAsync(1, "Jesus", 1, 20);
 
             result.Items.Should().HaveCount(2);
             result.TotalCount.Should().Be(2);
@@ -143,7 +147,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             };
             _mockSearchRepo.Setup(r => r.SearchAllAsync("NonExistent", 1, 20)).ReturnsAsync(paged);
 
-            var result = await _service.SearchAllAsync("NonExistent", 1, 20);
+            var result = await _service.SearchAllAsync(1, "NonExistent", 1, 20);
 
             result.Items.Should().BeEmpty();
         }
@@ -158,7 +162,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             };
             _mockSearchRepo.Setup(r => r.SearchAsync(1, "gospel", 1, 20)).ReturnsAsync(paged);
 
-            var result = await _service.SearchAsync(1, "gospel", 1, 20);
+            var result = await _service.SearchAsync(1, 1, "gospel", 1, 20);
 
             var item = result.Items.First();
             item.FullTextPrimary.Should().Contain("gospel");
@@ -174,11 +178,27 @@ namespace EncounterDaily.Tests.UnitTests.Services
             };
             _mockSearchRepo.Setup(r => r.SearchAsync(1, "Exodus", 1, 20)).ReturnsAsync(paged);
 
-            var result = await _service.SearchAsync(1, "Exodus", 1, 20);
+            var result = await _service.SearchAsync(1, 1, "Exodus", 1, 20);
 
             var item = result.Items.First();
             item.Month.Should().Be(1);
             item.Day.Should().Be(15);
+        }
+
+        [Fact]
+        public async Task SearchAsync_ShouldLogHistory()
+        {
+            var paged = new PagedResult<DailyReading>
+            {
+                Items = new List<DailyReading> { _exodusReading },
+                TotalCount = 1, Page = 1, PageSize = 20
+            };
+            _mockSearchRepo.Setup(r => r.SearchAsync(1, "Exodus", 1, 20)).ReturnsAsync(paged);
+
+            var result = await _service.SearchAsync(1, 1, "Exodus", 1, 20);
+
+            _mockHistoryRepo.Verify(r => r.AddAsync(It.Is<SearchHistory>(h => h.UserId == 1 && h.SeriesId == 1 && h.SearchTerm == "Exodus")), Times.Once);
+            _mockUow.Verify(u => u.CompleteAsync(), Times.Once);
         }
     }
 }
