@@ -27,9 +27,9 @@ namespace EncounterDaily.Core.Entities
         public int? SecondaryBookPageStart { get; set; }
         public int? SecondaryBookPageEnd { get; set; }
 
-        public string? FullTextPrimary { get; set; }
-        public string? FullTextSecondary { get; set; }
-        public string? SummaryPoints { get; set; }
+    public string? FullTextPrimary { get; set; }
+    public string? FullTextSecondary { get; set; }
+    public string? SummaryPoints { get; set; }
 
         public int SortOrder { get; set; }
 

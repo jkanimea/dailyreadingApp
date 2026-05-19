@@ -2,6 +2,7 @@
 using CsvHelper;
 using CsvHelper.Configuration;
 using EncounterDaily.Core.Entities;
+using EncounterDaily.Core.Enums;
 using EncounterDaily.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,14 +18,26 @@ switch (command)
     case "import":
         await ImportCsvAsync(argsList.ElementAtOrDefault(1) ?? "", force);
         break;
+    case "seeddata":
+        await SeedDatabaseAsync(force);
+        break;
     case "summarize":
         await SummarizeCommandAsync(argsList);
+        break;
+    case "ingesttext":
+        await IngestTextCommandAsync(argsList);
+        break;
+    case "ingestbible":
+        await IngestBibleCommandAsync(argsList);
         break;
     default:
         Console.WriteLine("Usage:");
         Console.WriteLine("  dotnet run -- generate [output-dir]");
         Console.WriteLine("  dotnet run -- [--force|-y] import <csv-file>");
+        Console.WriteLine("  dotnet run -- [--force|-y] seeddata");
         Console.WriteLine("  dotnet run -- summarize [--dry-run] [--series <id>] [--model <name>] [--delay <ms>]");
+        Console.WriteLine("  dotnet run -- ingesttext --book <CODE> [--series <id>] [--max-length <n>] [--delay <ms>] [--dry-run]");
+        Console.WriteLine("  dotnet run -- ingestbible [--dry-run]");
         break;
 }
 
@@ -54,6 +67,34 @@ static async Task SummarizeCommandAsync(List<string> argsList)
     var cmd = new SummarizeCommand(connectionString, apiKey, model, delayMs, dryRun, seriesFilter);
     int errors = await cmd.ExecuteAsync();
     Environment.ExitCode = errors > 0 ? 1 : 0;
+}
+
+static async Task IngestTextCommandAsync(List<string> argsList)
+{
+    var bookCode = "ALL";
+    int? seriesFilter = null;
+    int maxTextLength = 20000;
+    int delayMs = 1000;
+    var dryRun = argsList.Remove("--dry-run");
+
+    for (int i = 0; i < argsList.Count; i++)
+    {
+        if (argsList[i] == "--book" && i + 1 < argsList.Count)
+            bookCode = argsList[++i];
+        else if (argsList[i] == "--series" && i + 1 < argsList.Count)
+            seriesFilter = int.Parse(argsList[++i]);
+        else if (argsList[i] == "--max-length" && i + 1 < argsList.Count)
+            maxTextLength = int.Parse(argsList[++i]);
+        else if (argsList[i] == "--delay" && i + 1 < argsList.Count)
+            delayMs = int.Parse(argsList[++i]);
+    }
+
+    var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+        ?? "Server=(localdb)\\mssqllocaldb;Database=EncounterDaily;Trusted_Connection=True;";
+
+    var cmd = new IngestTextCommand(connectionString, bookCode, seriesFilter, dryRun, maxTextLength, delayMs);
+    int exitCode = await cmd.ExecuteAsync();
+    Environment.ExitCode = exitCode;
 }
 
 static Task GenerateSeedCsvAsync(string outputDir)
@@ -197,6 +238,122 @@ static async Task ImportCsvAsync(string csvPath, bool force)
 
     await context.SaveChangesAsync();
     Console.WriteLine($"Imported {records.Count} readings for series {seriesId}");
+}
+
+static async Task SeedDatabaseAsync(bool force)
+{
+    var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+        ?? "Server=(localdb)\\mssqllocaldb;Database=EncounterDaily;Trusted_Connection=True;";
+
+    var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+    optionsBuilder.UseSqlServer(connectionString);
+
+    using var context = new AppDbContext(optionsBuilder.Options);
+
+    if (force)
+    {
+        await context.Database.EnsureDeletedAsync();
+        await context.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await context.Database.EnsureCreatedAsync();
+        if (await context.Set<Book>().AnyAsync())
+        {
+            Console.WriteLine("Database already seeded. Use --force to re-seed.");
+            return;
+        }
+    }
+
+    var books = new List<Book>
+    {
+        new() { Title = "Desire of Ages", Author = "Ellen G. White", BookType = BookType.DesireOfAges, PageCount = 900, FullTextSource = "elllenwhite.info" },
+        new() { Title = "Acts of the Apostles", Author = "Ellen G. White", BookType = BookType.ActsOfTheApostles, PageCount = 600, FullTextSource = "elllenwhite.info" },
+        new() { Title = "The Great Controversy", Author = "Ellen G. White", BookType = BookType.GreatControversy, PageCount = 700, FullTextSource = "elllenwhite.info" },
+        new() { Title = "Patriarchs and Prophets", Author = "Ellen G. White", BookType = BookType.PatriarchsAndProphets, PageCount = 800, FullTextSource = "elllenwhite.info" },
+        new() { Title = "Prophets and Kings", Author = "Ellen G. White", BookType = BookType.ProphetsAndKings, PageCount = 750, FullTextSource = "elllenwhite.info" },
+    };
+    context.Set<Book>().AddRange(books);
+    await context.SaveChangesAsync();
+
+    var da = books[0].Id;
+    var aa = books[1].Id;
+    var gc = books[2].Id;
+    var pp = books[3].Id;
+    var pk = books[4].Id;
+
+    var seriesList = new List<Series>
+    {
+        new() { Name = "Christ The Way", ShortName = "ctw", Description = "Daily readings from Desire of Ages", SeriesType = SeriesType.ChristTheWay, PrimaryBookId = da, SortOrder = 1 },
+        new() { Name = "Christ The Church", ShortName = "ctc", Description = "Daily readings from Acts of the Apostles and Great Controversy", SeriesType = SeriesType.ChristTheChurch, PrimaryBookId = aa, SecondaryBookId = gc, SortOrder = 2 },
+        new() { Name = "Christ Our Redemption", ShortName = "cor", Description = "Daily readings from Patriarchs and Prophets", SeriesType = SeriesType.ChristOurRedemption, PrimaryBookId = pp, SortOrder = 3 },
+        new() { Name = "Christ Our Hope", ShortName = "coh", Description = "Daily readings from Prophets and Kings", SeriesType = SeriesType.ChristOurHope, PrimaryBookId = pk, SortOrder = 4 },
+    };
+    context.Set<Series>().AddRange(seriesList);
+    await context.SaveChangesAsync();
+
+    var seedDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "..", "database", "seed-data");
+    if (!Directory.Exists(seedDir))
+        seedDir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "database", "seed-data");
+    if (!Directory.Exists(seedDir))
+        seedDir = "seed-data";
+
+    int total = 0;
+    foreach (var series in seriesList)
+    {
+        var csvPath = Path.Combine(seedDir, $"series-{series.Id}-readings.csv");
+        if (!File.Exists(csvPath))
+        {
+            Console.WriteLine($"  CSV not found: {csvPath}");
+            continue;
+        }
+
+        using var reader = new StreamReader(csvPath);
+        using var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HeaderValidated = null,
+            MissingFieldFound = null
+        });
+
+        var records = csv.GetRecords<CsvReadingRecord>().ToList();
+        foreach (var record in records)
+        {
+            context.Set<DailyReading>().Add(new DailyReading
+            {
+                SeriesId = series.Id,
+                Month = record.Month,
+                Day = record.Day,
+                BibleReading = record.BibleReading,
+                PrimaryBookPageRange = record.PrimaryBookPageRange,
+                PrimaryBookPageStart = record.PrimaryBookPageStart,
+                PrimaryBookPageEnd = record.PrimaryBookPageEnd,
+                SecondaryBookPageRange = record.SecondaryBookPageRange,
+                SecondaryBookPageStart = record.SecondaryBookPageStart,
+                SecondaryBookPageEnd = record.SecondaryBookPageEnd,
+                FullTextPrimary = record.FullTextPrimary,
+                FullTextSecondary = record.FullTextSecondary,
+                SummaryPoints = record.SummaryPoints,
+                SortOrder = record.SortOrder
+            });
+        }
+        total += records.Count;
+        Console.WriteLine($"  Imported series \"{series.Name}\": {records.Count} readings");
+    }
+
+    await context.SaveChangesAsync();
+    Console.WriteLine($"Seeded database: {books.Count} books, {seriesList.Count} series, {total} daily readings");
+}
+
+static async Task IngestBibleCommandAsync(List<string> argsList)
+{
+    var dryRun = argsList.Remove("--dry-run");
+
+    var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+        ?? "Server=(localdb)\\mssqllocaldb;Database=EncounterDaily;Trusted_Connection=True;";
+
+    var cmd = new IngestBibleCommand(connectionString, dryRun);
+    int exitCode = await cmd.ExecuteAsync();
+    Environment.ExitCode = exitCode;
 }
 
 public record SeriesConfigInfo(int SeriesId, string Name, string PrimaryBook, string? SecondaryBook, int Pages, int? PagesSecondary);

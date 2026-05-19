@@ -11,5 +11,6 @@ namespace EncounterDaily.Core.Interfaces.Repositories
         Task UpdateAsync(T entity);
         Task DeleteAsync(int id);
         Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate);
+        IQueryable<T> Query();
     }
 }

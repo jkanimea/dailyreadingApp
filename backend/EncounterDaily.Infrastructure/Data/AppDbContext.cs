@@ -16,6 +16,8 @@ namespace EncounterDaily.Infrastructure.Data
         public DbSet<UserSeriesPreference> UserSeriesPreferences { get; set; } = null!;
         public DbSet<SearchHistory> SearchHistory { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+        public DbSet<BibleBook> BibleBooks { get; set; } = null!;
+        public DbSet<BibleVerse> BibleVerses { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -105,6 +107,21 @@ namespace EncounterDaily.Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.SeriesId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<BibleBook>(entity =>
+            {
+                entity.HasIndex(e => e.Name).IsUnique();
+                entity.HasIndex(e => e.Abbreviation).IsUnique();
+            });
+
+            modelBuilder.Entity<BibleVerse>(entity =>
+            {
+                entity.HasIndex(e => new { e.BookId, e.Chapter, e.Verse }).IsUnique();
+                entity.HasOne(e => e.Book)
+                    .WithMany(b => b.Verses)
+                    .HasForeignKey(e => e.BookId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<RefreshToken>(entity =>

@@ -140,6 +140,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             result.Id.Should().Be(1);
             result.FullTextPrimary.Should().Be("Full text...");
             result.HasSecondaryReading.Should().BeFalse();
+            result.BibleReading.Should().Be("John 3:16");
         }
 
         [Fact]

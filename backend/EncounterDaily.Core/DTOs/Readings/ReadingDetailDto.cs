@@ -8,6 +8,7 @@ namespace EncounterDaily.Core.DTOs.Readings
         public int Month { get; set; }
         public int Day { get; set; }
         public string BibleReading { get; set; } = string.Empty;
+        public string? FullTextBible { get; set; }
         public string? FullTextPrimary { get; set; }
         public string? FullTextSecondary { get; set; }
         public string PrimaryBookPageRange { get; set; } = string.Empty;

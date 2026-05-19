@@ -54,5 +54,10 @@ namespace EncounterDaily.Infrastructure.Repositories
         {
             return await _dbSet.AnyAsync(predicate);
         }
+
+        public virtual IQueryable<T> Query()
+        {
+            return _dbSet.AsQueryable();
+        }
     }
 }
