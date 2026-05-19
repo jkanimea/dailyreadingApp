@@ -108,3 +108,46 @@ npm run test:performance
    ```
 
 4. Verify the response contains `fullTextBible` (from BibleVerse table) and `fullTextPrimary` (assembled from EgwPage table, not stored per-reading).
+
+## Android Device Testing
+
+### Prerequisites
+- Android Studio with Android SDK
+- USB debugging enabled on your phone
+- Java 17+
+
+### Step-by-step
+
+1. **Add the Android platform** (run once):
+   ```powershell
+   npx cap add android
+   ```
+
+2. **Build the frontend and copy to Android** (run after every code change):
+   ```powershell
+   npx cap copy
+   npx cap run android
+   ```
+
+   > **Note**: Use `;` between commands (PowerShell 5.1), not `&&`.  
+   > Bad: `npx cap copy && npx cap run android`  
+   > Good: `npx cap copy; npx cap run android`
+
+3. **Open in Android Studio** (alternative to `run`):
+   ```powershell
+   npx cap open android
+   ```
+   Then click the green **Run** button in Android Studio.
+
+### Run the API for Android testing
+
+```powershell
+cd backend\EncounterDaily.API
+$env:ConnectionStrings__DefaultConnection = "Server=(localdb)\mssqllocaldb;Database=EncounterDaily;Trusted_Connection=True;"
+dotnet run --urls "http://0.0.0.0:5000"
+```
+
+Find your LAN IP with `ipconfig`, then update `frontend\src\environments\environment.ts`:
+```ts
+apiUrl: 'http://192.168.1.X:5000/api/v1'
+```
