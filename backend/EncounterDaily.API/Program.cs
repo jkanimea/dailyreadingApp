@@ -51,18 +51,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+var mobileOrigins = new[] { "capacitor://localhost", "http://localhost", "https://localhost" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowMobileApp", policy =>
     {
         policy.AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
         if (builder.Environment.IsDevelopment())
-            policy.AllowAnyOrigin();
+            policy.WithOrigins(mobileOrigins).SetIsOriginAllowed(_ => true);
         else
-            policy.WithOrigins(
-                builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                ?? Array.Empty<string>());
+            policy.WithOrigins(mobileOrigins);
     });
 });
 

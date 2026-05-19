@@ -17,11 +17,43 @@ switch (command)
     case "import":
         await ImportCsvAsync(argsList.ElementAtOrDefault(1) ?? "", force);
         break;
+    case "summarize":
+        await SummarizeCommandAsync(argsList);
+        break;
     default:
         Console.WriteLine("Usage:");
         Console.WriteLine("  dotnet run -- generate [output-dir]");
         Console.WriteLine("  dotnet run -- [--force|-y] import <csv-file>");
+        Console.WriteLine("  dotnet run -- summarize [--dry-run] [--series <id>] [--model <name>] [--delay <ms>]");
         break;
+}
+
+static async Task SummarizeCommandAsync(List<string> argsList)
+{
+    var dryRun = argsList.Remove("--dry-run");
+    int? seriesFilter = null;
+    string model = "openai/gpt-4o-mini";
+    int delayMs = 500;
+
+    for (int i = 1; i < argsList.Count; i++)
+    {
+        if (argsList[i] == "--series" && i + 1 < argsList.Count)
+            seriesFilter = int.Parse(argsList[++i]);
+        else if (argsList[i] == "--model" && i + 1 < argsList.Count)
+            model = argsList[++i];
+        else if (argsList[i] == "--delay" && i + 1 < argsList.Count)
+            delayMs = int.Parse(argsList[++i]);
+    }
+
+    var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
+        ?? "Server=(localdb)\\mssqllocaldb;Database=EncounterDaily;Trusted_Connection=True;";
+
+    var apiKey = Environment.GetEnvironmentVariable("OPENROUTER_API_KEY")
+        ?? throw new InvalidOperationException("OPENROUTER_API_KEY environment variable is not set.");
+
+    var cmd = new SummarizeCommand(connectionString, apiKey, model, delayMs, dryRun, seriesFilter);
+    int errors = await cmd.ExecuteAsync();
+    Environment.ExitCode = errors > 0 ? 1 : 0;
 }
 
 static Task GenerateSeedCsvAsync(string outputDir)
