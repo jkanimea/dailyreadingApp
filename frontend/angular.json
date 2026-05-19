@@ -42,8 +42,12 @@
           },
           "configurations": {
             "production": {
+              "optimization": true,
+              "aot": true,
+              "buildOptimizer": true,
+              "vendorChunk": false,
               "budgets": [
-                { "type": "initial", "maximumWarning": "2mb", "maximumError": "5mb" },
+                { "type": "initial", "maximumWarning": "600kb", "maximumError": "1mb" },
                 { "type": "anyComponentStyle", "maximumWarning": "2kb", "maximumError": "4kb" }
               ],
               "fileReplacements": [
