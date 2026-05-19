@@ -14,42 +14,54 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add(new AuthorizeFilter());
-});
+var bypassAuth = builder.Configuration.GetValue<bool>("DevMode:BypassAuth");
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
-
-var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
-var rsa = RSA.Create();
-if (!string.IsNullOrEmpty(jwtSettings.RsaPrivateKey))
+if (!bypassAuth)
 {
-    rsa.ImportFromPem(jwtSettings.RsaPrivateKey.ToCharArray());
-}
-
-builder.Services.AddSingleton(rsa);
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    builder.Services.AddControllers(options =>
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
-            ValidAudience = jwtSettings.Audience,
-            IssuerSigningKey = new RsaSecurityKey(rsa),
-            ClockSkew = TimeSpan.Zero
-        };
+        options.Filters.Add(new AuthorizeFilter());
     });
+
+    builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+
+    var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
+    var rsa = RSA.Create();
+    if (!string.IsNullOrEmpty(jwtSettings.RsaPrivateKey))
+    {
+        rsa.ImportFromPem(jwtSettings.RsaPrivateKey.ToCharArray());
+    }
+
+    builder.Services.AddSingleton(rsa);
+
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience,
+                IssuerSigningKey = new RsaSecurityKey(rsa),
+                ClockSkew = TimeSpan.Zero
+            };
+        });
+}
+else
+{
+    builder.Services.AddControllers();
+    builder.Services.AddSingleton(RSA.Create());
+    Console.WriteLine("  [DevMode] Auth bypass enabled — all endpoints are anonymous.");
+}
 
 var mobileOrigins = new[] { "capacitor://localhost", "http://localhost", "https://localhost" };
 
@@ -122,8 +134,11 @@ app.UseCors("AllowMobileApp");
 
 app.UseRateLimiter();
 
-app.UseAuthentication();
-app.UseAuthorization();
+if (!bypassAuth)
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
 
 app.MapControllers()
    .RequireRateLimiting("PerIp");
