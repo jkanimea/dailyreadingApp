@@ -6,13 +6,22 @@
 
 | Layer | What | Scale |
 |---|---|---|
-| **Backend** | .NET 8 Web API with Repository/Unit of Work pattern | 7 tables, 18+ endpoints |
+| **Backend** | .NET 8 Web API with Repository/Unit of Work pattern | 9 tables, 18+ endpoints |
 | **Frontend** | Angular + Ionic + Capacitor mobile app | 8 screens, 7 shared components |
 | **Database** | SQL Server with Full-Text Search | ~1,460 daily readings across 4 series |
 | **Auth** | Google + Facebook OAuth with JWT + refresh tokens | |
 | **Offline** | SQLite cache with bidirectional sync | 3-tier caching |
 | **Notifications** | FCM push notifications | |
 | **Testing** | xUnit, Jest, E2E (Appium/Detox), k6, OWASP ZAP | 80%+ coverage required |
+
+## Data Architecture — Reusable Content Storage
+
+EGW books (DA/AA/GC/PP/PK) and the KJV Bible are stored **once** in reusable tables, not duplicated per-reading:
+
+- **Bible**: `BibleBooks` (66 books) + `BibleVerses` (31,100 verses) — downloaded once from JSON
+- **EGW**: `EgwPages` (3,214 pages across 5 books) — scraped once from ellenwhite.info
+- **At query time**: `ReadingService` assembles text by looking up `BibleVerse` (for Bible reading) and `EgwPages` (for page range), then returns it in the DTO
+- **Result**: Adding a new series/reference that uses existing books requires **zero HTTP requests** — text is assembled from cached EgwPages
 
 ---
 
@@ -92,13 +101,15 @@
 - Broader search: `SearchByTextAsync` now searches `FullTextSecondary` and `SummaryPoints` too
 - Aligned routes to `/api/v1/` prefix
 
-**Tests to run after:**
-- `ReadingServiceTests` (13 tests) — includes today, full, summary coverage
-- `ReadingRepositoryTests` (5 tests)
-- `ReadingControllerTests` (11 tests) — DTO-based returns
-- `SeriesServiceTests`
-- `SeriesControllerTests` (4 tests) — includes config endpoint
-- Full test suite: **150 tests, all passing**
+**Phase 3 extended — Reusable EGW text storage:**
+- Added `EgwPage` entity (BookId, PageNumber, Text) with unique index on (BookId, PageNumber)
+- `IngestTextCommand` now **scrapes once** → stores pages in `EgwPage` table → assembles `FullTextPrimary` from cached pages
+- On re-run or when adding a new series: checks `EgwPage` cache first — **skips web scrape** if pages already exist, assembles directly from DB
+- `ReadingService.GetFullReadingAsync` assembles EGW text at query time from `EgwPages` (like `BibleVerse` lookup), not from per-reading entity fields
+- `EgwPage` table: ~3,214 total pages (DA: 716, AA: 587, GC: 659, PP: 595, PK: 657)
+- New `BibleBooks`/`BibleVerses` tables (66 books, ~31K verses) — **Bible** downloaded once from public JSON, stored permanently, looked up at query time
+- `IRepository<T>.Query()` method added for ad-hoc IQueryable access (used by Bible + EgwPage lookups)
+- 6 new unit tests covering EgwPage assembly edge cases (185 total, all passing)
 
 ---
 
