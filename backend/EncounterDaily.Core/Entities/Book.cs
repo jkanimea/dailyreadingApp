@@ -22,5 +22,6 @@ namespace EncounterDaily.Core.Entities
 
         public ICollection<Series> PrimarySeries { get; set; } = new List<Series>();
         public ICollection<Series> SecondarySeries { get; set; } = new List<Series>();
+        public ICollection<EgwPage> EgwPages { get; set; } = new List<EgwPage>();
     }
 }

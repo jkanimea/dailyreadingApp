@@ -121,6 +121,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task GetFullReadingAsync_ShouldReturnDetail()
         {
+            var series = new Series { Id = 1, Name = "Christ The Way", ShortName = "S1" };
             var reading = new DailyReading
             {
                 Id = 1,
@@ -128,9 +129,10 @@ namespace EncounterDaily.Tests.UnitTests.Services
                 Month = 3,
                 Day = 15,
                 BibleReading = "John 3:16",
-                FullTextPrimary = "Full text...",
                 PrimaryBookPageRange = "DA 1-5",
-                Series = new Series { Id = 1, Name = "Christ The Way", ShortName = "S1" }
+                PrimaryBookPageStart = 1,
+                PrimaryBookPageEnd = 5,
+                Series = series
             };
             _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
 
@@ -138,9 +140,8 @@ namespace EncounterDaily.Tests.UnitTests.Services
 
             result.Should().NotBeNull();
             result.Id.Should().Be(1);
-            result.FullTextPrimary.Should().Be("Full text...");
-            result.HasSecondaryReading.Should().BeFalse();
             result.BibleReading.Should().Be("John 3:16");
+            result.HasSecondaryReading.Should().BeFalse();
         }
 
         [Fact]

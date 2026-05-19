@@ -18,6 +18,7 @@ namespace EncounterDaily.Infrastructure.Data
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
         public DbSet<BibleBook> BibleBooks { get; set; } = null!;
         public DbSet<BibleVerse> BibleVerses { get; set; } = null!;
+        public DbSet<EgwPage> EgwPages { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -131,6 +132,15 @@ namespace EncounterDaily.Infrastructure.Data
                 entity.HasOne(e => e.User)
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<EgwPage>(entity =>
+            {
+                entity.HasIndex(e => new { e.BookId, e.PageNumber }).IsUnique();
+                entity.HasOne(e => e.Book)
+                    .WithMany(b => b.EgwPages)
+                    .HasForeignKey(e => e.BookId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
         }

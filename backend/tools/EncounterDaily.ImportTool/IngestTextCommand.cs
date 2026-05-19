@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using EncounterDaily.Core.Entities;
+using EncounterDaily.Core.Enums;
 using EncounterDaily.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,6 +49,15 @@ public class IngestTextCommand
         ["GC"] = new() { (2, true) },
         ["PP"] = new() { (3, false) },
         ["PK"] = new() { (4, false) },
+    };
+
+    private static readonly Dictionary<string, BookType> CodeToBookType = new()
+    {
+        ["DA"] = BookType.DesireOfAges,
+        ["AA"] = BookType.ActsOfTheApostles,
+        ["GC"] = BookType.GreatControversy,
+        ["PP"] = BookType.PatriarchsAndProphets,
+        ["PK"] = BookType.ProphetsAndKings,
     };
 
     private readonly string _connectionString;
@@ -116,19 +126,68 @@ public class IngestTextCommand
     {
         var book = Books[code];
 
-        Console.WriteLine($"  Scraping chapters from ellenwhite.info...");
-        var pageTexts = await ScrapePageTextsFromWebAsync(book);
-        Console.WriteLine($"  Parsed {pageTexts.Count} pages with content");
+        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+        optionsBuilder.UseSqlServer(_connectionString);
+        using var context = new AppDbContext(optionsBuilder.Options);
 
-        if (pageTexts.Count == 0)
+        var bookType = CodeToBookType[code];
+        var dbBook = await context.Set<Book>().FirstOrDefaultAsync(b => b.BookType == bookType);
+        if (dbBook == null)
         {
-            Console.Error.WriteLine("  No page markers found. Cannot proceed.");
+            Console.Error.WriteLine($"  Book type {bookType} not found in database. Run seeddata first.");
             return;
         }
 
-        var minPage = pageTexts.Keys.Min();
-        var maxPage = pageTexts.Keys.Max();
-        Console.WriteLine($"  Page range: {minPage} - {maxPage}");
+        Dictionary<int, string>? pageTexts = null;
+        var existingPages = await context.Set<EgwPage>()
+            .Where(p => p.BookId == dbBook.Id)
+            .CountAsync();
+
+        if (existingPages > 0)
+        {
+            Console.WriteLine($"  {existingPages} EgwPages already cached in DB, skipping web scrape.");
+        }
+        else
+        {
+            Console.WriteLine($"  Scraping chapters from ellenwhite.info...");
+            pageTexts = await ScrapePageTextsFromWebAsync(book);
+            Console.WriteLine($"  Parsed {pageTexts.Count} pages with content");
+
+            if (pageTexts.Count == 0)
+            {
+                Console.Error.WriteLine("  No page markers found. Cannot proceed.");
+                return;
+            }
+
+            Console.WriteLine($"  Page range: {pageTexts.Keys.Min()} - {pageTexts.Keys.Max()}");
+
+            Console.WriteLine($"  Storing {pageTexts.Count} pages to EgwPage table...");
+            var egwPages = new List<EgwPage>();
+            foreach (var (pageNum, pageText) in pageTexts)
+            {
+                egwPages.Add(new EgwPage
+                {
+                    BookId = dbBook.Id,
+                    PageNumber = (short)pageNum,
+                    Text = pageText
+                });
+            }
+            context.Set<EgwPage>().AddRange(egwPages);
+            await context.SaveChangesAsync();
+            Console.WriteLine($"  Stored {egwPages.Count} pages.");
+        }
+
+        var allPages = await context.Set<EgwPage>()
+            .Where(p => p.BookId == dbBook.Id)
+            .ToDictionaryAsync(p => (int)p.PageNumber, p => p.Text);
+
+        if (allPages.Count == 0)
+        {
+            Console.Error.WriteLine("  No pages in database. Cannot proceed.");
+            return;
+        }
+
+        Console.WriteLine($"  Cached page range: {allPages.Keys.Min()} - {allPages.Keys.Max()}");
 
         var seriesMappings = BookSeriesMap[code]
             .Where(m => !_seriesFilter.HasValue || m.SeriesId == _seriesFilter.Value)
@@ -141,10 +200,6 @@ public class IngestTextCommand
         }
 
         Console.WriteLine($"  Matching series: {string.Join(", ", seriesMappings.Select(m => $"{m.SeriesId} ({(m.IsSecondary ? "sec" : "pri")})"))}");
-
-        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        optionsBuilder.UseSqlServer(_connectionString);
-        using var context = new AppDbContext(optionsBuilder.Options);
 
         foreach (var (seriesId, isSecondary) in seriesMappings)
         {
@@ -173,7 +228,7 @@ public class IngestTextCommand
                 var textParts = new List<string>();
                 for (int p = startPage; p <= endPage; p++)
                 {
-                    if (pageTexts.TryGetValue(p, out var pt) && !string.IsNullOrWhiteSpace(pt))
+                    if (allPages.TryGetValue(p, out var pt) && !string.IsNullOrWhiteSpace(pt))
                         textParts.Add(pt.Trim());
                 }
 

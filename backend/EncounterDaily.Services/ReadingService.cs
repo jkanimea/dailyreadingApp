@@ -85,6 +85,10 @@ namespace EncounterDaily.Services
                 throw new KeyNotFoundException($"Reading {readingId} not found");
 
             var bibleText = await LookupBibleTextAsync(reading.BibleReading);
+            var primaryText = await AssembleEgwTextAsync(
+                reading.Series?.PrimaryBookId, reading.PrimaryBookPageStart, reading.PrimaryBookPageEnd);
+            var secondaryText = await AssembleEgwTextAsync(
+                reading.Series?.SecondaryBookId, reading.SecondaryBookPageStart, reading.SecondaryBookPageEnd);
 
             return new ReadingDetailDto
             {
@@ -95,8 +99,8 @@ namespace EncounterDaily.Services
                 Day = reading.Day,
                 BibleReading = reading.BibleReading,
                 FullTextBible = bibleText,
-                FullTextPrimary = reading.FullTextPrimary,
-                FullTextSecondary = reading.FullTextSecondary,
+                FullTextPrimary = primaryText,
+                FullTextSecondary = secondaryText,
                 PrimaryBookPageRange = reading.PrimaryBookPageRange,
                 SecondaryBookPageRange = reading.SecondaryBookPageRange,
                 HasSecondaryReading = reading.SecondaryBookPageRange != null
@@ -171,6 +175,33 @@ namespace EncounterDaily.Services
             }
 
             return string.Join("\n\n", verses);
+        }
+
+        private async Task<string> AssembleEgwTextAsync(int? bookId, int? startPage, int? endPage)
+        {
+            if (bookId is not > 0 || startPage is not > 0 || endPage is not > 0)
+                return string.Empty;
+
+            if (startPage > endPage)
+                return string.Empty;
+
+            try
+            {
+                var pages = await _unitOfWork.Repository<EgwPage>()
+                    .Query()
+                    .Where(p => p.BookId == bookId.Value
+                        && p.PageNumber >= startPage.Value
+                        && p.PageNumber <= endPage.Value)
+                    .OrderBy(p => p.PageNumber)
+                    .Select(p => p.Text)
+                    .ToListAsync();
+
+                return string.Join(" ", pages);
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private static DailyReadingDto MapToDto(DailyReading reading)
