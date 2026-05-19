@@ -427,27 +427,65 @@ public class IngestTextCommand
             var group = pageGroups[i];
             int page = group.Key;
 
-            int startPos = group.First().Index + group.First().Length;
-            int endPos = i < pageGroups.Count - 1
-                ? pageGroups[i + 1].First().Index
-                : fullText.Length;
+            int pageStart = i > 0
+                ? pageGroups[i - 1].OrderBy(m => m.Index).Last().Index + pageGroups[i - 1].OrderBy(m => m.Index).Last().Length
+                : group.First().Index;
 
-            int length = endPos - startPos;
-            if (length <= 0) continue;
-
-            var text = fullText.Substring(startPos, length);
             if (markersPresent)
             {
-                text = PageMarkerRegex.Replace(text, "");
-                text = InlinePageBreakRegex.Replace(text, "");
+                var sortedMarkers = group.OrderBy(m => m.Index).ToList();
+                var pageEnd = sortedMarkers[^1].Index;
+                if (pageEnd - pageStart <= 0) continue;
+
+                var segments = new List<string>();
+
+                // First segment: from pageStart to the first marker on this page
+                {
+                    int segEnd = sortedMarkers[0].Index;
+                    if (segEnd > pageStart)
+                    {
+                        var segment = fullText.Substring(pageStart, segEnd - pageStart);
+                        segment = InlinePageBreakRegex.Replace(segment, "");
+                        segment = WhitespaceRegex.Replace(segment, " ").Trim();
+                        if (!string.IsNullOrWhiteSpace(segment))
+                        {
+                            segments.Add($"{segment} [{sortedMarkers[0].Page}.{sortedMarkers[0].Para}]");
+                        }
+                    }
+                }
+
+                // Remaining segments: between consecutive markers (tagged with the closing marker)
+                for (int m = 0; m < sortedMarkers.Count - 1; m++)
+                {
+                    int segStart = sortedMarkers[m].Index + sortedMarkers[m].Length;
+                    int segEnd = sortedMarkers[m + 1].Index;
+                    if (segEnd <= segStart) continue;
+
+                    var segment = fullText.Substring(segStart, segEnd - segStart);
+                    segment = InlinePageBreakRegex.Replace(segment, "");
+                    segment = WhitespaceRegex.Replace(segment, " ").Trim();
+
+                    if (!string.IsNullOrWhiteSpace(segment))
+                    {
+                        segments.Add($"{segment} [{sortedMarkers[m + 1].Page}.{sortedMarkers[m + 1].Para}]");
+                    }
+                }
+
+                result[page] = string.Join(" ", segments);
             }
             else
             {
-                text = PageMarkerBracketRegex.Replace(text, "");
-            }
-            text = WhitespaceRegex.Replace(text, " ");
+                int pageEnd = i < pageGroups.Count - 1
+                    ? pageGroups[i + 1].First().Index
+                    : fullText.Length;
+                int startPos = group.First().Index + group.First().Length;
+                if (pageEnd - startPos <= 0) continue;
 
-            result[page] = text.Trim();
+                var text = fullText.Substring(startPos, pageEnd - startPos);
+                text = PageMarkerBracketRegex.Replace(text, "");
+                text = WhitespaceRegex.Replace(text, " ");
+                result[page] = text.Trim();
+            }
         }
 
         return result;

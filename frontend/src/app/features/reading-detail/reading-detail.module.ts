@@ -15,7 +15,7 @@ import { ActivatedRoute } from '@angular/router';
         <ion-buttons slot="start">
           <ion-back-button defaultHref="/today"></ion-back-button>
         </ion-buttons>
-        <ion-title>{{ reading?.seriesName ?? 'Reading' }}</ion-title>
+        <ion-title>{{ detail?.seriesName ?? 'Reading' }} - Series {{ detail?.seriesId }}</ion-title>
       </ion-toolbar>
       <ion-toolbar *ngIf="detail?.fullTextSecondary">
         <ion-segment [value]="selectedTab" (ionChange)="onTabChange($event)">
@@ -45,13 +45,13 @@ import { ActivatedRoute } from '@angular/router';
         </div>
 
         <div *ngIf="!detail.fullTextSecondary || selectedTab === 'primary'" [style.font-size]="'var(--app-font-size, 17px)'">
-          <h2>{{ detail.primaryBookPageRange }}</h2>
-          <p>{{ detail.fullTextPrimary }}</p>
+          <h2 class="reading-heading">{{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}</h2>
+          <p><span *ngFor="let seg of getParagraphSegments(detail.fullTextPrimary)" class="egw-text"><span *ngIf="seg.isRef" class="para-ref">{{ seg.text }}</span><span *ngIf="!seg.isRef">{{ seg.text }}</span></span></p>
         </div>
 
         <div *ngIf="detail.fullTextSecondary && selectedTab === 'secondary'" [style.font-size]="'var(--app-font-size, 17px)'">
           <h2>Companion: {{ detail.secondaryBookPageRange }}</h2>
-          <p>{{ detail.fullTextSecondary }}</p>
+          <p><span *ngFor="let seg of getParagraphSegments(detail.fullTextSecondary)" class="egw-text"><span *ngIf="seg.isRef" class="para-ref">{{ seg.text }}</span><span *ngIf="!seg.isRef">{{ seg.text }}</span></span></p>
         </div>
       </div>
     </ion-content>
@@ -66,6 +66,27 @@ import { ActivatedRoute } from '@angular/router';
       background: var(--ion-color-light);
       border-radius: 8px;
     }
+    .egw-text {
+      line-height: 1.8;
+    }
+    .reading-heading {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 8px 0;
+    }
+    .para-ref {
+      display: inline-block;
+      font-size: 0.75em;
+      font-weight: 600;
+      color: var(--ion-color-primary);
+      background: var(--ion-color-primary-contrast);
+      border: 1px solid var(--ion-color-primary);
+      border-radius: 4px;
+      padding: 0 5px;
+      margin: 0 2px;
+      vertical-align: super;
+      line-height: 1.4;
+    }
   `]
 })
 class ReadingDetailPage extends BaseReadingPageComponent {
@@ -76,6 +97,40 @@ class ReadingDetailPage extends BaseReadingPageComponent {
     readingService: ReadingService
   ) {
     super(readingService);
+  }
+
+  paraRefRegex = /\[(\d+)\.(\d+)\]/g;
+
+  monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  formatDate(month: number, day: number): string {
+    return `${this.monthNames[month - 1]} ${day}`;
+  }
+
+  cleanPageRange(range: string): string {
+    return range.replace(/\s*pp\.?\s*/i, ' ');
+  }
+
+  getParagraphSegments(text: string | null | undefined): { text: string; isRef: boolean }[] {
+    if (!text) return [];
+    const segments: { text: string; isRef: boolean }[] = [];
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    this.paraRefRegex.lastIndex = 0;
+
+    while ((match = this.paraRefRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        segments.push({ text: text.slice(lastIndex, match.index), isRef: false });
+      }
+      segments.push({ text: match[0], isRef: true });
+      lastIndex = match.index + match[0].length;
+    }
+
+    if (lastIndex < text.length) {
+      segments.push({ text: text.slice(lastIndex), isRef: false });
+    }
+
+    return segments.length > 0 ? segments : [{ text, isRef: false }];
   }
 
   onTabChange(event: CustomEvent): void {

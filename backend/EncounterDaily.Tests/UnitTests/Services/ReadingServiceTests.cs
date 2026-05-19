@@ -298,6 +298,40 @@ namespace EncounterDaily.Tests.UnitTests.Services
 
             result.FullTextPrimary.Should().Be("Page one. Page three. Page five.");
         }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldPreserveParagraphReferencesInEgwText()
+        {
+            var book = new Book { Id = 10, BookType = BookType.DesireOfAges, Title = "Desire of Ages" };
+            var series = new Series { Id = 1, PrimaryBookId = 10, PrimaryBook = book };
+            var reading = new DailyReading
+            {
+                Id = 1, SeriesId = 1, Month = 5, Day = 19,
+                BibleReading = "Mark 5:9",
+                PrimaryBookPageRange = "Desire of Ages 338-339",
+                PrimaryBookPageStart = 338, PrimaryBookPageEnd = 339,
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
+
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            ctx.EgwPages.AddRange(
+                new EgwPage { BookId = 10, PageNumber = 338, Text = "First paragraph content. [338.1] Second paragraph content. [338.2]" },
+                new EgwPage { BookId = 10, PageNumber = 339, Text = "Third paragraph content. [339.1]" });
+            await ctx.SaveChangesAsync();
+            var mockEgwRepo = new Mock<IRepository<EgwPage>>();
+            mockEgwRepo.Setup(r => r.Query()).Returns(ctx.EgwPages);
+            _mockUow.Setup(u => u.Repository<EgwPage>()).Returns(mockEgwRepo.Object);
+
+            var result = await _service.GetFullReadingAsync(1);
+
+            result.FullTextPrimary.Should().Contain("[338.1]");
+            result.FullTextPrimary.Should().Contain("[338.2]");
+            result.FullTextPrimary.Should().Contain("[339.1]");
+            result.FullTextPrimary.Should().Be("First paragraph content. [338.1] Second paragraph content. [338.2] Third paragraph content. [339.1]");
+        }
+
         [Fact]
         public async Task GetFullReadingAsync_ShouldThrow_WhenNotFound()
         {
