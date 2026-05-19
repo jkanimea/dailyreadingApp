@@ -12,6 +12,7 @@ export interface DailyReading {
 }
 
 export interface ReadingDetail extends DailyReading {
+  fullTextBible?: string;
   fullTextPrimary?: string;
   fullTextSecondary?: string;
 }

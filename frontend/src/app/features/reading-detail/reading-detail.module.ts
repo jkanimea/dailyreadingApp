@@ -39,6 +39,11 @@ import { ActivatedRoute } from '@angular/router';
       </div>
 
       <div *ngIf="detail && !loading">
+        <div *ngIf="detail.fullTextBible" [style.font-size]="'var(--app-font-size, 17px)'" class="ion-margin-bottom">
+          <h2>{{ detail.bibleReading }}</h2>
+          <p class="bible-text">{{ detail.fullTextBible }}</p>
+        </div>
+
         <div *ngIf="!detail.fullTextSecondary || selectedTab === 'primary'" [style.font-size]="'var(--app-font-size, 17px)'">
           <h2>{{ detail.primaryBookPageRange }}</h2>
           <p>{{ detail.fullTextPrimary }}</p>
@@ -51,7 +56,17 @@ import { ActivatedRoute } from '@angular/router';
       </div>
     </ion-content>
   `,
-  standalone: false
+  standalone: false,
+  styles: [`
+    .bible-text {
+      font-style: italic;
+      color: var(--ion-color-medium);
+      line-height: 1.6;
+      padding: 12px;
+      background: var(--ion-color-light);
+      border-radius: 8px;
+    }
+  `]
 })
 class ReadingDetailPage extends BaseReadingPageComponent {
   selectedTab = 'primary';
