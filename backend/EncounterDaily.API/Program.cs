@@ -19,6 +19,12 @@ var bypassAuth = builder.Configuration.GetValue<bool>("DevMode:BypassAuth");
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -63,7 +69,7 @@ else
     Console.WriteLine("  [DevMode] Auth bypass enabled — all endpoints are anonymous.");
 }
 
-var mobileOrigins = new[] { "capacitor://localhost", "http://localhost", "https://localhost" };
+var mobileOrigins = new[] { "capacitor://localhost", "http://localhost", "https://localhost", "http://192.168.1.147:8101", "https://192.168.1.147:8101" };
 
 builder.Services.AddCors(options =>
 {

@@ -76,9 +76,54 @@ describe('PreferencesService', () => {
       return Promise.resolve(null);
     });
 
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        PreferencesService,
+        { provide: OfflineStorageService, useValue: storage }
+      ]
+    });
     service = TestBed.inject(PreferencesService);
     await new Promise(r => setTimeout(r, 10));
 
     service.theme$.subscribe(t => expect(t).toBe('dark'));
+  });
+
+  it('getSeriesId should default to 1', () => {
+    expect(service.getSeriesId()).toBe(1);
+  });
+
+  it('seriesId$ should emit default 1', (done) => {
+    service.seriesId$.subscribe(id => {
+      expect(id).toBe(1);
+      done();
+    });
+  });
+
+  it('setSeriesId should update subject and persist', (done) => {
+    service.setSeriesId(2).then(() => {
+      expect(service.getSeriesId()).toBe(2);
+      expect(storage.set).toHaveBeenCalledWith('prefs_series_id', 2);
+      done();
+    });
+  });
+
+  it('should restore saved seriesId from storage', async () => {
+    storage.get = jest.fn().mockImplementation((key: string) => {
+      if (key === 'prefs_series_id') return Promise.resolve(2);
+      return Promise.resolve(null);
+    });
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        PreferencesService,
+        { provide: OfflineStorageService, useValue: storage }
+      ]
+    });
+    service = TestBed.inject(PreferencesService);
+    await new Promise(r => setTimeout(r, 10));
+
+    expect(service.getSeriesId()).toBe(2);
   });
 });

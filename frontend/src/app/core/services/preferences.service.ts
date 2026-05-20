@@ -7,6 +7,7 @@ export type FontSize = 'small' | 'medium' | 'large';
 
 const PREFS_THEME = 'prefs_theme';
 const PREFS_FONT_SIZE = 'prefs_font_size';
+const PREFS_SERIES_ID = 'prefs_series_id';
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
@@ -15,6 +16,9 @@ export class PreferencesService {
 
   private readonly fontSizeSubject = new BehaviorSubject<FontSize>('medium');
   readonly fontSize$ = this.fontSizeSubject.asObservable();
+
+  private readonly seriesIdSubject = new BehaviorSubject<number>(1);
+  readonly seriesId$ = this.seriesIdSubject.asObservable();
 
   constructor(private storage: OfflineStorageService) {
     this.load();
@@ -26,6 +30,9 @@ export class PreferencesService {
 
     const fontSize = await this.storage.get<FontSize>(PREFS_FONT_SIZE);
     if (fontSize) this.fontSizeSubject.next(fontSize);
+
+    const seriesId = await this.storage.get<number>(PREFS_SERIES_ID);
+    if (seriesId) this.seriesIdSubject.next(seriesId);
 
     this.applyTheme(theme ?? 'system');
     this.applyFontSize(fontSize ?? 'medium');
@@ -41,6 +48,15 @@ export class PreferencesService {
     this.fontSizeSubject.next(size);
     await this.storage.set(PREFS_FONT_SIZE, size);
     this.applyFontSize(size);
+  }
+
+  getSeriesId(): number {
+    return this.seriesIdSubject.value;
+  }
+
+  async setSeriesId(id: number): Promise<void> {
+    this.seriesIdSubject.next(id);
+    await this.storage.set(PREFS_SERIES_ID, id);
   }
 
   private applyTheme(mode: ThemeMode): void {

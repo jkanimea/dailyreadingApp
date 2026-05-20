@@ -1,11 +1,15 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
-import { RouterModule, Routes } from '@angular/router';
+import { IonicModule, ActionSheetController } from '@ionic/angular';
+import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { BaseReadingPageComponent } from '../base/base-reading-page-component';
 import { ReadingService } from '../../core/services/reading.service';
+import { SeriesService } from '../../core/services/series.service';
+import { PreferencesService } from '../../core/services/preferences.service';
 import { ActivatedRoute } from '@angular/router';
+import { Series } from '../../core/models/series.model';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-reading-detail',
@@ -15,7 +19,14 @@ import { ActivatedRoute } from '@angular/router';
         <ion-buttons slot="start">
           <ion-back-button defaultHref="/today"></ion-back-button>
         </ion-buttons>
-        <ion-title>{{ detail?.seriesName ?? 'Reading' }} - Series {{ detail?.seriesId }}</ion-title>
+        <ion-title (click)="switchSeries()" style="cursor: pointer">
+          {{ detail?.seriesName ?? 'Reading' }} - Series {{ detail?.seriesId }}
+        </ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="switchSeries()">
+            <ion-icon slot="icon-only" name="swap-horizontal"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
       <ion-toolbar *ngIf="detail?.fullTextSecondary">
         <ion-segment [value]="selectedTab" (ionChange)="onTabChange($event)">
@@ -91,15 +102,55 @@ import { ActivatedRoute } from '@angular/router';
 })
 class ReadingDetailPage extends BaseReadingPageComponent {
   selectedTab = 'primary';
+  seriesList: Series[] = [];
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
+    private seriesService: SeriesService,
+    private prefs: PreferencesService,
+    private actionSheetCtrl: ActionSheetController,
     readingService: ReadingService
   ) {
     super(readingService);
   }
 
   paraRefRegex = /\[(\d+)\.(\d+)\]/g;
+
+  async switchSeries(): Promise<void> {
+    try {
+      this.seriesList = await firstValueFrom(this.seriesService.getAll());
+    } catch {
+      return;
+    }
+
+    const buttons: any[] = this.seriesList.map(s => ({
+      text: `${s.name} - Series ${s.id}`,
+      handler: () => this.onSeriesSelected(s.id)
+    }));
+    buttons.push({ text: 'Cancel', role: 'cancel' });
+
+    const sheet = await this.actionSheetCtrl.create({
+      header: 'Select Series',
+      buttons
+    });
+    await sheet.present();
+  }
+
+  private async onSeriesSelected(seriesId: number): Promise<void> {
+    const current = this.prefs.getSeriesId();
+    if (seriesId === current) return;
+
+    await this.prefs.setSeriesId(seriesId);
+    try {
+      const reading = await firstValueFrom(this.readingService.getToday(seriesId));
+      if (reading?.id) {
+        this.router.navigate(['/reading', reading.id]);
+      }
+    } catch {
+      this.router.navigate(['/today']);
+    }
+  }
 
   monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
