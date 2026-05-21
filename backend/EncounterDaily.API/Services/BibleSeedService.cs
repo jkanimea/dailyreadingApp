@@ -45,6 +45,8 @@ public class BibleSeedService : IHostedService
         using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        await context.Database.EnsureCreatedAsync(cancellationToken);
+
         if (await context.Set<BibleBook>().AnyAsync(cancellationToken))
         {
             _logger.LogInformation("Bible data already exists. Skipping seed.");

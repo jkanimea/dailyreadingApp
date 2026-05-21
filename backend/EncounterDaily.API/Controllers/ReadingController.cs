@@ -15,6 +15,13 @@ namespace EncounterDaily.API.Controllers
             _readingService = readingService;
         }
 
+        [HttpGet("debug/bible-status")]
+        public async Task<ActionResult> GetBibleStatus()
+        {
+            var status = await _readingService.GetBibleStatusAsync();
+            return Ok(status);
+        }
+
         [HttpGet("series/{seriesId}/today")]
         public async Task<ActionResult<DailyReadingDto>> GetToday(int seriesId, [FromQuery] int? month = null, [FromQuery] int? day = null)
         {

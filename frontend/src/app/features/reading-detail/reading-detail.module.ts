@@ -44,9 +44,16 @@ import { firstValueFrom, Subscription } from 'rxjs';
           <h2 class="reading-heading">{{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}</h2>
         </div>
 
-        <div [style.font-size]="'var(--app-font-size, 17px)'" class="ion-margin-bottom">
-          <h2>{{ detail.bibleReading }}</h2>
-          <p *ngIf="detail.fullTextBible" class="bible-text">{{ detail.fullTextBible }}</p>
+        <div class="ion-margin-bottom">
+          <ng-container *ngIf="bibleSections.length > 0; else plainBible">
+            <ng-container *ngFor="let section of bibleSections">
+              <h3 class="bible-section-title">{{ section.title }}</h3>
+              <p class="bible-text">{{ section.verses.join('\n\n') }}</p>
+            </ng-container>
+          </ng-container>
+          <ng-template #plainBible>
+            <p *ngIf="detail.fullTextBible" class="bible-text">{{ detail.fullTextBible }}</p>
+          </ng-template>
         </div>
 
         <div [style.font-size]="'var(--app-font-size, 17px)'">
@@ -62,13 +69,21 @@ import { firstValueFrom, Subscription } from 'rxjs';
   `,
   standalone: false,
   styles: [`
+    .bible-section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 16px 0 8px;
+      color: var(--ion-color-dark);
+    }
     .bible-text {
       font-style: italic;
       color: var(--ion-color-medium);
+      font-size: 15px;
       line-height: 1.6;
       padding: 12px;
       background: var(--ion-color-light);
       border-radius: 8px;
+      white-space: pre-line;
     }
     .egw-text {
       line-height: 1.8;
@@ -161,6 +176,26 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
 
   cleanPageRange(range: string): string {
     return range.replace(/\s*pp\.?\s*/i, ' ');
+  }
+
+  get bibleSections(): { title: string; verses: string[] }[] {
+    const full = this.detail?.fullTextBible;
+    if (!full) return [];
+
+    const sections: { title: string; verses: string[] }[] = [];
+    const blocks = full.split('\n\n');
+    let current: { title: string; verses: string[] } | null = null;
+
+    for (const block of blocks) {
+      if (/^[A-Za-z0-9 ]+ \d+:\d+-\d+$/.test(block.trim())) {
+        current = { title: block, verses: [] };
+        sections.push(current);
+      } else if (current) {
+        current.verses.push(block);
+      }
+    }
+
+    return sections;
   }
 
   getParagraphSegments(text: string | null | undefined): { text: string; isRef: boolean }[] {
