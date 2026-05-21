@@ -127,6 +127,7 @@ builder.Services.AddHttpClient("FacebookGraph", client =>
 });
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
+builder.Services.AddHostedService<EncounterDaily.API.Services.BibleSeedService>();
 
 var app = builder.Build();
 
