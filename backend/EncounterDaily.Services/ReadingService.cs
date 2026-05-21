@@ -204,7 +204,8 @@ namespace EncounterDaily.Services
                     if (found.Count == 0)
                         continue;
 
-                    verses.Add($"{fullName} {chapter}:{verseNum}-{endVerse}");
+                    var headingRange = endVerse == verseNum ? $"{chapter}:{verseNum}" : $"{chapter}:{verseNum}-{endVerse}";
+                    verses.Add($"{fullName} {headingRange}");
                     foreach (var v in found)
                         verses.Add($"{v.Verse} {v.Text}");
                 }

@@ -114,6 +114,75 @@ describe('ReadingDetailPage', () => {
     });
   });
 
+  describe('bibleSections', () => {
+    it('should return empty array when fullTextBible is null', () => {
+      component.detail = { ...mockDetail, fullTextBible: null as any };
+      expect(component.bibleSections).toEqual([]);
+    });
+
+    it('should return empty array when fullTextBible is undefined', () => {
+      component.detail = { ...mockDetail, fullTextBible: undefined as any };
+      expect(component.bibleSections).toEqual([]);
+    });
+
+    it('should return empty array when fullTextBible is empty string', () => {
+      component.detail = { ...mockDetail, fullTextBible: '' };
+      expect(component.bibleSections).toEqual([]);
+    });
+
+    it('should return empty sections for plain verse text without headings', () => {
+      component.detail = mockDetail;
+      expect(component.bibleSections).toEqual([]);
+    });
+
+    it('should parse single section with heading and verses', () => {
+      component.detail = {
+        ...mockDetail,
+        fullTextBible: 'Matthew 9:18-31\n\n18 While he spake these things\n\n19 And Jesus arose'
+      };
+      const sections = component.bibleSections;
+      expect(sections.length).toBe(1);
+      expect(sections[0].title).toBe('Matthew 9:18-31');
+      expect(sections[0].verses).toEqual([
+        '18 While he spake these things',
+        '19 And Jesus arose'
+      ]);
+    });
+
+    it('should parse multiple sections (Matthew and Mark)', () => {
+      component.detail = {
+        ...mockDetail,
+        fullTextBible: 'Matthew 9:18-31\n\n18 While he spake\n\n19 And Jesus\n\nMark 5:21-43\n\n21 And when Jesus\n\n22 And behold'
+      };
+      const sections = component.bibleSections;
+      expect(sections.length).toBe(2);
+      expect(sections[0].title).toBe('Matthew 9:18-31');
+      expect(sections[0].verses).toEqual(['18 While he spake', '19 And Jesus']);
+      expect(sections[1].title).toBe('Mark 5:21-43');
+      expect(sections[1].verses).toEqual(['21 And when Jesus', '22 And behold']);
+    });
+
+    it('should handle numbered book names like 1 Corinthians', () => {
+      component.detail = {
+        ...mockDetail,
+        fullTextBible: '1 Corinthians 13:4-7\n\n4 Charity suffereth long'
+      };
+      const sections = component.bibleSections;
+      expect(sections.length).toBe(1);
+      expect(sections[0].title).toBe('1 Corinthians 13:4-7');
+    });
+
+    it('should handle single verse references (no range)', () => {
+      component.detail = {
+        ...mockDetail,
+        fullTextBible: 'Acts 13:3\n\n3 Then when they had fasted'
+      };
+      const sections = component.bibleSections;
+      expect(sections.length).toBe(1);
+      expect(sections[0].title).toBe('Acts 13:3');
+    });
+  });
+
   describe('getParagraphSegments', () => {
     it('should return empty array for null text', () => {
       expect(component.getParagraphSegments(null)).toEqual([]);
@@ -231,6 +300,40 @@ describe('ReadingDetailPage', () => {
       const el: HTMLElement = fixture.nativeElement.querySelector('ion-title');
       expect(el.textContent).toContain('Christ The Church');
       expect(el.textContent).toContain('Series 2');
+    }));
+
+    it('should render bible section headings as h3 elements', fakeAsync(() => {
+      component.detail = {
+        ...mockDetail,
+        fullTextBible: 'Matthew 9:18-31\n\n18 While he spake\n\nMark 5:21-43\n\n21 And when Jesus'
+      };
+      fixture.detectChanges();
+      const titles = fixture.nativeElement.querySelectorAll('.bible-section-title');
+      expect(titles.length).toBe(2);
+      expect(titles[0].textContent).toBe('Matthew 9:18-31');
+      expect(titles[1].textContent).toBe('Mark 5:21-43');
+    }));
+
+    it('should render a .bible-text paragraph per section', fakeAsync(() => {
+      component.detail = {
+        ...mockDetail,
+        fullTextBible: 'Matthew 9:18-31\n\n18 While he spake\n\nMark 5:21-43\n\n21 And when Jesus'
+      };
+      fixture.detectChanges();
+      const texts = fixture.nativeElement.querySelectorAll('p.bible-text');
+      expect(texts.length).toBe(2);
+      expect(texts[0].textContent).toContain('18 While he spake');
+      expect(texts[1].textContent).toContain('21 And when Jesus');
+    }));
+
+    it('should fall back to plain .bible-text when fullTextBible has no section headings', fakeAsync(() => {
+      component.detail = mockDetail;
+      fixture.detectChanges();
+      const sections = fixture.nativeElement.querySelectorAll('.bible-section-title');
+      expect(sections.length).toBe(0);
+      const el = fixture.nativeElement.querySelector('.bible-text');
+      expect(el).toBeTruthy();
+      expect(el.textContent).toContain('And when they had fasted');
     }));
   });
 });

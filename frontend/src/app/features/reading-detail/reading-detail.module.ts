@@ -187,7 +187,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     let current: { title: string; verses: string[] } | null = null;
 
     for (const block of blocks) {
-      if (/^[A-Za-z0-9 ]+ \d+:\d+-\d+$/.test(block.trim())) {
+      if (/^[A-Za-z0-9 ]+ \d+:\d+(?:-\d+)?$/.test(block.trim())) {
         current = { title: block, verses: [] };
         sections.push(current);
       } else if (current) {
