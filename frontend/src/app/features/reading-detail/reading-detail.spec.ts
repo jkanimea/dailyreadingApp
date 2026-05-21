@@ -210,6 +210,15 @@ describe('ReadingDetailPage', () => {
       expect(el.textContent).toContain('And when they had fasted');
     }));
 
+    it('should show bible reading heading even when fullTextBible is empty', fakeAsync(() => {
+      component.detail = { ...mockDetail, fullTextBible: '' };
+      fixture.detectChanges();
+      const allHeadings: HTMLElement[] = fixture.nativeElement.querySelectorAll('h2');
+      const bibleHeading = Array.from(allHeadings).find(h => h.textContent === mockDetail.bibleReading);
+      expect(bibleHeading).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('.bible-text')).toBeFalsy();
+    }));
+
     it('should show companion heading when secondary text exists', fakeAsync(() => {
       component.detail = mockDetail;
       fixture.detectChanges();

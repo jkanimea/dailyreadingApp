@@ -44,9 +44,9 @@ import { firstValueFrom, Subscription } from 'rxjs';
           <h2 class="reading-heading">{{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}</h2>
         </div>
 
-        <div *ngIf="detail.fullTextBible" [style.font-size]="'var(--app-font-size, 17px)'" class="ion-margin-bottom">
+        <div [style.font-size]="'var(--app-font-size, 17px)'" class="ion-margin-bottom">
           <h2>{{ detail.bibleReading }}</h2>
-          <p class="bible-text">{{ detail.fullTextBible }}</p>
+          <p *ngIf="detail.fullTextBible" class="bible-text">{{ detail.fullTextBible }}</p>
         </div>
 
         <div [style.font-size]="'var(--app-font-size, 17px)'">

@@ -135,7 +135,7 @@ namespace EncounterDaily.Services
                 var match = BibleRefRegex.Match(part);
                 if (!match.Success)
                 {
-                    verses.Add($"({part})");
+                    verses.Add(part);
                     continue;
                 }
 
@@ -145,7 +145,7 @@ namespace EncounterDaily.Services
 
                 if (!RefAbbrevToFullName.TryGetValue(bookName, out var fullName))
                 {
-                    verses.Add($"({part})");
+                    verses.Add(part);
                     continue;
                 }
 
@@ -158,7 +158,7 @@ namespace EncounterDaily.Services
 
                     if (book == null)
                     {
-                        verses.Add($"({part})");
+                        verses.Add(part);
                         continue;
                     }
 
@@ -168,11 +168,11 @@ namespace EncounterDaily.Services
                         .Select(v => v.Text)
                         .FirstOrDefaultAsync();
 
-                    verses.Add(verse ?? $"({part})");
+                    verses.Add(verse ?? part);
                 }
                 catch
                 {
-                    verses.Add($"({part})");
+                    verses.Add(part);
                 }
             }
 
