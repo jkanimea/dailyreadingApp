@@ -134,20 +134,14 @@ namespace EncounterDaily.Services
             {
                 var match = BibleRefRegex.Match(part);
                 if (!match.Success)
-                {
-                    verses.Add(part);
                     continue;
-                }
 
                 var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
                 var chapter = short.Parse(match.Groups[3].Value);
                 var verseNum = short.Parse(match.Groups[4].Value);
 
                 if (!RefAbbrevToFullName.TryGetValue(bookName, out var fullName))
-                {
-                    verses.Add(part);
                     continue;
-                }
 
                 try
                 {
@@ -157,10 +151,7 @@ namespace EncounterDaily.Services
                         .FirstOrDefaultAsync();
 
                     if (book == null)
-                    {
-                        verses.Add(part);
                         continue;
-                    }
 
                     var verse = await _unitOfWork.Repository<BibleVerse>()
                         .Query()
@@ -168,15 +159,16 @@ namespace EncounterDaily.Services
                         .Select(v => v.Text)
                         .FirstOrDefaultAsync();
 
-                    verses.Add(verse ?? part);
+                    if (verse != null)
+                        verses.Add(verse);
                 }
                 catch
                 {
-                    verses.Add(part);
+                    // skip on error
                 }
             }
 
-            return string.Join("\n\n", verses);
+            return verses.Count > 0 ? string.Join("\n\n", verses) : string.Empty;
         }
 
         private async Task<string> AssembleEgwTextAsync(int? bookId, int? startPage, int? endPage)
