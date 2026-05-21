@@ -342,6 +342,10 @@ static async Task SeedDatabaseAsync(bool force)
 
     await context.SaveChangesAsync();
     Console.WriteLine($"Seeded database: {books.Count} books, {seriesList.Count} series, {total} daily readings");
+
+    Console.WriteLine("\nIngesting Bible data...");
+    var bibleCmd = new IngestBibleCommand(connectionString, false);
+    await bibleCmd.ExecuteAsync();
 }
 
 static async Task IngestBibleCommandAsync(List<string> argsList)

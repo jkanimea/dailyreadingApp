@@ -17,11 +17,23 @@ describe('ReadingService', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('getToday should call correct endpoint', () => {
+  it('getToday should call correct endpoint without date params', () => {
     service.getToday(1).subscribe(r => expect(r.bibleReading).toBe('John 3:16'));
     const req = httpMock.expectOne('https://localhost:5001/api/v1/reading/series/1/today');
     expect(req.request.method).toBe('GET');
+    expect(req.request.params.keys().length).toBe(0);
     req.flush({ id: 1, seriesId: 1, bibleReading: 'John 3:16' });
+  });
+
+  it('getToday should pass month and day query params when provided', () => {
+    service.getToday(2, 5, 21).subscribe();
+    const req = httpMock.expectOne(r =>
+      r.url.includes('/reading/series/2/today') &&
+      r.params.get('month') === '5' &&
+      r.params.get('day') === '21'
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ id: 10, seriesId: 2 });
   });
 
   it('getByDate should call correct endpoint', () => {

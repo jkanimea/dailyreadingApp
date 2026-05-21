@@ -8,8 +8,12 @@ import { HttpParams } from '@angular/common/http';
 export class ReadingService {
   constructor(private api: ApiService) {}
 
-  getToday(seriesId: number): Observable<DailyReading> {
-    return this.api.get<DailyReading>(`/reading/series/${seriesId}/today`);
+  getToday(seriesId: number, month?: number, day?: number): Observable<DailyReading> {
+    let params = new HttpParams();
+    if (month !== undefined && day !== undefined) {
+      params = params.set('month', month).set('day', day);
+    }
+    return this.api.get<DailyReading>(`/reading/series/${seriesId}/today`, params);
   }
 
   getByDate(seriesId: number, month: number, day: number): Observable<DailyReading> {

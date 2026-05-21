@@ -23,7 +23,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public async Task GetToday_ShouldReturnOk_WhenFound()
         {
             var dto = new DailyReadingDto { Id = 1, SeriesId = 1, BibleReading = "John 3:16" };
-            _mockService.Setup(s => s.GetTodayReadingAsync(1)).ReturnsAsync(dto);
+            _mockService.Setup(s => s.GetTodayReadingAsync(1, null, null)).ReturnsAsync(dto);
 
             var result = await _controller.GetToday(1);
 
@@ -35,7 +35,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         [Fact]
         public async Task GetToday_ShouldReturnNotFound_WhenNoReading()
         {
-            _mockService.Setup(s => s.GetTodayReadingAsync(1)).ThrowsAsync(new KeyNotFoundException());
+            _mockService.Setup(s => s.GetTodayReadingAsync(1, null, null)).ThrowsAsync(new KeyNotFoundException());
 
             var result = await _controller.GetToday(1);
 

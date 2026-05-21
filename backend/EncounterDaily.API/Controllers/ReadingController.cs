@@ -16,11 +16,11 @@ namespace EncounterDaily.API.Controllers
         }
 
         [HttpGet("series/{seriesId}/today")]
-        public async Task<ActionResult<DailyReadingDto>> GetToday(int seriesId)
+        public async Task<ActionResult<DailyReadingDto>> GetToday(int seriesId, [FromQuery] int? month = null, [FromQuery] int? day = null)
         {
             try
             {
-                var result = await _readingService.GetTodayReadingAsync(seriesId);
+                var result = await _readingService.GetTodayReadingAsync(seriesId, month, day);
                 return Ok(result);
             }
             catch (KeyNotFoundException)

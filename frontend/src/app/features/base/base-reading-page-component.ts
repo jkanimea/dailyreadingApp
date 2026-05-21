@@ -30,7 +30,8 @@ export abstract class BaseReadingPageComponent implements OnDestroy {
     this.loading = true;
     this.error = undefined;
     try {
-      this.reading = await this.readingService.getToday(seriesId).toPromise();
+      const now = new Date();
+      this.reading = await this.readingService.getToday(seriesId, now.getMonth() + 1, now.getDate()).toPromise();
     } catch {
       this.error = 'Failed to load reading';
     } finally {

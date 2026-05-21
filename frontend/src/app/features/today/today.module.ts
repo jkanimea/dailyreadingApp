@@ -48,7 +48,8 @@ class TodayPage {
     this.error = undefined;
     try {
       const seriesId = this.prefs.getSeriesId();
-      const reading = await this.readingService.getToday(seriesId).toPromise();
+      const now = new Date();
+      const reading = await this.readingService.getToday(seriesId, now.getMonth() + 1, now.getDate()).toPromise();
       if (reading?.id) {
         this.router.navigate(['/reading', reading.id]);
       } else {
