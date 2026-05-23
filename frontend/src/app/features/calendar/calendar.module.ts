@@ -1,11 +1,12 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
-import { RouterModule, Routes } from '@angular/router';
+import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { takeUntil } from 'rxjs/operators';
 import { BaseCalendarPageComponent, CalendarDay } from '../base/base-calendar-page-component';
 import { ReadingService } from '../../core/services/reading.service';
+import { PreferencesService } from '../../core/services/preferences.service';
 
 @Component({
   selector: 'app-calendar',
@@ -100,8 +101,17 @@ class CalendarPage extends BaseCalendarPageComponent {
   dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   private seriesId = 1;
 
-  constructor(readingService: ReadingService) {
+  constructor(
+    readingService: ReadingService,
+    private router: Router,
+    private prefs: PreferencesService
+  ) {
     super(readingService);
+  }
+
+  override ionViewWillEnter(): void {
+    this.seriesId = this.prefs.getSeriesId();
+    super.ionViewWillEnter();
   }
 
   setSeriesId(id: number): void {
@@ -109,7 +119,7 @@ class CalendarPage extends BaseCalendarPageComponent {
     this.loadMonth(this.currentMonth);
   }
 
-  loadMonth(month: number): void {
+  override loadMonth(month: number): void {
     if (!month) month = this.currentMonth;
     this.loading = true;
 
@@ -152,7 +162,9 @@ class CalendarPage extends BaseCalendarPageComponent {
   }
 
   onDaySelected(day: CalendarDay): void {
-    // navigation handled by parent or router
+    if (day.reading?.id) {
+      this.router.navigate(['/reading', day.reading.id]);
+    }
   }
 }
 
