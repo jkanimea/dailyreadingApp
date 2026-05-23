@@ -1,14 +1,85 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
-import { RouterModule, Routes } from '@angular/router';
-import { Component } from '@angular/core';
+import { RouterModule, Routes, Router } from '@angular/router';
+import { Component, OnInit } from '@angular/core';
+import { SeriesService } from '../../core/services/series.service';
+import { PreferencesService } from '../../core/services/preferences.service';
+import { Series } from '../../core/models/series.model';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
-  template: `<ion-content class="ion-padding"><h1>Series Selection</h1></ion-content>`,
-  standalone: false
+  template: `
+    <ion-header>
+      <ion-toolbar>
+        <ion-title>Select a Series</ion-title>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <div *ngIf="loading" class="ion-text-center ion-padding">
+        <ion-spinner></ion-spinner>
+      </div>
+
+      <div *ngIf="error" class="ion-text-center">
+        <p class="error-message">{{ error }}</p>
+      </div>
+
+      <ion-list *ngIf="!loading && series.length > 0">
+        <ion-card *ngFor="let s of series" button (click)="onSelect(s)" class="series-card">
+          <ion-card-header>
+            <ion-card-title>{{ s.name }}</ion-card-title>
+            <ion-card-subtitle *ngIf="s.primaryBook">Based on {{ s.primaryBook.title }}</ion-card-subtitle>
+          </ion-card-header>
+          <ion-card-content>
+            <p>{{ s.description }}</p>
+          </ion-card-content>
+        </ion-card>
+      </ion-list>
+    </ion-content>
+  `,
+  standalone: false,
+  styles: [`
+    .series-card {
+      margin-bottom: 16px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .error-message { color: var(--ion-color-danger); }
+  `]
 })
-class SeriesPage {}
+class SeriesPage implements OnInit {
+  series: Series[] = [];
+  loading = false;
+  error?: string;
+
+  constructor(
+    private router: Router,
+    private seriesService: SeriesService,
+    private prefs: PreferencesService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadSeries();
+  }
+
+  private async loadSeries(): Promise<void> {
+    this.loading = true;
+    this.error = undefined;
+    try {
+      this.series = await firstValueFrom(this.seriesService.getAll());
+    } catch {
+      this.error = 'Failed to load series. Make sure the API is running.';
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  async onSelect(s: Series): Promise<void> {
+    await this.prefs.setSeriesId(s.id);
+    this.router.navigate(['/today']);
+  }
+}
 
 const routes: Routes = [{ path: '', component: SeriesPage }];
 
