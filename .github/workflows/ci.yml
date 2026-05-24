@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
       - name: Run unit tests
-        run: cd frontend && npx ng test --watch=false --browsers=ChromeHeadless
+        run: cd frontend && npx jest --ci
       - name: Run linting
         run: cd frontend && npx ng lint
 
