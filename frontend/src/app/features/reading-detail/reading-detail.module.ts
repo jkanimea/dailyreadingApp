@@ -23,6 +23,9 @@ import { firstValueFrom, Subscription } from 'rxjs';
           {{ detail?.seriesName ?? 'Reading' }} - Series {{ detail?.seriesId }}
         </ion-title>
         <ion-buttons slot="end">
+          <ion-button (click)="goToCalendar()">
+            <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+          </ion-button>
           <ion-button (click)="switchSeries()">
             <ion-icon slot="icon-only" name="swap-horizontal"></ion-icon>
           </ion-button>
@@ -129,6 +132,10 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   }
 
   paraRefRegex = /\[(\d+)\.(\d+)\]/g;
+
+  goToCalendar(): void {
+    this.router.navigate(['/calendar']);
+  }
 
   async switchSeries(): Promise<void> {
     try {

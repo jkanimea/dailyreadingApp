@@ -181,6 +181,15 @@ describe('ReadingDetailPage', () => {
       expect(sections.length).toBe(1);
       expect(sections[0].title).toBe('Acts 13:3');
     });
+
+    it('should return empty sections for chapter-only headings (no colon)', () => {
+      component.detail = {
+        ...mockDetail,
+        fullTextBible: 'Isaiah 42\n\n42:1 Behold my servant\n\n42:2 He shall not cry\n\nIsaiah 44-45\n\n44:1 Yet now hear'
+      };
+      const sections = component.bibleSections;
+      expect(sections.length).toBe(0);
+    });
   });
 
   describe('getParagraphSegments', () => {
@@ -190,6 +199,10 @@ describe('ReadingDetailPage', () => {
 
     it('should return empty array for undefined text', () => {
       expect(component.getParagraphSegments(undefined)).toEqual([]);
+    });
+
+    it('should return empty array for empty string', () => {
+      expect(component.getParagraphSegments('')).toEqual([]);
     });
 
     it('should return single segment when no references', () => {
@@ -334,6 +347,25 @@ describe('ReadingDetailPage', () => {
       const el = fixture.nativeElement.querySelector('.bible-text');
       expect(el).toBeTruthy();
       expect(el.textContent).toContain('And when they had fasted');
+    }));
+
+    it('should render bible text when only Bible exists and no EGW text', fakeAsync(() => {
+      component.detail = {
+        ...mockDetail,
+        bibleReading: 'Isaiah 42,44-45,48',
+        fullTextBible: 'Isaiah 42\n\n42:1 Behold my servant\n\nIsaiah 44-45\n\n44:1 Yet now hear',
+        fullTextPrimary: '',
+        primaryBookPageRange: '',
+        fullTextSecondary: undefined,
+        secondaryBookPageRange: undefined,
+        hasSecondaryReading: false
+      };
+      fixture.detectChanges();
+      const bibleEl = fixture.nativeElement.querySelector('.bible-text');
+      expect(bibleEl).toBeTruthy();
+      expect(bibleEl.textContent).toContain('Behold my servant');
+      const egwEl = fixture.nativeElement.querySelector('.egw-text');
+      expect(egwEl).toBeFalsy();
     }));
   });
 });

@@ -13,7 +13,7 @@ import { PreferencesService } from '../../core/services/preferences.service';
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Calendar</ion-title>
+        <ion-title><ion-icon name="calendar-outline"></ion-icon> Calendar</ion-title>
       </ion-toolbar>
     </ion-header>
 
