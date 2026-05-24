@@ -14,13 +14,12 @@ export class SecureStorageService {
 
   private async initialize(): Promise<void> {
     if (Capacitor.isNativePlatform()) {
-      const { SecureStoragePlugin } = await import('capacitor-secure-storage-plugin');
-      SecureStoragePlugin;
+      try { await import('capacitor-secure-storage-plugin'); } catch { }
     }
   }
 
   private async isReady(): Promise<void> {
-    await this.ready;
+    try { await this.ready; } catch { }
   }
 
   async setTokens(accessToken: string, refreshToken: string): Promise<void> {

@@ -28,7 +28,10 @@ export class AuthService {
   }
 
   isAuthenticated(): Promise<boolean> {
-    return this.secureStorage.getToken().then(t => !!t);
+    return this.secureStorage.getToken().then(
+      t => !!t,
+      () => false
+    );
   }
 
   logout(): Observable<void> {

@@ -1,7 +1,4 @@
 {
-  "name": "C:\\ionic-temp\\encounter-daily",
-  "integrations": {
-    "capacitor": {}
-  },
+  "name": "encounter-daily",
   "type": "angular"
 }
