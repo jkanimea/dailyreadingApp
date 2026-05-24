@@ -378,6 +378,22 @@ public class IngestTextCommand
         text = Regex.Replace(text, @"&#\d+;", " ");
         text = Regex.Replace(text, @"[ \t]+", " ");
 
+        // Trim navigation/site chrome: keep only from the chapter heading
+        // to the last page marker (e.g. {DA 348.2}) on each chapter page.
+        var chapterMatch = Regex.Match(text, @"\bChapter\s+\d+:");
+        if (chapterMatch.Success)
+        {
+            text = text.Substring(chapterMatch.Index);
+        }
+
+        var markerMatches = Regex.Matches(text, @"\{[A-Z]{2}\s+\d+\.\d+\}");
+        if (markerMatches.Count > 0)
+        {
+            var lastMarker = markerMatches[^1];
+            int endPos = lastMarker.Index + lastMarker.Length;
+            text = text.Substring(0, endPos);
+        }
+
         return text.Trim();
     }
 

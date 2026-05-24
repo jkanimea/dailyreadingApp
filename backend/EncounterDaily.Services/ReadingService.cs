@@ -73,6 +73,10 @@ namespace EncounterDaily.Services
             @"(\d\s+)?([A-Za-z]+)\s+(\d+):(\d+)(?:-(\d+))?",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+        private static readonly Regex ChapterOnlyRefRegex = new(
+            @"(\d\s+)?([A-Za-z]+)\s+(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
         public ReadingService(IUnitOfWork unitOfWork) : base(unitOfWork) { }
 
         public async Task<DailyReading?> GetBySeriesDateAsync(int seriesId, int month, int day)
@@ -166,56 +170,132 @@ namespace EncounterDaily.Services
             if (string.IsNullOrWhiteSpace(bibleReading))
                 return string.Empty;
 
-            var verses = new List<string>();
+            var resultParts = new List<string>();
             var parts = bibleReading.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
             foreach (var part in parts)
             {
-                var match = BibleRefRegex.Match(part);
-                if (!match.Success)
-                    continue;
-
-                var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
-                var chapter = short.Parse(match.Groups[3].Value);
-                var verseNum = short.Parse(match.Groups[4].Value);
-
-                if (!RefAbbrevToFullName.TryGetValue(bookName, out var fullName))
-                    continue;
-
-                try
+                var verseMatch = BibleRefRegex.Match(part);
+                if (verseMatch.Success)
                 {
-                    var book = await _unitOfWork.Repository<BibleBook>()
-                        .Query()
-                        .Where(b => b.Name == fullName)
-                        .FirstOrDefaultAsync();
+                    await ProcessVerseRef(verseMatch, resultParts);
+                    continue;
+                }
 
-                    if (book == null)
-                        continue;
+                var chapterMatch = ChapterOnlyRefRegex.Match(part);
+                if (chapterMatch.Success)
+                {
+                    await ProcessChapterRef(chapterMatch, resultParts);
+                }
+            }
 
-                    var endVerse = match.Groups[5].Success ? short.Parse(match.Groups[5].Value) : verseNum;
+            return resultParts.Count > 0 ? string.Join("\n\n", resultParts) : string.Empty;
+        }
 
+        private async Task ProcessVerseRef(Match match, List<string> resultParts)
+        {
+            var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
+            var chapter = short.Parse(match.Groups[3].Value);
+            var verseNum = short.Parse(match.Groups[4].Value);
+
+            if (!RefAbbrevToFullName.TryGetValue(bookName, out var fullName))
+                return;
+
+            try
+            {
+                var book = await _unitOfWork.Repository<BibleBook>()
+                    .Query()
+                    .Where(b => b.Name == fullName)
+                    .FirstOrDefaultAsync();
+
+                if (book == null)
+                    return;
+
+                var endVerse = match.Groups[5].Success ? short.Parse(match.Groups[5].Value) : verseNum;
+
+                var found = await _unitOfWork.Repository<BibleVerse>()
+                    .Query()
+                    .Where(v => v.BookId == book.Id && v.Chapter == chapter && v.Verse >= verseNum && v.Verse <= endVerse)
+                    .OrderBy(v => v.Verse)
+                    .Select(v => new { v.Verse, v.Text })
+                    .ToListAsync();
+
+                if (found.Count == 0)
+                    return;
+
+                var headingRange = endVerse == verseNum ? $"{chapter}:{verseNum}" : $"{chapter}:{verseNum}-{endVerse}";
+                resultParts.Add($"{fullName} {headingRange}");
+                foreach (var v in found)
+                    resultParts.Add($"{v.Verse} {v.Text}");
+            }
+            catch
+            {
+                // skip on error
+            }
+        }
+
+        private async Task ProcessChapterRef(Match match, List<string> resultParts)
+        {
+            var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
+            var chapterSpec = match.Groups[3].Value;
+
+            if (!RefAbbrevToFullName.TryGetValue(bookName, out var fullName))
+                return;
+
+            try
+            {
+                var book = await _unitOfWork.Repository<BibleBook>()
+                    .Query()
+                    .Where(b => b.Name == fullName)
+                    .FirstOrDefaultAsync();
+
+                if (book == null)
+                    return;
+
+                foreach (var (chapterStart, chapterEnd) in ParseChapterSpecs(chapterSpec))
+                {
                     var found = await _unitOfWork.Repository<BibleVerse>()
                         .Query()
-                        .Where(v => v.BookId == book.Id && v.Chapter == chapter && v.Verse >= verseNum && v.Verse <= endVerse)
-                        .OrderBy(v => v.Verse)
-                        .Select(v => new { v.Verse, v.Text })
+                        .Where(v => v.BookId == book.Id && v.Chapter >= chapterStart && v.Chapter <= chapterEnd)
+                        .OrderBy(v => v.Chapter)
+                        .ThenBy(v => v.Verse)
+                        .Select(v => new { v.Chapter, v.Verse, v.Text })
                         .ToListAsync();
 
                     if (found.Count == 0)
                         continue;
 
-                    var headingRange = endVerse == verseNum ? $"{chapter}:{verseNum}" : $"{chapter}:{verseNum}-{endVerse}";
-                    verses.Add($"{fullName} {headingRange}");
+                    var heading = chapterStart == chapterEnd
+                        ? $"{fullName} {chapterStart}"
+                        : $"{fullName} {chapterStart}-{chapterEnd}";
+
+                    resultParts.Add(heading);
                     foreach (var v in found)
-                        verses.Add($"{v.Verse} {v.Text}");
-                }
-                catch
-                {
-                    // skip on error
+                        resultParts.Add($"{v.Chapter}:{v.Verse} {v.Text}");
                 }
             }
+            catch
+            {
+                // skip on error
+            }
+        }
 
-            return verses.Count > 0 ? string.Join("\n\n", verses) : string.Empty;
+        private static IEnumerable<(int start, int end)> ParseChapterSpecs(string spec)
+        {
+            foreach (var part in spec.Split(','))
+            {
+                var trimmed = part.Trim();
+                if (trimmed.Contains('-'))
+                {
+                    var range = trimmed.Split('-');
+                    yield return (int.Parse(range[0]), int.Parse(range[1]));
+                }
+                else
+                {
+                    var ch = int.Parse(trimmed);
+                    yield return (ch, ch);
+                }
+            }
         }
 
         private async Task<string> AssembleEgwTextAsync(int? bookId, int? startPage, int? endPage)

@@ -368,5 +368,114 @@ namespace EncounterDaily.Tests.UnitTests.Services
             await _service.Invoking(s => s.GetSummaryAsync(999))
                 .Should().ThrowAsync<KeyNotFoundException>();
         }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldReturnBibleText_WhenChapterOnlyReference()
+        {
+            var book = new Book { Id = 10, BookType = BookType.ProphetsAndKings, Title = "Prophets and Kings" };
+            var series = new Series { Id = 4, PrimaryBookId = 10, PrimaryBook = book };
+            var reading = new DailyReading
+            {
+                Id = 100,
+                SeriesId = 4,
+                Month = 5,
+                Day = 22,
+                BibleReading = "Isaiah 42,44-45,48",
+                PrimaryBookPageRange = "",
+                PrimaryBookPageStart = 0,
+                PrimaryBookPageEnd = 0,
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(100)).ReturnsAsync(reading);
+
+            var dbId = Guid.NewGuid().ToString();
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(dbId).Options);
+            ctx.Set<BibleBook>().Add(new BibleBook { Id = 23, Name = "Isaiah", Abbreviation = "isa" });
+            ctx.Set<BibleVerse>().AddRange(
+                new BibleVerse { BookId = 23, Chapter = 42, Verse = 1, Text = "Behold my servant." },
+                new BibleVerse { BookId = 23, Chapter = 42, Verse = 2, Text = "He shall not cry." },
+                new BibleVerse { BookId = 23, Chapter = 43, Verse = 1, Text = "Fear not." },
+                new BibleVerse { BookId = 23, Chapter = 44, Verse = 1, Text = "Yet now hear." },
+                new BibleVerse { BookId = 23, Chapter = 44, Verse = 2, Text = "Thus saith the LORD." },
+                new BibleVerse { BookId = 23, Chapter = 45, Verse = 1, Text = "Thus saith the LORD to his anointed." },
+                new BibleVerse { BookId = 23, Chapter = 48, Verse = 1, Text = "Hear ye this." }
+            );
+            await ctx.SaveChangesAsync();
+
+            var mockBibleBookRepo = new Mock<IRepository<BibleBook>>();
+            mockBibleBookRepo.Setup(r => r.Query()).Returns(ctx.Set<BibleBook>());
+            _mockUow.Setup(u => u.Repository<BibleBook>()).Returns(mockBibleBookRepo.Object);
+
+            var mockBibleVerseRepo = new Mock<IRepository<BibleVerse>>();
+            mockBibleVerseRepo.Setup(r => r.Query()).Returns(ctx.Set<BibleVerse>());
+            _mockUow.Setup(u => u.Repository<BibleVerse>()).Returns(mockBibleVerseRepo.Object);
+
+            var mockEgwRepo = new Mock<IRepository<EgwPage>>();
+            mockEgwRepo.Setup(r => r.Query()).Returns(new List<EgwPage>().AsQueryable());
+            _mockUow.Setup(u => u.Repository<EgwPage>()).Returns(mockEgwRepo.Object);
+
+            var result = await _service.GetFullReadingAsync(100);
+
+            result.FullTextBible.Should().NotBeEmpty();
+            result.FullTextBible.Should().Contain("Isaiah 42");
+            result.FullTextBible.Should().Contain("42:1 Behold my servant.");
+            result.FullTextBible.Should().Contain("42:2 He shall not cry.");
+            result.FullTextBible.Should().Contain("Isaiah 44-45");
+            result.FullTextBible.Should().Contain("44:1 Yet now hear.");
+            result.FullTextBible.Should().Contain("45:1 Thus saith the LORD to his anointed.");
+            result.FullTextBible.Should().Contain("Isaiah 48");
+            result.FullTextBible.Should().Contain("48:1 Hear ye this.");
+            result.FullTextBible.Should().NotContain("43:1");
+            result.FullTextPrimary.Should().BeEmpty();
+            result.FullTextSecondary.Should().BeNullOrEmpty();
+        }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldReturnBibleTextOnly_WhenNoEgwPageRange()
+        {
+            var series = new Series { Id = 4, PrimaryBookId = 0 };
+            var reading = new DailyReading
+            {
+                Id = 101,
+                SeriesId = 4,
+                Month = 5,
+                Day = 22,
+                BibleReading = "John 3:16",
+                PrimaryBookPageRange = "",
+                PrimaryBookPageStart = 0,
+                PrimaryBookPageEnd = 0,
+                Series = series
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(101)).ReturnsAsync(reading);
+
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+            ctx.Set<BibleBook>().Add(new BibleBook { Id = 43, Name = "John", Abbreviation = "john" });
+            ctx.Set<BibleVerse>().Add(
+                new BibleVerse { BookId = 43, Chapter = 3, Verse = 16, Text = "For God so loved the world." }
+            );
+            await ctx.SaveChangesAsync();
+
+            var mockBibleBookRepo = new Mock<IRepository<BibleBook>>();
+            mockBibleBookRepo.Setup(r => r.Query()).Returns(ctx.Set<BibleBook>());
+            _mockUow.Setup(u => u.Repository<BibleBook>()).Returns(mockBibleBookRepo.Object);
+
+            var mockBibleVerseRepo = new Mock<IRepository<BibleVerse>>();
+            mockBibleVerseRepo.Setup(r => r.Query()).Returns(ctx.Set<BibleVerse>());
+            _mockUow.Setup(u => u.Repository<BibleVerse>()).Returns(mockBibleVerseRepo.Object);
+
+            var mockEgwRepo = new Mock<IRepository<EgwPage>>();
+            mockEgwRepo.Setup(r => r.Query()).Returns(new List<EgwPage>().AsQueryable());
+            _mockUow.Setup(u => u.Repository<EgwPage>()).Returns(mockEgwRepo.Object);
+
+            var result = await _service.GetFullReadingAsync(101);
+
+            result.FullTextBible.Should().NotBeEmpty();
+            result.FullTextBible.Should().Contain("John 3:16");
+            result.FullTextBible.Should().Contain("16 For God so loved the world.");
+            result.FullTextPrimary.Should().BeEmpty();
+            result.FullTextSecondary.Should().BeNullOrEmpty();
+        }
     }
 }
