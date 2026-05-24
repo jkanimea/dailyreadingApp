@@ -33,9 +33,9 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci
       - name: Run unit tests
-        run: cd frontend && ng test --watch=false --browsers=ChromeHeadless
+        run: cd frontend && npx ng test --watch=false --browsers=ChromeHeadless
       - name: Run linting
-        run: cd frontend && ng lint
+        run: cd frontend && npx ng lint
 
   e2e-tests:
     runs-on: macos-latest
