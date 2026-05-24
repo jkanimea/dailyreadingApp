@@ -36,7 +36,7 @@ describe('AuthService', () => {
       expect(res.accessToken).toBe('jwt-123');
     });
 
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/auth/google');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/auth/google');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ token: 'google-token' });
     req.flush({ accessToken: 'jwt-123', refreshToken: 'rt-123' });
@@ -47,7 +47,7 @@ describe('AuthService', () => {
       expect(res.accessToken).toBe('jwt-new');
     });
 
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/auth/refresh');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/auth/refresh');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ refreshToken: 'rt-old' });
     req.flush({ accessToken: 'jwt-new', refreshToken: 'rt-new' });
@@ -56,7 +56,7 @@ describe('AuthService', () => {
   it('should get current user', () => {
     service.getCurrentUser().subscribe(user => expect(user.displayName).toBe('Test User'));
 
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/auth/me');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/auth/me');
     expect(req.request.method).toBe('GET');
     req.flush({ id: '1', displayName: 'Test User', email: 'test@example.com' });
   });
@@ -76,7 +76,7 @@ describe('AuthService', () => {
   it('logout should clear tokens and POST', () => {
     service.logout().subscribe();
 
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/auth/logout');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/auth/logout');
     expect(req.request.method).toBe('POST');
     req.flush(null);
 

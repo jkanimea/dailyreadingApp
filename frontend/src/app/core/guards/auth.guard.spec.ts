@@ -3,6 +3,10 @@ import { Router } from '@angular/router';
 import { AuthGuard } from './auth.guard';
 import { AuthService } from '../services/auth.service';
 
+jest.mock('../../../environments/environment', () => ({
+  environment: { bypassAuth: false, apiUrl: 'http://localhost:5000/api/v1' }
+}));
+
 describe('AuthGuard', () => {
   let guard: AuthGuard;
   let authService: any;

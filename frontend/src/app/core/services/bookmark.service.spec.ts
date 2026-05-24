@@ -19,21 +19,21 @@ describe('BookmarkService', () => {
 
   it('getAll should GET bookmarks', () => {
     service.getAll().subscribe(b => expect(b.length).toBe(2));
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/bookmarks');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/bookmarks');
     expect(req.request.method).toBe('GET');
     req.flush([{}, {}]);
   });
 
   it('addBookmark should POST', () => {
     service.addBookmark(5).subscribe();
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/bookmarks/5');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/bookmarks/5');
     expect(req.request.method).toBe('POST');
     req.flush({});
   });
 
   it('removeBookmark should DELETE', () => {
     service.removeBookmark(5).subscribe();
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/bookmarks/5');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/bookmarks/5');
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });

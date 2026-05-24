@@ -19,7 +19,7 @@ describe('ReadingService', () => {
 
   it('getToday should call correct endpoint without date params', () => {
     service.getToday(1).subscribe(r => expect(r.bibleReading).toBe('John 3:16'));
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/reading/series/1/today');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/reading/series/1/today');
     expect(req.request.method).toBe('GET');
     expect(req.request.params.keys().length).toBe(0);
     req.flush({ id: 1, seriesId: 1, bibleReading: 'John 3:16' });
@@ -38,28 +38,28 @@ describe('ReadingService', () => {
 
   it('getByDate should call correct endpoint', () => {
     service.getByDate(2, 12, 25).subscribe();
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/reading/series/2/date/12/25');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/reading/series/2/date/12/25');
     expect(req.request.method).toBe('GET');
     req.flush({});
   });
 
   it('getByMonth should call correct endpoint', () => {
     service.getByMonth(3, 6).subscribe();
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/reading/series/3/month/6');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/reading/series/3/month/6');
     expect(req.request.method).toBe('GET');
     req.flush([]);
   });
 
   it('getFullReading should call correct endpoint', () => {
     service.getFullReading(42).subscribe(r => expect(r.fullTextPrimary).toBe('text'));
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/reading/42/full');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/reading/42/full');
     expect(req.request.method).toBe('GET');
     req.flush({ id: 42, fullTextPrimary: 'text' });
   });
 
   it('getSummary should call correct endpoint', () => {
     service.getSummary(7).subscribe(r => expect(r.summaryPoints).toBe('summary'));
-    const req = httpMock.expectOne('https://localhost:5001/api/v1/reading/7/summary');
+    const req = httpMock.expectOne('http://localhost:5000/api/v1/reading/7/summary');
     expect(req.request.method).toBe('GET');
     req.flush({ id: 7, summaryPoints: 'summary' });
   });
