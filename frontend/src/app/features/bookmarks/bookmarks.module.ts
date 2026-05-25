@@ -22,6 +22,9 @@ import { firstValueFrom } from 'rxjs';
           <ion-button (click)="goToCalendar()">
             <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
           </ion-button>
+          <ion-button (click)="goToSettings()">
+            <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -79,6 +82,10 @@ class BookmarksPage {
 
   goToSearch(): void {
     this.router.navigate(['/search']);
+  }
+
+  goToSettings(): void {
+    this.router.navigate(['/settings']);
   }
 
   goToProgress(): void {

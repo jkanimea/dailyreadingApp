@@ -25,6 +25,9 @@ import { firstValueFrom, Subject, debounceTime, distinctUntilChanged } from 'rxj
           <ion-button (click)="goToBookmarks()">
             <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
           </ion-button>
+          <ion-button (click)="goToSettings()">
+            <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -111,6 +114,10 @@ class SearchPage {
 
   goToCalendar(): void {
     this.router.navigate(['/calendar']);
+  }
+
+  goToSettings(): void {
+    this.router.navigate(['/settings']);
   }
 
   goToProgress(): void {

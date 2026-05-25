@@ -29,6 +29,9 @@ interface SeriesStats {
           <ion-button (click)="goToBookmarks()">
             <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
           </ion-button>
+          <ion-button (click)="goToSettings()">
+            <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -90,6 +93,10 @@ class ProgressPage implements OnInit {
 
   goToSearch(): void {
     this.router.navigate(['/search']);
+  }
+
+  goToSettings(): void {
+    this.router.navigate(['/settings']);
   }
 
   goToCalendar(): void {
