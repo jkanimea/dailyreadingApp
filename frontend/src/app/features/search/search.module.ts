@@ -15,6 +15,17 @@ import { firstValueFrom, Subject, debounceTime, distinctUntilChanged } from 'rxj
     <ion-header>
       <ion-toolbar>
         <ion-title>Search</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="goToCalendar()">
+            <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+          </ion-button>
+          <ion-button (click)="goToProgress()">
+            <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
+          </ion-button>
+          <ion-button (click)="goToBookmarks()">
+            <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -96,6 +107,18 @@ class SearchPage {
       debounceTime(400),
       distinctUntilChanged()
     ).subscribe(q => this.performSearch(q));
+  }
+
+  goToCalendar(): void {
+    this.router.navigate(['/calendar']);
+  }
+
+  goToProgress(): void {
+    this.router.navigate(['/progress']);
+  }
+
+  goToBookmarks(): void {
+    this.router.navigate(['/bookmarks']);
   }
 
   onQueryChange(event: CustomEvent): void {

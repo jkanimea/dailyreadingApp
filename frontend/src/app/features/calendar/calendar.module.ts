@@ -14,6 +14,17 @@ import { PreferencesService } from '../../core/services/preferences.service';
     <ion-header>
       <ion-toolbar>
         <ion-title><ion-icon name="calendar-outline"></ion-icon> Calendar</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="goToSearch()">
+            <ion-icon slot="icon-only" name="search-outline"></ion-icon>
+          </ion-button>
+          <ion-button (click)="goToProgress()">
+            <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
+          </ion-button>
+          <ion-button (click)="goToBookmarks()">
+            <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -112,6 +123,18 @@ class CalendarPage extends BaseCalendarPageComponent {
   override ionViewWillEnter(): void {
     this.seriesId = this.prefs.getSeriesId();
     super.ionViewWillEnter();
+  }
+
+  goToSearch(): void {
+    this.router.navigate(['/search']);
+  }
+
+  goToProgress(): void {
+    this.router.navigate(['/progress']);
+  }
+
+  goToBookmarks(): void {
+    this.router.navigate(['/bookmarks']);
   }
 
   setSeriesId(id: number): void {

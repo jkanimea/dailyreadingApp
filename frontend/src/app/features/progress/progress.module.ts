@@ -19,6 +19,17 @@ interface SeriesStats {
     <ion-header>
       <ion-toolbar>
         <ion-title>Progress</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="goToSearch()">
+            <ion-icon slot="icon-only" name="search-outline"></ion-icon>
+          </ion-button>
+          <ion-button (click)="goToCalendar()">
+            <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+          </ion-button>
+          <ion-button (click)="goToBookmarks()">
+            <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
@@ -76,6 +87,18 @@ class ProgressPage implements OnInit {
     private seriesService: SeriesService,
     private progressService: ProgressService
   ) {}
+
+  goToSearch(): void {
+    this.router.navigate(['/search']);
+  }
+
+  goToCalendar(): void {
+    this.router.navigate(['/calendar']);
+  }
+
+  goToBookmarks(): void {
+    this.router.navigate(['/bookmarks']);
+  }
 
   ngOnInit(): void {
     this.loadStats();
