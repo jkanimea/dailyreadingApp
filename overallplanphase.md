@@ -15,6 +15,7 @@
 | 4 | **Login** | ✅ Done | Google Sign-In (GIS), Facebook Login (JS SDK), "Continue as Guest" fallback, loading/error states |
 | 5 | **Header navigation** | ✅ Done | Search, Progress, Bookmark, Calendar nav icons added to all page headers for cross-screen access |
 | 6 | **Backend API** | ✅ Done | Search, Progress, Bookmark controllers with full CRUD; fixed GetUserId() fallback for dev bypass |
+| 7 | **Series Selection** | ✅ Done | Series list with descriptions, selection persists to preferences, navigates to today's reading |
 
 ### Phase 10: Verify test coverage
 - Run `dotnet test /p:CollectCoverage=true` to confirm backend ≥ 80%
@@ -77,7 +78,7 @@
 | Phase | Status | Remaining |
 |-------|--------|-----------|
 | 1-6 | ✅ Complete | Nothing |
-| 7 | ✅ Complete | Search, Progress, Bookmarks, Login, header nav icons, backend API fixed |
+| 7 | ✅ Complete | Search, Progress, Bookmarks, Login, Series Selection, header nav icons, backend API fixed |
 | 8 | ✅ Complete | E2E tests, server-side push, conflict resolution |
 | 9 | ⚠️ Partial | Localization, manual summary review |
 | 10 | ⚠️ Partial | Coverage verification, performance, accessibility, security, E2E |
