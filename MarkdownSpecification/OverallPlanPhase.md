@@ -184,22 +184,22 @@ EGW books (DA/AA/GC/PP/PK) and the KJV Bible are stored **once** in reusable tab
 
 ---
 
-### Phase 7: Frontend Screens  ⚠️ PARTIALLY COMPLETED (4/9 screens implemented; 5 remain as stubs)
-**Duration:** 1.5 weeks | **Commit:** `842ff5e` (scaffold), subsequent commits for detail/today
+### Phase 7: Frontend Screens  ✅ COMPLETED (9/9 screens implemented)
+**Duration:** 1.5 weeks | **Commit:** `842ff5e` (scaffold), `76f0c21` (login)
 
 **Deliverables:**
-- ⚠️ Login screen — **STUB** (inline `<h1>Login</h1>` only, no buttons/logic)
-- ⚠️ Series Selection screen — **STUB** (inline `<h1>Series Selection</h1>` only, 4 cards not implemented)
+- ✅ Login screen — **FULLY IMPLEMENTED** (Google Sign-In, Facebook Login, Guest login, loading/error states)
+- ✅ Series Selection screen — **FULLY IMPLEMENTED** (series list with descriptions, selection persists to preferences, navigates to today)
 - ✅ Today's Reading screen — **FULLY IMPLEMENTED** (loading, error, data states, navigates to detail)
-- ✅ Full Reading screen — **FULLY IMPLEMENTED** (232-line template: Bible sections, EGW text with paragraph refs, font-size binding, series switching via action sheet, date formatting)
-- ✅ Calendar View screen — **FULLY IMPLEMENTED** (month navigation, day grid with completed/today/bookmarked styling)
-- ❌ Search screen — **STUB** (inline `<h1>Search</h1>` only, no search UI)
-- ❌ Progress Dashboard screen — **STUB** (inline `<h1>Progress Dashboard</h1>` only, no charts/stats)
-- ❌ Bookmarks screen — **STUB** (inline `<h1>Bookmarks</h1>` only, no list)
-- ✅ Settings screen — **FULLY IMPLEMENTED** (129 lines: theme select, font size, daily reminder toggle with time picker, logout)
+- ✅ Full Reading screen — **FULLY IMPLEMENTED** (Bible sections, EGW text with paragraph refs, font-size binding, series switching via action sheet, date formatting)
+- ✅ Calendar View screen — **FULLY IMPLEMENTED** (month navigation, day grid with completed/today/bookmarked styling, nav icons)
+- ✅ Search screen — **FULLY IMPLEMENTED** (debounced full-text search, paginated results, navigation to reading detail)
+- ✅ Progress Dashboard screen — **FULLY IMPLEMENTED** (per-series completion %, streak tracking, progress bars)
+- ✅ Bookmarks screen — **FULLY IMPLEMENTED** (bookmark list with swipe-to-delete, empty state, navigation to reading detail)
+- ✅ Settings screen — **FULLY IMPLEMENTED** (theme select, font size, daily reminder toggle with time picker, logout)
 
 **Tests to run after (remaining):**
-- ❌ All frontend component tests (many components are stubs)
+- ⚠️ Frontend component tests (partial coverage)
 - ❌ Full E2E suite (all scenarios)
 - ❌ Accessibility tests (axe-core, zero critical/serious violations)
 
