@@ -2,6 +2,8 @@ export interface UserDto {
   id: number;
   email: string;
   displayName: string;
+  provider: string;
+  selectedSeriesId: number;
   photoUrl?: string;
 }
 
@@ -13,6 +15,6 @@ export interface LoginRequest {
 export interface TokenResponse {
   accessToken: string;
   refreshToken: string;
-  expiresAt: number;
+  expiresIn: number;
   user: UserDto;
 }

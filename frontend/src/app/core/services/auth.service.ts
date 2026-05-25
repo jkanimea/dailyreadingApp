@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, from } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { Observable, from, of } from 'rxjs';
 import { TokenResponse, UserDto } from '../models/user.model';
 import { environment } from '../../../environments/environment';
 import { SecureStorageService } from './secure-storage.service';
+
+const GUEST_ID_KEY = 'encounter_guest_id';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -15,8 +16,8 @@ export class AuthService {
     private secureStorage: SecureStorageService
   ) {}
 
-  login(provider: 'google' | 'facebook', token: string): Observable<TokenResponse> {
-    return this.http.post<TokenResponse>(`${this.apiUrl}/auth/${provider}`, { token });
+  login(provider: 'google' | 'facebook', idToken: string): Observable<TokenResponse> {
+    return this.http.post<TokenResponse>(`${this.apiUrl}/auth/${provider}`, { idToken });
   }
 
   refreshAccessToken(refreshToken: string): Observable<TokenResponse> {
@@ -34,8 +35,16 @@ export class AuthService {
     );
   }
 
-  logout(): Observable<void> {
-    this.secureStorage.clearTokens();
-    return this.http.post<void>(`${this.apiUrl}/auth/logout`, {});
+  async guestLogin(): Promise<void> {
+    const guestId = localStorage.getItem(GUEST_ID_KEY) || String(Date.now());
+    localStorage.setItem(GUEST_ID_KEY, guestId);
+    await this.secureStorage.setTokens('guest-token-' + guestId, 'guest-refresh-' + guestId);
+  }
+
+  async logout(): Promise<void> {
+    await this.secureStorage.clearTokens();
+    try {
+      await this.http.post<void>(`${this.apiUrl}/auth/logout`, {}).toPromise();
+    } catch { }
   }
 }

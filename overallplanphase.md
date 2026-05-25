@@ -1,6 +1,6 @@
 # Encounter Daily — Remaining Work
 
-**Updated:** 2026-05-23
+**Updated:** 2026-05-26
 
 ---
 
@@ -9,7 +9,14 @@
 ### Phase 7: Login screen
 | Screen | Current State | What's Needed |
 |--------|--------------|---------------|
-| **Login** | `<h1>Login</h1>` stub | Google + Facebook buttons, wire to auth service, loading/error states |
+| **Login** | ✅ Complete | Google Sign-In, Facebook Login, Guest login, loading/error states |
+
+### Phase 7: Search, Progress, Bookmarks navigation
+| Feature | Current State | What's Needed |
+|---------|--------------|---------------|
+| **Search screen** | Built and functional; navigation icons added to all page headers | — |
+| **Progress screen** | Built and functional; navigation icons added to all page headers | — |
+| **Bookmarks screen** | Built and functional; navigation icons added to all page headers | — |
 
 ### Phase 10: Verify test coverage
 - Run `dotnet test /p:CollectCoverage=true` to confirm backend ≥ 80%
@@ -60,8 +67,7 @@
 - Add version tracking for last-write-wins conflict resolution in sync service
 
 ### Phase 7: Frontend component + E2E tests
-- Write tests for all 5 stub screens once built
-- Full E2E suite covering all scenarios
+- Write E2E tests covering all scenarios
 
 ### Phase 9: Font scaling expansion
 - Apply `--app-font-size` binding to remaining components (calendar, cards, etc.) beyond reading-detail
@@ -73,7 +79,7 @@
 | Phase | Status | Remaining |
 |-------|--------|-----------|
 | 1-6 | ✅ Complete | Nothing |
-| 7 | ⚠️ 1/9 screens | Login screen only |
+| 7 | ✅ Complete | All 9 screens built; navigation icons across app; guest login |
 | 8 | ✅ Complete | E2E tests, server-side push, conflict resolution |
 | 9 | ⚠️ Partial | Localization, manual summary review |
 | 10 | ⚠️ Partial | Coverage verification, performance, accessibility, security, E2E |
