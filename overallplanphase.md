@@ -6,17 +6,15 @@
 
 ## High Priority (blocks app usability)
 
-### Phase 7: Login screen
-| Screen | Current State | What's Needed |
-|--------|--------------|---------------|
-| **Login** | ✅ Complete | Google Sign-In, Facebook Login, Guest login, loading/error states |
-
-### Phase 7: Search, Progress, Bookmarks navigation
-| Feature | Current State | What's Needed |
-|---------|--------------|---------------|
-| **Search screen** | Built and functional; navigation icons added to all page headers | — |
-| **Progress screen** | Built and functional; navigation icons added to all page headers | — |
-| **Bookmarks screen** | Built and functional; navigation icons added to all page headers | — |
+### Phase 7: Deliverables (✅ Complete)
+| # | Screen | Status | Details |
+|---|--------|--------|---------|
+| 1 | **Search** | ✅ Done | Full-text search with debounced input, paginated results, navigation to reading detail |
+| 2 | **Progress** | ✅ Done | Per-series completion %, streak tracking, progress bars |
+| 3 | **Bookmarks** | ✅ Done | Bookmark list with swipe-to-delete, empty state, navigation to reading detail |
+| 4 | **Login** | ✅ Done | Google Sign-In (GIS), Facebook Login (JS SDK), "Continue as Guest" fallback, loading/error states |
+| 5 | **Header navigation** | ✅ Done | Search, Progress, Bookmark, Calendar nav icons added to all page headers for cross-screen access |
+| 6 | **Backend API** | ✅ Done | Search, Progress, Bookmark controllers with full CRUD; fixed GetUserId() fallback for dev bypass |
 
 ### Phase 10: Verify test coverage
 - Run `dotnet test /p:CollectCoverage=true` to confirm backend ≥ 80%
@@ -66,8 +64,8 @@
 ### Phase 8: Conflict resolution
 - Add version tracking for last-write-wins conflict resolution in sync service
 
-### Phase 7: Frontend component + E2E tests
-- Write E2E tests covering all scenarios
+### Phase 7: E2E tests
+- Write E2E tests covering Phase 7 scenarios (search, progress, bookmarks, login)
 
 ### Phase 9: Font scaling expansion
 - Apply `--app-font-size` binding to remaining components (calendar, cards, etc.) beyond reading-detail
@@ -79,7 +77,7 @@
 | Phase | Status | Remaining |
 |-------|--------|-----------|
 | 1-6 | ✅ Complete | Nothing |
-| 7 | ✅ Complete | All 9 screens built; navigation icons across app; guest login |
+| 7 | ✅ Complete | Search, Progress, Bookmarks, Login, header nav icons, backend API fixed |
 | 8 | ✅ Complete | E2E tests, server-side push, conflict resolution |
 | 9 | ⚠️ Partial | Localization, manual summary review |
 | 10 | ⚠️ Partial | Coverage verification, performance, accessibility, security, E2E |
