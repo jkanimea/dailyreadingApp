@@ -25,7 +25,7 @@ switch (command)
         await SummarizeCommandAsync(argsList);
         break;
     case "ingesttext":
-        await IngestTextCommandAsync(argsList);
+        await IngestTextCommandAsync(argsList, force);
         break;
     case "ingestbible":
         await IngestBibleCommandAsync(argsList);
@@ -36,7 +36,7 @@ switch (command)
         Console.WriteLine("  dotnet run -- [--force|-y] import <csv-file>");
         Console.WriteLine("  dotnet run -- [--force|-y] seeddata");
         Console.WriteLine("  dotnet run -- summarize [--dry-run] [--series <id>] [--model <name>] [--delay <ms>]");
-        Console.WriteLine("  dotnet run -- ingesttext --book <CODE> [--series <id>] [--max-length <n>] [--delay <ms>] [--dry-run]");
+        Console.WriteLine("  dotnet run -- ingesttext --book <CODE> [--series <id>] [--max-length <n>] [--delay <ms>] [--dry-run] [--force|-f]");
         Console.WriteLine("  dotnet run -- ingestbible [--dry-run]");
         break;
 }
@@ -69,13 +69,14 @@ static async Task SummarizeCommandAsync(List<string> argsList)
     Environment.ExitCode = errors > 0 ? 1 : 0;
 }
 
-static async Task IngestTextCommandAsync(List<string> argsList)
+static async Task IngestTextCommandAsync(List<string> argsList, bool topLevelForce = false)
 {
     var bookCode = "ALL";
     int? seriesFilter = null;
     int maxTextLength = 20000;
     int delayMs = 1000;
     var dryRun = argsList.Remove("--dry-run");
+    var force = topLevelForce || argsList.Remove("--force") || argsList.Remove("-f");
 
     for (int i = 0; i < argsList.Count; i++)
     {
@@ -92,7 +93,7 @@ static async Task IngestTextCommandAsync(List<string> argsList)
     var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection")
         ?? "Server=(localdb)\\mssqllocaldb;Database=EncounterDaily;Trusted_Connection=True;";
 
-    var cmd = new IngestTextCommand(connectionString, bookCode, seriesFilter, dryRun, maxTextLength, delayMs);
+    var cmd = new IngestTextCommand(connectionString, bookCode, seriesFilter, dryRun, force, maxTextLength, delayMs);
     int exitCode = await cmd.ExecuteAsync();
     Environment.ExitCode = exitCode;
 }
