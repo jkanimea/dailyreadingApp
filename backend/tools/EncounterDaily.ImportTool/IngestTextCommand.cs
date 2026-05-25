@@ -64,6 +64,7 @@ public class IngestTextCommand
     private readonly string _bookCode;
     private readonly int? _seriesFilter;
     private readonly bool _dryRun;
+    private readonly bool _force;
     private readonly bool _allBooks;
     private readonly int _maxTextLength;
     private readonly int _delayMs;
@@ -77,6 +78,7 @@ public class IngestTextCommand
         string bookCode,
         int? seriesFilter,
         bool dryRun,
+        bool force = false,
         int maxTextLength = 20000,
         int delayMs = 1000)
     {
@@ -84,6 +86,7 @@ public class IngestTextCommand
         _bookCode = bookCode.ToUpperInvariant();
         _seriesFilter = seriesFilter;
         _dryRun = dryRun;
+        _force = force;
         _allBooks = _bookCode == "ALL";
         _maxTextLength = maxTextLength;
         _delayMs = delayMs;
@@ -143,12 +146,20 @@ public class IngestTextCommand
             .Where(p => p.BookId == dbBook.Id)
             .CountAsync();
 
-        if (existingPages > 0)
+        if (existingPages > 0 && !_force)
         {
             Console.WriteLine($"  {existingPages} EgwPages already cached in DB, skipping web scrape.");
         }
         else
         {
+            if (existingPages > 0 && _force)
+            {
+                Console.WriteLine($"  --force: deleting {existingPages} cached EgwPages before re-scraping...");
+                context.Set<EgwPage>().RemoveRange(
+                    context.Set<EgwPage>().Where(p => p.BookId == dbBook.Id));
+                await context.SaveChangesAsync();
+            }
+
             Console.WriteLine($"  Scraping chapters from ellenwhite.info...");
             pageTexts = await ScrapePageTextsFromWebAsync(book);
             Console.WriteLine($"  Parsed {pageTexts.Count} pages with content");
@@ -380,10 +391,11 @@ public class IngestTextCommand
 
         // Trim navigation/site chrome: keep only from the chapter heading
         // to the last page marker (e.g. {DA 348.2}) on each chapter page.
-        var chapterMatch = Regex.Match(text, @"\bChapter\s+\d+:");
-        if (chapterMatch.Success)
+        var chapterMatches = Regex.Matches(text, @"\bChapter\s+\d+:");
+        if (chapterMatches.Count > 0)
         {
-            text = text.Substring(chapterMatch.Index);
+            var lastChapterMatch = chapterMatches[^1];
+            text = text.Substring(lastChapterMatch.Index);
         }
 
         var markerMatches = Regex.Matches(text, @"\{[A-Z]{2}\s+\d+\.\d+\}");
