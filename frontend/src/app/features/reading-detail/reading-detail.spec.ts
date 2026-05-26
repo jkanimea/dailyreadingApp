@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { IonicModule, ActionSheetController, NavController } from '@ionic/angular';
 import { BehaviorSubject, of } from 'rxjs';
 import { ReadingService } from '../../core/services/reading.service';
+import { ProgressService } from '../../core/services/progress.service';
 import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { ReadingDetailPage } from './reading-detail.module';
@@ -11,6 +12,7 @@ describe('ReadingDetailPage', () => {
   let component: ReadingDetailPage;
   let fixture: ComponentFixture<ReadingDetailPage>;
   let mockReadingService: any;
+  let mockProgressService: any;
   let mockSeriesService: any;
   let mockPrefs: any;
   let mockRouter: any;
@@ -56,6 +58,10 @@ describe('ReadingDetailPage', () => {
       setSeriesId: jest.fn().mockResolvedValue(undefined)
     };
 
+    mockProgressService = {
+      markComplete: jest.fn().mockReturnValue(of({ readingId: 5, isCompleted: true }))
+    };
+
     mockRouter = {
       navigate: jest.fn().mockResolvedValue(true)
     };
@@ -71,6 +77,7 @@ describe('ReadingDetailPage', () => {
       imports: [IonicModule.forRoot()],
       providers: [
         { provide: ReadingService, useValue: mockReadingService },
+        { provide: ProgressService, useValue: mockProgressService },
         { provide: SeriesService, useValue: mockSeriesService },
         { provide: PreferencesService, useValue: mockPrefs },
         { provide: Router, useValue: mockRouter },

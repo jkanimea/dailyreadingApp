@@ -5,6 +5,7 @@ import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnDestroy } from '@angular/core';
 import { BaseReadingPageComponent } from '../base/base-reading-page-component';
 import { ReadingService } from '../../core/services/reading.service';
+import { ProgressService } from '../../core/services/progress.service';
 import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { ActivatedRoute } from '@angular/router';
@@ -45,7 +46,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
+    <ion-content class="ion-padding" (ionScroll)="onScroll($event)">
       <div *ngIf="loading" class="ion-text-center">
         <ion-spinner></ion-spinner>
       </div>
@@ -55,6 +56,10 @@ import { firstValueFrom, Subscription } from 'rxjs';
       </div>
 
       <div *ngIf="detail && !loading">
+        <div class="completed-banner" *ngIf="completed">
+          <ion-icon name="checkmark-circle" color="success"></ion-icon> Reading marked complete
+        </div>
+
         <div [style.font-size]="'var(--app-font-size, 17px)'" class="ion-margin-bottom">
           <h2 class="reading-heading">{{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}</h2>
         </div>
@@ -121,11 +126,25 @@ import { firstValueFrom, Subscription } from 'rxjs';
       vertical-align: super;
       line-height: 1.4;
     }
+    .completed-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--ion-color-success-tint, #e8f5e9);
+      color: var(--ion-color-success-shade, #2e7d32);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
   `]
 })
 export class ReadingDetailPage extends BaseReadingPageComponent implements OnDestroy {
   seriesList: Series[] = [];
   private routeSub?: Subscription;
+  completed = false;
+  private autoMarked = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -133,6 +152,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     private seriesService: SeriesService,
     private prefs: PreferencesService,
     private actionSheetCtrl: ActionSheetController,
+    private progressService: ProgressService,
     readingService: ReadingService
   ) {
     super(readingService);
@@ -141,6 +161,23 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   override ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     super.ngOnDestroy();
+  }
+
+  async onScroll(event: CustomEvent): Promise<void> {
+    if (this.autoMarked || !this.detail) return;
+    const target = event.detail;
+    const scrollHeight = target.scrollHeight;
+    const scrollTop = target.scrollTop;
+    const clientHeight = target.clientHeight;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      this.autoMarked = true;
+      try {
+        await firstValueFrom(this.progressService.markComplete(this.detail.id));
+        this.completed = true;
+      } catch {
+        this.autoMarked = false;
+      }
+    }
   }
 
   paraRefRegex = /\[(\d+)\.(\d+)\]/g;
