@@ -102,8 +102,8 @@ namespace EncounterDaily.Services
         public async Task<DailyReadingDto> GetTodayReadingAsync(int seriesId, int? month = null, int? day = null)
         {
             var now = month.HasValue && day.HasValue
-                ? new DateTime(DateTime.UtcNow.Year, month.Value, day.Value)
-                : DateTime.UtcNow;
+                ? new DateTime(DateTime.Now.Year, month.Value, day.Value)
+                : DateTime.Now;
             var reading = await _unitOfWork.Readings.GetBySeriesDateAsync(seriesId, now.Month, now.Day);
             if (reading == null)
                 throw new KeyNotFoundException($"No reading found for series {seriesId} on {now.Month}/{now.Day}");

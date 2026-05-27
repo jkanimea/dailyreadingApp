@@ -9,6 +9,7 @@ namespace EncounterDaily.Core.Interfaces.Services
         Task<int> GetStreakAsync(int userId, int seriesId);
         Task<IEnumerable<ProgressDto>> GetUserProgressForSeriesAsync(int userId, int seriesId);
         Task<double> GetCompletionPercentageAsync(int userId, int seriesId);
+        Task<int> GetCompletedCountAsync(int userId, int seriesId);
         Task<ProgressDto> MarkCompleteAsync(int userId, int readingId);
         Task UnmarkCompleteAsync(int userId, int readingId);
     }

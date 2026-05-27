@@ -90,7 +90,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task GetTodayReadingAsync_ShouldReturnDto()
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
             var reading = new DailyReading
             {
                 Id = 1,
@@ -114,7 +114,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
         [Fact]
         public async Task GetTodayReadingAsync_ShouldThrow_WhenNoReading()
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
             _mockReadingRepo.Setup(r => r.GetBySeriesDateAsync(1, now.Month, now.Day)).ReturnsAsync((DailyReading?)null);
 
             await _service.Invoking(s => s.GetTodayReadingAsync(1))

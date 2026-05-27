@@ -68,5 +68,11 @@ namespace EncounterDaily.Infrastructure.Repositories
 
             return (double)completedCount / totalReadings * 100;
         }
+
+        public async Task<int> GetCompletedCountAsync(int userId, int seriesId)
+        {
+            return await _dbSet
+                .CountAsync(p => p.UserId == userId && p.SeriesId == seriesId && p.IsCompleted);
+        }
     }
 }

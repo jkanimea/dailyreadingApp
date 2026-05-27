@@ -31,6 +31,11 @@ namespace EncounterDaily.Services
             return await _unitOfWork.Progress.GetCompletionPercentageAsync(userId, seriesId);
         }
 
+        public async Task<int> GetCompletedCountAsync(int userId, int seriesId)
+        {
+            return await _unitOfWork.Progress.GetCompletedCountAsync(userId, seriesId);
+        }
+
         public async Task<ProgressDto> MarkCompleteAsync(int userId, int readingId)
         {
             var reading = await _unitOfWork.Readings.GetByIdAsync(readingId)

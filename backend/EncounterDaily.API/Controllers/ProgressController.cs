@@ -32,6 +32,14 @@ namespace EncounterDaily.API.Controllers
             return Ok(streak);
         }
 
+        [HttpGet("series/{seriesId}/completed-count")]
+        public async Task<ActionResult<int>> GetCompletedCount(int seriesId)
+        {
+            var userId = GetUserId();
+            var count = await _progressService.GetCompletedCountAsync(userId, seriesId);
+            return Ok(count);
+        }
+
         [HttpGet("series/{seriesId}/percentage")]
         public async Task<ActionResult<double>> GetCompletionPercentage(int seriesId)
         {
