@@ -34,7 +34,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding" (ionScroll)="onScroll($event)">
+    <ion-content class="ion-padding">
       <div *ngIf="loading" class="ion-text-center">
         <ion-spinner></ion-spinner>
       </div>
@@ -71,6 +71,12 @@ import { firstValueFrom, Subscription } from 'rxjs';
         <div *ngIf="detail.fullTextSecondary" [style.font-size]="'var(--app-font-size, 17px)'" class="ion-margin-top">
           <h2>Companion: {{ detail.secondaryBookPageRange }}</h2>
           <p><span *ngFor="let seg of getParagraphSegments(detail.fullTextSecondary)" class="egw-text"><span *ngIf="seg.isRef" class="para-ref">{{ seg.text }}</span><span *ngIf="!seg.isRef">{{ seg.text }}</span></span></p>
+        </div>
+
+        <div class="ion-margin-top ion-padding-top complete-checkbox">
+          <ion-checkbox [checked]="completed" (ionChange)="toggleComplete($event)">
+            I have read this passage
+          </ion-checkbox>
         </div>
       </div>
     </ion-content>
@@ -126,13 +132,20 @@ import { firstValueFrom, Subscription } from 'rxjs';
       font-size: 15px;
       margin-bottom: 12px;
     }
+    .complete-checkbox {
+      border-top: 1px solid var(--ion-color-light-shade);
+      text-align: center;
+    }
+    .complete-checkbox ion-checkbox {
+      --size: 24px;
+      font-size: 16px;
+    }
   `]
 })
 export class ReadingDetailPage extends BaseReadingPageComponent implements OnDestroy {
   seriesList: Series[] = [];
   private routeSub?: Subscription;
   completed = false;
-  private autoMarked = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -151,20 +164,18 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     super.ngOnDestroy();
   }
 
-  async onScroll(event: CustomEvent): Promise<void> {
-    if (this.autoMarked || !this.detail) return;
-    const target = event.detail;
-    const scrollHeight = target.scrollHeight;
-    const scrollTop = target.scrollTop;
-    const clientHeight = target.clientHeight;
-    if (scrollTop + clientHeight >= scrollHeight - 60) {
-      this.autoMarked = true;
-      try {
+  async toggleComplete(event: CustomEvent): Promise<void> {
+    if (!this.detail) return;
+    const checked = event.detail.checked;
+    try {
+      if (checked) {
         await firstValueFrom(this.progressService.markComplete(this.detail.id));
-        this.completed = true;
-      } catch {
-        this.autoMarked = false;
+      } else {
+        await firstValueFrom(this.progressService.unmarkComplete(this.detail.id));
       }
+      this.completed = checked;
+    } catch {
+      this.completed = !checked;
     }
   }
 
@@ -295,14 +306,25 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     return segments.length > 0 ? segments : [{ text, isRef: false }];
   }
 
-  protected load(): void {
+  protected async load(): Promise<void> {
     this.routeSub?.unsubscribe();
-    this.routeSub = this.route.paramMap.subscribe(params => {
+    this.routeSub = this.route.paramMap.subscribe(async params => {
       const id = Number(params.get('id'));
       if (id) {
-        this.loadDetail(id);
+        await this.loadDetail(id);
+        await this.checkCompleted(id);
       }
     });
+  }
+
+  private async checkCompleted(readingId: number): Promise<void> {
+    if (!this.detail?.seriesId) return;
+    try {
+      const allProgress = await firstValueFrom(this.progressService.getSeriesProgress(this.detail.seriesId));
+      this.completed = allProgress.some(p => p.readingId === readingId && p.isCompleted);
+    } catch {
+      this.completed = false;
+    }
   }
 }
 
