@@ -18,29 +18,17 @@ import { firstValueFrom, Subscription } from 'rxjs';
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/today"></ion-back-button>
+          <ion-back-button defaultHref="/today" text=""></ion-back-button>
         </ion-buttons>
-        <ion-title (click)="switchSeries()" style="cursor: pointer">
+        <ion-title>
           {{ detail?.seriesName ?? 'Reading' }} - Series {{ detail?.seriesId }}
         </ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="goToSearch()">
-            <ion-icon slot="icon-only" name="search-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToProgress()">
-            <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToBookmarks()">
-            <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToCalendar()">
-            <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+          <ion-button (click)="openFeatures()">
+            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
           </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="switchSeries()">
-            <ion-icon slot="icon-only" name="swap-horizontal"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-toolbar>
@@ -181,6 +169,21 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   }
 
   paraRefRegex = /\[(\d+)\.(\d+)\]/g;
+
+  async openFeatures(): Promise<void> {
+    const sheet = await this.actionSheetCtrl.create({
+      header: 'Features',
+      buttons: [
+        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
+        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
+        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
+        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
+        { text: 'Switch Series', icon: 'swap-horizontal', handler: () => this.switchSeries() },
+        { text: 'Cancel', role: 'cancel' }
+      ]
+    });
+    await sheet.present();
+  }
 
   goToCalendar(): void {
     this.router.navigate(['/calendar']);

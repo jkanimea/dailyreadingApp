@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { ReadingService } from '../../core/services/reading.service';
@@ -12,17 +12,8 @@ import { PreferencesService } from '../../core/services/preferences.service';
       <ion-toolbar>
         <ion-title>Today's Reading</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="goToSearch()">
-            <ion-icon slot="icon-only" name="search-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToProgress()">
-            <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToBookmarks()">
-            <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToCalendar()">
-            <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+          <ion-button (click)="openFeatures()">
+            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
           </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
@@ -52,31 +43,30 @@ class TodayPage {
   constructor(
     private router: Router,
     private readingService: ReadingService,
-    private prefs: PreferencesService
+    private prefs: PreferencesService,
+    private actionSheetCtrl: ActionSheetController
   ) {}
 
   ionViewWillEnter(): void {
     this.loadToday();
   }
 
-  goToCalendar(): void {
-    this.router.navigate(['/calendar']);
-  }
-
-  goToSearch(): void {
-    this.router.navigate(['/search']);
+  async openFeatures(): Promise<void> {
+    const sheet = await this.actionSheetCtrl.create({
+      header: 'Features',
+      buttons: [
+        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
+        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
+        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
+        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
+        { text: 'Cancel', role: 'cancel' }
+      ]
+    });
+    await sheet.present();
   }
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
-  }
-
-  goToProgress(): void {
-    this.router.navigate(['/progress']);
-  }
-
-  goToBookmarks(): void {
-    this.router.navigate(['/bookmarks']);
   }
 
   private async loadToday(): Promise<void> {

@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { takeUntil } from 'rxjs/operators';
@@ -15,14 +15,8 @@ import { PreferencesService } from '../../core/services/preferences.service';
       <ion-toolbar>
         <ion-title><ion-icon name="calendar-outline"></ion-icon> Calendar</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="goToSearch()">
-            <ion-icon slot="icon-only" name="search-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToProgress()">
-            <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToBookmarks()">
-            <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+          <ion-button (click)="openFeatures()">
+            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
           </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
@@ -116,9 +110,10 @@ class CalendarPage extends BaseCalendarPageComponent {
   private seriesId = 1;
 
   constructor(
-    readingService: ReadingService,
     private router: Router,
-    private prefs: PreferencesService
+    readingService: ReadingService,
+    private prefs: PreferencesService,
+    private actionSheetCtrl: ActionSheetController
   ) {
     super(readingService);
   }
@@ -128,20 +123,21 @@ class CalendarPage extends BaseCalendarPageComponent {
     super.ionViewWillEnter();
   }
 
-  goToSearch(): void {
-    this.router.navigate(['/search']);
+  async openFeatures(): Promise<void> {
+    const sheet = await this.actionSheetCtrl.create({
+      header: 'Features',
+      buttons: [
+        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
+        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
+        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
+        { text: 'Cancel', role: 'cancel' }
+      ]
+    });
+    await sheet.present();
   }
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
-  }
-
-  goToProgress(): void {
-    this.router.navigate(['/progress']);
-  }
-
-  goToBookmarks(): void {
-    this.router.navigate(['/bookmarks']);
   }
 
   setSeriesId(id: number): void {

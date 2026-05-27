@@ -1,8 +1,8 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { SeriesService } from '../../core/services/series.service';
 import { ProgressService } from '../../core/services/progress.service';
 import { Series } from '../../core/models/series.model';
@@ -12,6 +12,7 @@ interface SeriesStats {
   series: Series;
   percentage: number;
   streak: number;
+  completedCount: number;
 }
 
 @Component({
@@ -20,14 +21,8 @@ interface SeriesStats {
       <ion-toolbar>
         <ion-title>Progress</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="goToSearch()">
-            <ion-icon slot="icon-only" name="search-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToCalendar()">
-            <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToBookmarks()">
-            <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+          <ion-button (click)="openFeatures()">
+            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
           </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
@@ -55,8 +50,12 @@ interface SeriesStats {
         </ion-card-header>
         <ion-card-content>
           <div class="stat-row">
+            <span class="stat-label">Day</span>
+            <span class="stat-value">{{ s.completedCount }}</span>
+          </div>
+          <div class="stat-row">
             <span class="stat-label">Completed</span>
-            <span class="stat-value">{{ s.percentage }}%</span>
+            <span class="stat-value">{{ displayPercentage(s) }}%</span>
           </div>
           <div class="progress-track">
             <div class="progress-fill" [style.width.%]="s.percentage"></div>
@@ -80,7 +79,7 @@ interface SeriesStats {
     .error-message { color: var(--ion-color-danger); }
   `]
 })
-class ProgressPage implements OnInit {
+class ProgressPage {
   stats: SeriesStats[] = [];
   loading = false;
   error?: string;
@@ -88,27 +87,35 @@ class ProgressPage implements OnInit {
   constructor(
     private router: Router,
     private seriesService: SeriesService,
-    private progressService: ProgressService
+    private progressService: ProgressService,
+    private actionSheetCtrl: ActionSheetController
   ) {}
 
-  goToSearch(): void {
-    this.router.navigate(['/search']);
+  async openFeatures(): Promise<void> {
+    const sheet = await this.actionSheetCtrl.create({
+      header: 'Features',
+      buttons: [
+        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
+        { text: 'Progress', icon: 'trending-up-outline', handler: () => {} },
+        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
+        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
+        { text: 'Cancel', role: 'cancel' }
+      ]
+    });
+    await sheet.present();
   }
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
   }
 
-  goToCalendar(): void {
-    this.router.navigate(['/calendar']);
-  }
-
-  goToBookmarks(): void {
-    this.router.navigate(['/bookmarks']);
-  }
-
-  ngOnInit(): void {
+  ionViewWillEnter(): void {
     this.loadStats();
+  }
+
+  displayPercentage(s: SeriesStats): number {
+    if (s.completedCount === 0) return 0;
+    return s.percentage < 1 ? 1 : Math.round(s.percentage);
   }
 
   private async loadStats(): Promise<void> {
@@ -119,13 +126,14 @@ class ProgressPage implements OnInit {
       const results = await Promise.all(
         seriesList.map(async (s) => {
           try {
-            const [percentage, streak] = await Promise.all([
+            const [percentage, streak, completedCount] = await Promise.all([
               firstValueFrom(this.progressService.getCompletionPercentage(s.id)),
-              firstValueFrom(this.progressService.getStreak(s.id))
+              firstValueFrom(this.progressService.getStreak(s.id)),
+              firstValueFrom(this.progressService.getCompletedCount(s.id))
             ]);
-            return { series: s, percentage, streak };
+            return { series: s, percentage, streak, completedCount };
           } catch {
-            return { series: s, percentage: 0, streak: 0 };
+            return { series: s, percentage: 0, streak: 0, completedCount: 0 };
           }
         })
       );

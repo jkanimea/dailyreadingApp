@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { BookmarkService } from '../../core/services/bookmark.service';
@@ -13,14 +13,8 @@ import { firstValueFrom } from 'rxjs';
       <ion-toolbar>
         <ion-title>Bookmarks</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="goToSearch()">
-            <ion-icon slot="icon-only" name="search-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToProgress()">
-            <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToCalendar()">
-            <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+          <ion-button (click)="openFeatures()">
+            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
           </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
@@ -77,23 +71,25 @@ class BookmarksPage {
 
   constructor(
     private router: Router,
-    private bookmarkService: BookmarkService
+    private bookmarkService: BookmarkService,
+    private actionSheetCtrl: ActionSheetController
   ) {}
 
-  goToSearch(): void {
-    this.router.navigate(['/search']);
+  async openFeatures(): Promise<void> {
+    const sheet = await this.actionSheetCtrl.create({
+      header: 'Features',
+      buttons: [
+        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
+        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
+        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
+        { text: 'Cancel', role: 'cancel' }
+      ]
+    });
+    await sheet.present();
   }
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
-  }
-
-  goToProgress(): void {
-    this.router.navigate(['/progress']);
-  }
-
-  goToCalendar(): void {
-    this.router.navigate(['/calendar']);
   }
 
   ionViewWillEnter(): void {

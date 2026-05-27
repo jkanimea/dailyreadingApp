@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -16,14 +16,8 @@ import { firstValueFrom, Subject, debounceTime, distinctUntilChanged } from 'rxj
       <ion-toolbar>
         <ion-title>Search</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="goToCalendar()">
-            <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToProgress()">
-            <ion-icon slot="icon-only" name="trending-up-outline"></ion-icon>
-          </ion-button>
-          <ion-button (click)="goToBookmarks()">
-            <ion-icon slot="icon-only" name="bookmark-outline"></ion-icon>
+          <ion-button (click)="openFeatures()">
+            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
           </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
@@ -104,7 +98,8 @@ class SearchPage {
   constructor(
     private router: Router,
     private searchService: SearchService,
-    private prefs: PreferencesService
+    private prefs: PreferencesService,
+    private actionSheetCtrl: ActionSheetController
   ) {
     this.searchSubject.pipe(
       debounceTime(400),
@@ -112,20 +107,21 @@ class SearchPage {
     ).subscribe(q => this.performSearch(q));
   }
 
-  goToCalendar(): void {
-    this.router.navigate(['/calendar']);
+  async openFeatures(): Promise<void> {
+    const sheet = await this.actionSheetCtrl.create({
+      header: 'Features',
+      buttons: [
+        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
+        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
+        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
+        { text: 'Cancel', role: 'cancel' }
+      ]
+    });
+    await sheet.present();
   }
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
-  }
-
-  goToProgress(): void {
-    this.router.navigate(['/progress']);
-  }
-
-  goToBookmarks(): void {
-    this.router.navigate(['/bookmarks']);
   }
 
   onQueryChange(event: CustomEvent): void {

@@ -20,6 +20,10 @@ export class ProgressService {
     return this.api.get<number>(`/progress/series/${seriesId}/percentage`);
   }
 
+  getCompletedCount(seriesId: number): Observable<number> {
+    return this.api.get<number>(`/progress/series/${seriesId}/completed-count`);
+  }
+
   markComplete(readingId: number): Observable<ProgressDto> {
     return this.api.post<ProgressDto>(`/progress/${readingId}/complete`);
   }
