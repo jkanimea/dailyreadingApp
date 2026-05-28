@@ -28,14 +28,14 @@ builder.Services.AddControllers()
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+
 if (!bypassAuth)
 {
     builder.Services.AddControllers(options =>
     {
         options.Filters.Add(new AuthorizeFilter());
     });
-
-    builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 
     var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
     var rsa = RSA.Create();
