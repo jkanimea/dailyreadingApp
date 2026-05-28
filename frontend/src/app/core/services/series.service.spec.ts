@@ -41,7 +41,7 @@ describe('SeriesService', () => {
       expect(series[1].secondaryBook?.title).toBe('The Great Controversy');
     });
 
-    const req = httpMock.expectOne('http://localhost:5000/api/v1/series');
+    const req = httpMock.expectOne('/api/v1/series');
     expect(req.request.method).toBe('GET');
     req.flush(mockSeries);
   });
@@ -59,7 +59,7 @@ describe('SeriesService', () => {
       expect(s.primaryBook.title).toBe('Desire of Ages');
     });
 
-    const req = httpMock.expectOne('http://localhost:5000/api/v1/series/1');
+    const req = httpMock.expectOne('/api/v1/series/1');
     expect(req.request.method).toBe('GET');
     req.flush(mockSeries);
   });
