@@ -13,6 +13,9 @@ import { PreferencesService } from '../../core/services/preferences.service';
   template: `
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button defaultHref="/today" text=""></ion-back-button>
+        </ion-buttons>
         <ion-title><ion-icon name="calendar-outline"></ion-icon> Calendar</ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="openFeatures()">

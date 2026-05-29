@@ -11,6 +11,9 @@ import { firstValueFrom } from 'rxjs';
   template: `
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button defaultHref="/today" text=""></ion-back-button>
+        </ion-buttons>
         <ion-title>Bookmarks</ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="openFeatures()">

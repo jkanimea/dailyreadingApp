@@ -12,6 +12,9 @@ import { AuthService } from '../../core/services/auth.service';
   template: `
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button defaultHref="/today" text=""></ion-back-button>
+        </ion-buttons>
         <ion-title>Settings</ion-title>
       </ion-toolbar>
     </ion-header>

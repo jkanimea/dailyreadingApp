@@ -14,6 +14,9 @@ import { firstValueFrom, Subject, debounceTime, distinctUntilChanged } from 'rxj
   template: `
     <ion-header>
       <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-back-button defaultHref="/today" text=""></ion-back-button>
+        </ion-buttons>
         <ion-title>Search</ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="openFeatures()">
