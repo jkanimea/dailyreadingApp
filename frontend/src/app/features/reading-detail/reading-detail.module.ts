@@ -91,11 +91,11 @@ import { firstValueFrom, Subscription } from 'rxjs';
     }
     .bible-text {
       font-style: italic;
-      color: var(--ion-color-medium);
+      color: var(--bible-text-color, var(--ion-color-medium));
       font-size: 15px;
       line-height: 1.6;
       padding: 12px;
-      background: var(--ion-color-light);
+      background: var(--bible-text-bg, var(--ion-color-light));
       border-radius: 8px;
       white-space: pre-line;
     }

@@ -44,6 +44,10 @@
 body.dark {
   --ion-background-color: #121212;
   --ion-text-color: #ffffff;
+
+  /* Bible verse block: black background with white text so it stands out in dark mode */
+  --bible-text-bg: #000000;
+  --bible-text-color: #ffffff;
 }
 
 body.light {
