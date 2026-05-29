@@ -5,8 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace EncounterDaily.API.Controllers
 {
-    [ApiController]
-    public abstract class BaseController<T> : ControllerBase where T : BaseEntity
+    public abstract class BaseController<T> : BaseApiController where T : BaseEntity
     {
         protected readonly IService<T> _service;
         protected readonly ILogger _logger;

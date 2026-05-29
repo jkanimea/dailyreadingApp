@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EncounterDaily.API.Controllers
 {
-    [Route("api/v1/[controller]")]
     public class ReadingController : BaseController<DailyReading>
     {
         private readonly IReadingService _readingService;

@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace EncounterDaily.API.Controllers
 {
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class AuthController : ControllerBase
+    public class AuthController : BaseApiController
     {
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;

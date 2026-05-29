@@ -1,13 +1,10 @@
-using System.Security.Claims;
 using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EncounterDaily.API.Controllers
 {
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class BookmarkController : ControllerBase
+    public class BookmarkController : BaseApiController
     {
         private readonly IBookmarkService _bookmarkService;
         private readonly ILogger<BookmarkController> _logger;
@@ -58,12 +55,5 @@ namespace EncounterDaily.API.Controllers
             }
         }
 
-        private int GetUserId()
-        {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (claim != null && int.TryParse(claim, out var userId))
-                return userId;
-            return 1;
-        }
     }
 }

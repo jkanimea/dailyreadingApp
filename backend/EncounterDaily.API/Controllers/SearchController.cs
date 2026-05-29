@@ -1,13 +1,10 @@
-using System.Security.Claims;
 using EncounterDaily.Core.DTOs.Search;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EncounterDaily.API.Controllers
 {
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class SearchController : ControllerBase
+    public class SearchController : BaseApiController
     {
         private readonly ISearchService _searchService;
         private readonly ILogger<SearchController> _logger;
@@ -47,12 +44,5 @@ namespace EncounterDaily.API.Controllers
             return Ok(result);
         }
 
-        private int GetUserId()
-        {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (claim != null && int.TryParse(claim, out var userId))
-                return userId;
-            return 1;
-        }
     }
 }

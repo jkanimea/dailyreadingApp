@@ -1,13 +1,10 @@
-using System.Security.Claims;
 using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EncounterDaily.API.Controllers
 {
-    [ApiController]
-    [Route("api/v1/[controller]")]
-    public class ProgressController : ControllerBase
+    public class ProgressController : BaseApiController
     {
         private readonly IProgressService _progressService;
         private readonly ILogger<ProgressController> _logger;
@@ -74,12 +71,5 @@ namespace EncounterDaily.API.Controllers
             return NoContent();
         }
 
-        private int GetUserId()
-        {
-            var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (claim != null && int.TryParse(claim, out var userId))
-                return userId;
-            return 1;
-        }
     }
 }
