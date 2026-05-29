@@ -1,6 +1,7 @@
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace EncounterDaily.API.Controllers
 {
@@ -8,10 +9,12 @@ namespace EncounterDaily.API.Controllers
     public abstract class BaseController<T> : ControllerBase where T : BaseEntity
     {
         protected readonly IService<T> _service;
+        protected readonly ILogger _logger;
 
-        protected BaseController(IService<T> service)
+        protected BaseController(IService<T> service, ILogger logger)
         {
             _service = service;
+            _logger = logger;
         }
 
         [HttpGet]

@@ -3,6 +3,7 @@ using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace EncounterDaily.Tests.UnitTests.Controllers
@@ -18,7 +19,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         {
             _mockService = new Mock<ISeriesService>();
             _mockFactory = new Mock<ISeriesFactory>();
-            _controller = new SeriesController(_mockService.Object, _mockFactory.Object);
+            _controller = new SeriesController(_mockService.Object, _mockFactory.Object, Mock.Of<ILogger<SeriesController>>());
         }
 
         [Fact]

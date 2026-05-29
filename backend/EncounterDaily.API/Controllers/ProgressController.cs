@@ -10,10 +10,12 @@ namespace EncounterDaily.API.Controllers
     public class ProgressController : ControllerBase
     {
         private readonly IProgressService _progressService;
+        private readonly ILogger<ProgressController> _logger;
 
-        public ProgressController(IProgressService progressService)
+        public ProgressController(IProgressService progressService, ILogger<ProgressController> logger)
         {
             _progressService = progressService;
+            _logger = logger;
         }
 
         [HttpGet("series/{seriesId}")]
@@ -59,6 +61,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (KeyNotFoundException ex)
             {
+                _logger.LogWarning("Mark complete failed: {Message} (readingId: {ReadingId})", ex.Message, readingId);
                 return NotFound(new { message = ex.Message });
             }
         }

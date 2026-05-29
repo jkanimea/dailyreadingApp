@@ -3,6 +3,7 @@ using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace EncounterDaily.Tests.UnitTests.Controllers
@@ -16,7 +17,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public ReadingControllerTests()
         {
             _mockService = new Mock<IReadingService>();
-            _controller = new ReadingController(_mockService.Object);
+            _controller = new ReadingController(_mockService.Object, Mock.Of<ILogger<ReadingController>>());
         }
 
         [Fact]

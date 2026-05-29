@@ -11,10 +11,12 @@ namespace EncounterDaily.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
             _authService = authService;
+            _logger = logger;
         }
 
         [AllowAnonymous]
@@ -28,6 +30,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (UnauthorizedAccessException)
             {
+                _logger.LogWarning("Google login failed with invalid token");
                 return Unauthorized(new { message = "Invalid Google token" });
             }
         }
@@ -43,6 +46,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (UnauthorizedAccessException)
             {
+                _logger.LogWarning("Facebook login failed with invalid token");
                 return Unauthorized(new { message = "Invalid Facebook token" });
             }
         }
@@ -58,6 +62,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _logger.LogWarning("Token refresh failed: {Message}", ex.Message);
                 return Unauthorized(new { message = ex.Message });
             }
         }
@@ -73,6 +78,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
+                _logger.LogWarning("Logout failed: {Message}", ex.Message);
                 return Unauthorized(new { message = ex.Message });
             }
         }

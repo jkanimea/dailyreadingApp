@@ -4,6 +4,7 @@ import { Observable, BehaviorSubject, throwError, from, of } from 'rxjs';
 import { catchError, filter, take, switchMap, map } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { SecureStorageService } from '../services/secure-storage.service';
+import { LoggingService } from '../services/logging.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
@@ -12,7 +13,8 @@ export class AuthInterceptor implements HttpInterceptor {
 
   constructor(
     private authService: AuthService,
-    private secureStorage: SecureStorageService
+    private secureStorage: SecureStorageService,
+    private logging: LoggingService
   ) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
@@ -23,8 +25,13 @@ export class AuthInterceptor implements HttpInterceptor {
     return from(this.addToken(req)).pipe(
       switchMap(authReq => next.handle(authReq)),
       catchError(error => {
-        if (error instanceof HttpErrorResponse && error.status === 401) {
-          return this.handle401Error(req, next);
+        if (error instanceof HttpErrorResponse) {
+          this.logging.error('AuthInterceptor',
+            `HTTP ${error.status} ${req.method} ${req.urlWithParams}`,
+            error.message);
+          if (error.status === 401) {
+            return this.handle401Error(req, next);
+          }
         }
         return throwError(() => error);
       })

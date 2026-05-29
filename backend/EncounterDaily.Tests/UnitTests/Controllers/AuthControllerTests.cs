@@ -4,6 +4,7 @@ using EncounterDaily.Core.DTOs.Auth;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace EncounterDaily.Tests.UnitTests.Controllers
@@ -17,7 +18,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public AuthControllerTests()
         {
             _mockService = new Mock<IAuthService>();
-            _controller = new AuthController(_mockService.Object);
+            _controller = new AuthController(_mockService.Object, Mock.Of<ILogger<AuthController>>());
         }
 
         [Fact]

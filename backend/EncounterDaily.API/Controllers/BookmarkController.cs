@@ -10,10 +10,12 @@ namespace EncounterDaily.API.Controllers
     public class BookmarkController : ControllerBase
     {
         private readonly IBookmarkService _bookmarkService;
+        private readonly ILogger<BookmarkController> _logger;
 
-        public BookmarkController(IBookmarkService bookmarkService)
+        public BookmarkController(IBookmarkService bookmarkService, ILogger<BookmarkController> logger)
         {
             _bookmarkService = bookmarkService;
+            _logger = logger;
         }
 
         [HttpGet]
@@ -35,6 +37,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (KeyNotFoundException ex)
             {
+                _logger.LogWarning("Add bookmark failed: {Message} (readingId: {ReadingId})", ex.Message, readingId);
                 return NotFound(new { message = ex.Message });
             }
         }
@@ -50,6 +53,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (KeyNotFoundException ex)
             {
+                _logger.LogWarning("Remove bookmark failed: {Message} (readingId: {ReadingId})", ex.Message, readingId);
                 return NotFound(new { message = ex.Message });
             }
         }

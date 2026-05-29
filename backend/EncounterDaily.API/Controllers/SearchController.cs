@@ -10,10 +10,12 @@ namespace EncounterDaily.API.Controllers
     public class SearchController : ControllerBase
     {
         private readonly ISearchService _searchService;
+        private readonly ILogger<SearchController> _logger;
 
-        public SearchController(ISearchService searchService)
+        public SearchController(ISearchService searchService, ILogger<SearchController> logger)
         {
             _searchService = searchService;
+            _logger = logger;
         }
 
         [HttpGet]

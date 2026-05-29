@@ -2,6 +2,7 @@ using EncounterDaily.API.Controllers;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace EncounterDaily.Tests.UnitTests.Controllers
@@ -139,7 +140,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
 
         private class TestBookController : BaseController<Book>
         {
-            public TestBookController(IService<Book> service) : base(service) { }
+            public TestBookController(IService<Book> service) : base(service, Mock.Of<ILogger>()) { }
         }
     }
 }

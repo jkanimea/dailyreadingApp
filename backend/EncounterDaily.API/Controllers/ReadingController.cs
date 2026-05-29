@@ -10,7 +10,8 @@ namespace EncounterDaily.API.Controllers
     {
         private readonly IReadingService _readingService;
 
-        public ReadingController(IReadingService readingService) : base(readingService)
+        public ReadingController(IReadingService readingService, ILogger<ReadingController> logger)
+            : base(readingService, logger)
         {
             _readingService = readingService;
         }
@@ -32,6 +33,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (KeyNotFoundException)
             {
+                _logger.LogWarning("Today's reading not found for series {SeriesId}, month {Month}, day {Day}", seriesId, month, day);
                 return NotFound(new { message = "No reading found for today" });
             }
         }
@@ -69,6 +71,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (KeyNotFoundException)
             {
+                _logger.LogWarning("Full reading not found: {ReadingId}", id);
                 return NotFound();
             }
         }
@@ -83,6 +86,7 @@ namespace EncounterDaily.API.Controllers
             }
             catch (KeyNotFoundException)
             {
+                _logger.LogWarning("Summary not found: {ReadingId}", id);
                 return NotFound();
             }
         }

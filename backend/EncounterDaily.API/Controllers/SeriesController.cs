@@ -11,7 +11,8 @@ namespace EncounterDaily.API.Controllers
         private readonly ISeriesService _seriesService;
         private readonly ISeriesFactory _seriesFactory;
 
-        public SeriesController(ISeriesService seriesService, ISeriesFactory seriesFactory) : base(seriesService)
+        public SeriesController(ISeriesService seriesService, ISeriesFactory seriesFactory, ILogger<SeriesController> logger)
+            : base(seriesService, logger)
         {
             _seriesService = seriesService;
             _seriesFactory = seriesFactory;

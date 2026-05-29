@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
+using EncounterDaily.API.Middleware;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Services;
 using EncounterDaily.Infrastructure;
@@ -11,8 +12,18 @@ using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .WriteTo.File("logs/encounterdaily-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
+    .CreateLogger();
+
+builder.Host.UseSerilog();
 
 var bypassAuth = builder.Configuration.GetValue<bool>("DevMode:BypassAuth");
 
@@ -146,6 +157,8 @@ if (!bypassAuth)
     app.UseAuthentication();
     app.UseAuthorization();
 }
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.MapControllers()
    .RequireRateLimiting("PerIp");

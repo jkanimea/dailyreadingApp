@@ -4,6 +4,7 @@ using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace EncounterDaily.Tests.UnitTests.Controllers
@@ -17,7 +18,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public BookmarkControllerTests()
         {
             _mockService = new Mock<IBookmarkService>();
-            _controller = new BookmarkController(_mockService.Object);
+            _controller = new BookmarkController(_mockService.Object, Mock.Of<ILogger<BookmarkController>>());
             _controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext
