@@ -5,6 +5,7 @@ export interface UserDto {
   provider: string;
   selectedSeriesId: number;
   photoUrl?: string;
+  role?: string; // 'Admin' | 'User'
 }
 
 export interface LoginRequest {

@@ -10,6 +10,7 @@ const GUEST_ID_KEY = 'encounter_guest_id';
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly apiUrl = environment.apiUrl;
+  private cachedRole: string | null = null;
 
   constructor(
     private http: HttpClient,
@@ -35,13 +36,39 @@ export class AuthService {
     );
   }
 
+  async getRole(): Promise<string | null> {
+    if (this.cachedRole) return this.cachedRole;
+    const token = await this.secureStorage.getToken().catch(() => null);
+    if (!token || token.startsWith('guest-')) return null;
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payload = JSON.parse(atob(parts[1]));
+      this.cachedRole = payload['role'] ?? null;
+      return this.cachedRole;
+    } catch {
+      return null;
+    }
+  }
+
+  async isAdmin(): Promise<boolean> {
+    const role = await this.getRole();
+    return role === 'Admin';
+  }
+
+  clearRoleCache(): void {
+    this.cachedRole = null;
+  }
+
   async guestLogin(): Promise<void> {
+    this.cachedRole = null;
     const guestId = localStorage.getItem(GUEST_ID_KEY) || String(Date.now());
     localStorage.setItem(GUEST_ID_KEY, guestId);
     await this.secureStorage.setTokens('guest-token-' + guestId, 'guest-refresh-' + guestId);
   }
 
   async logout(): Promise<void> {
+    this.cachedRole = null;
     await this.secureStorage.clearTokens();
     try {
       await this.http.post<void>(`${this.apiUrl}/auth/logout`, {}).toPromise();

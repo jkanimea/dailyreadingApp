@@ -12,6 +12,8 @@ namespace EncounterDaily.Core.Interfaces
         IUserRepository Users { get; }
         IRefreshTokenRepository RefreshTokens { get; }
         ISearchRepository Search { get; }
+        IRoleRepository Roles { get; }
+        IAppLogRepository AppLogs { get; }
         IRepository<T> Repository<T>() where T : BaseEntity;
         Task<int> CompleteAsync();
     }

@@ -1,0 +1,171 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/today"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Admin — Log Viewer</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <!-- Filters -->
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Filters</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-grid>
+        <ion-row>
+          <ion-col size="12" size-md="4">
+            <ion-item>
+              <ion-label>Level</ion-label>
+              <ion-select [(ngModel)]="query.level" placeholder="All">
+                <ion-select-option *ngFor="let l of levels" [value]="l">
+                  {{ l || 'All' }}
+                </ion-select-option>
+              </ion-select>
+            </ion-item>
+          </ion-col>
+          <ion-col size="12" size-md="4">
+            <ion-item>
+              <ion-label>Origin</ion-label>
+              <ion-select [(ngModel)]="query.origin" placeholder="All">
+                <ion-select-option *ngFor="let o of origins" [value]="o">
+                  {{ o || 'All' }}
+                </ion-select-option>
+              </ion-select>
+            </ion-item>
+          </ion-col>
+          <ion-col size="12" size-md="4">
+            <ion-item>
+              <ion-label position="floating">From</ion-label>
+              <ion-input type="datetime-local" [(ngModel)]="query.from"></ion-input>
+            </ion-item>
+          </ion-col>
+          <ion-col size="12" size-md="4">
+            <ion-item>
+              <ion-label position="floating">To</ion-label>
+              <ion-input type="datetime-local" [(ngModel)]="query.to"></ion-input>
+            </ion-item>
+          </ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col>
+            <ion-button (click)="applyFilter()" color="primary" fill="solid">
+              <ion-icon slot="start" name="search-outline"></ion-icon>
+              Apply
+            </ion-button>
+            <ion-button (click)="clearFilter()" color="medium" fill="outline" class="ion-margin-start">
+              <ion-icon slot="start" name="refresh-outline"></ion-icon>
+              Clear
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Delete old logs -->
+  <ion-card>
+    <ion-card-content>
+      <div class="delete-section">
+        <p class="ion-no-margin">
+          <strong>Cleanup:</strong> Delete all log entries older than 6 months.
+        </p>
+        <ion-button
+          color="danger"
+          fill="outline"
+          [disabled]="deleteLoading"
+          (click)="deleteOldLogs()"
+          class="ion-margin-top">
+          <ion-spinner *ngIf="deleteLoading" name="crescent" slot="start"></ion-spinner>
+          <ion-icon *ngIf="!deleteLoading" name="trash-outline" slot="start"></ion-icon>
+          Delete Old Logs
+        </ion-button>
+        <p *ngIf="deleteMessage" class="delete-message ion-margin-top">{{ deleteMessage }}</p>
+      </div>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- Error -->
+  <ion-card *ngIf="errorMessage" color="danger">
+    <ion-card-content>{{ errorMessage }}</ion-card-content>
+  </ion-card>
+
+  <!-- Summary -->
+  <div class="log-summary ion-padding-vertical">
+    <span class="count-badge">{{ totalCount }} total entries</span>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Loading logs...</p>
+  </div>
+
+  <!-- Log List -->
+  <div *ngIf="!loading">
+    <ion-card *ngFor="let log of logs" class="log-card">
+      <ion-card-content>
+        <div class="log-header">
+          <ion-badge [color]="getLevelColor(log.level)" class="level-badge">
+            {{ log.level | uppercase }}
+          </ion-badge>
+          <ion-badge color="light" class="origin-badge">
+            {{ log.origin }}
+          </ion-badge>
+          <span class="log-timestamp">{{ log.createdAt | date:'short' }}</span>
+        </div>
+        <p class="log-message">{{ log.message }}</p>
+        <div *ngIf="log.source" class="log-meta">
+          <ion-icon name="code-slash-outline"></ion-icon>
+          <span>{{ log.source }}</span>
+        </div>
+        <div *ngIf="log.userEmail" class="log-meta">
+          <ion-icon name="person-outline"></ion-icon>
+          <span>{{ log.userEmail }}</span>
+        </div>
+        <div *ngIf="log.ipAddress" class="log-meta">
+          <ion-icon name="globe-outline"></ion-icon>
+          <span>{{ log.ipAddress }}</span>
+        </div>
+        <ion-accordion-group *ngIf="log.exception">
+          <ion-accordion>
+            <ion-item slot="header" color="light" lines="none" class="exception-toggle">
+              <ion-label>Exception Details</ion-label>
+            </ion-item>
+            <div slot="content" class="exception-content">
+              <pre>{{ log.exception }}</pre>
+            </div>
+          </ion-accordion>
+        </ion-accordion-group>
+      </ion-card-content>
+    </ion-card>
+
+    <div *ngIf="logs.length === 0 && !loading" class="empty-state">
+      <ion-icon name="document-text-outline"></ion-icon>
+      <p>No log entries found.</p>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="totalPages > 1" class="pagination">
+    <ion-button
+      fill="outline"
+      size="small"
+      [disabled]="query.page === 1"
+      (click)="goToPage((query.page || 1) - 1)">
+      <ion-icon name="chevron-back-outline"></ion-icon>
+    </ion-button>
+    <span class="page-info">Page {{ query.page }} of {{ totalPages }}</span>
+    <ion-button
+      fill="outline"
+      size="small"
+      [disabled]="query.page === totalPages"
+      (click)="goToPage((query.page || 1) + 1)">
+      <ion-icon name="chevron-forward-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+</ion-content>

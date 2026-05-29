@@ -57,6 +57,8 @@ namespace EncounterDaily.Services
                     SelectedSeriesId = 1
                 };
                 await _unitOfWork.Users.AddAsync(user);
+                await _unitOfWork.CompleteAsync();
+                await AssignDefaultRoleAsync(user.Id);
             }
             else
             {
@@ -102,6 +104,8 @@ namespace EncounterDaily.Services
                     SelectedSeriesId = 1
                 };
                 await _unitOfWork.Users.AddAsync(user);
+                await _unitOfWork.CompleteAsync();
+                await AssignDefaultRoleAsync(user.Id);
             }
             else
             {
@@ -160,12 +164,24 @@ namespace EncounterDaily.Services
             var user = await _unitOfWork.Users.GetByIdAsync(userId)
                 ?? throw new UnauthorizedAccessException("User not found");
 
-            return MapToDto(user);
+            var roleName = await _unitOfWork.Roles.GetUserRoleNameAsync(userId);
+            return MapToDto(user, roleName);
+        }
+
+        private async Task AssignDefaultRoleAsync(int userId)
+        {
+            var userRole = await _unitOfWork.Roles.GetByNameAsync("User");
+            if (userRole != null)
+            {
+                await _unitOfWork.Roles.AssignRoleToUserAsync(userId, userRole.Id);
+                await _unitOfWork.CompleteAsync();
+            }
         }
 
         private async Task<TokenResponse> GenerateTokensAsync(User user)
         {
-            var accessToken = GenerateAccessToken(user);
+            var roleName = await _unitOfWork.Roles.GetUserRoleNameAsync(user.Id);
+            var accessToken = GenerateAccessToken(user, roleName);
             var refreshToken = await GenerateRefreshTokenAsync(user);
 
             return new TokenResponse
@@ -173,11 +189,11 @@ namespace EncounterDaily.Services
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 ExpiresIn = _jwtSettings.AccessTokenExpirationMinutes * 60,
-                User = MapToDto(user)
+                User = MapToDto(user, roleName)
             };
         }
 
-        private string GenerateAccessToken(User user)
+        private string GenerateAccessToken(User user, string roleName)
         {
             var privateKey = new RsaSecurityKey(_rsa);
             var credentials = new SigningCredentials(privateKey, SecurityAlgorithms.RsaSha256);
@@ -188,7 +204,8 @@ namespace EncounterDaily.Services
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.DisplayName),
-                new Claim("provider", user.Provider)
+                new Claim("provider", user.Provider),
+                new Claim("role", roleName)
             };
 
             var token = new JwtSecurityToken(
@@ -230,7 +247,7 @@ namespace EncounterDaily.Services
             return Convert.ToHexString(hash).ToLower();
         }
 
-        private static UserDto MapToDto(User user)
+        private static UserDto MapToDto(User user, string role = "User")
         {
             return new UserDto
             {
@@ -240,7 +257,8 @@ namespace EncounterDaily.Services
                 Provider = user.Provider,
                 SelectedSeriesId = user.SelectedSeriesId,
                 CreatedAt = user.CreatedAt,
-                LastLoginAt = user.LastLoginAt
+                LastLoginAt = user.LastLoginAt,
+                Role = role
             };
         }
 

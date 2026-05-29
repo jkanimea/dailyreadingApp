@@ -17,6 +17,8 @@ namespace EncounterDaily.Infrastructure
         private IUserRepository? _users;
         private IRefreshTokenRepository? _refreshTokens;
         private ISearchRepository? _search;
+        private IRoleRepository? _roles;
+        private IAppLogRepository? _appLogs;
 
         public UnitOfWork(AppDbContext context)
         {
@@ -30,6 +32,8 @@ namespace EncounterDaily.Infrastructure
         public IUserRepository Users => _users ??= new UserRepository(_context);
         public IRefreshTokenRepository RefreshTokens => _refreshTokens ??= new RefreshTokenRepository(_context);
         public ISearchRepository Search => _search ??= new SearchRepository(_context);
+        public IRoleRepository Roles => _roles ??= new RoleRepository(_context);
+        public IAppLogRepository AppLogs => _appLogs ??= new AppLogRepository(_context);
 
         public IRepository<T> Repository<T>() where T : BaseEntity
         {

@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using System.Threading.RateLimiting;
 using EncounterDaily.API.Middleware;
+using EncounterDaily.API.Services;
+using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Services;
 using EncounterDaily.Infrastructure;
@@ -69,14 +71,24 @@ if (!bypassAuth)
                 ValidIssuer = jwtSettings.Issuer,
                 ValidAudience = jwtSettings.Audience,
                 IssuerSigningKey = new RsaSecurityKey(rsa),
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.Zero,
+                RoleClaimType = "role"
             };
         });
+
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("Admin"));
+    });
 }
 else
 {
     builder.Services.AddControllers();
     builder.Services.AddSingleton(RSA.Create());
+    builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("RequireAdminRole", policy => policy.RequireAssertion(_ => true));
+    });
     Console.WriteLine("  [DevMode] Auth bypass enabled — all endpoints are anonymous.");
 }
 
@@ -138,9 +150,19 @@ builder.Services.AddHttpClient("FacebookGraph", client =>
 });
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
-builder.Services.AddHostedService<EncounterDaily.API.Services.BibleSeedService>();
+builder.Services.AddScoped<IAppLogService, AppLogService>();
+builder.Services.AddHostedService<BibleSeedService>();
+builder.Services.AddHostedService<LogCleanupService>();
 
 var app = builder.Build();
+
+// Seed database: ensure tables and default roles exist
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await dbContext.Database.EnsureCreatedAsync();
+    await SeedRolesAsync(dbContext);
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -164,3 +186,20 @@ app.MapControllers()
    .RequireRateLimiting("PerIp");
 
 app.Run();
+
+static async Task SeedRolesAsync(AppDbContext context)
+{
+    var roleNames = new[] { "Admin", "User" };
+    foreach (var name in roleNames)
+    {
+        if (!context.Roles.Any(r => r.Name == name))
+        {
+            context.Roles.Add(new Role
+            {
+                Name = name,
+                Description = name == "Admin" ? "Full administrative access" : "Standard authenticated user"
+            });
+        }
+    }
+    await context.SaveChangesAsync();
+}

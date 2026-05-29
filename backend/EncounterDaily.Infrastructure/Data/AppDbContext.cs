@@ -16,6 +16,9 @@ namespace EncounterDaily.Infrastructure.Data
         public DbSet<UserSeriesPreference> UserSeriesPreferences { get; set; } = null!;
         public DbSet<SearchHistory> SearchHistory { get; set; } = null!;
         public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+        public DbSet<Role> Roles { get; set; } = null!;
+        public DbSet<UserRole> UserRoles { get; set; } = null!;
+        public DbSet<AppLog> AppLogs { get; set; } = null!;
         public DbSet<BibleBook> BibleBooks { get; set; } = null!;
         public DbSet<BibleVerse> BibleVerses { get; set; } = null!;
         public DbSet<EgwPage> EgwPages { get; set; } = null!;
@@ -133,6 +136,31 @@ namespace EncounterDaily.Infrastructure.Data
                     .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<Role>(entity =>
+            {
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            modelBuilder.Entity<UserRole>(entity =>
+            {
+                entity.HasIndex(e => new { e.UserId, e.RoleId }).IsUnique();
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Role)
+                    .WithMany(r => r.UserRoles)
+                    .HasForeignKey(e => e.RoleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<AppLog>(entity =>
+            {
+                entity.HasIndex(e => e.CreatedAt);
+                entity.HasIndex(e => e.Level);
+                entity.HasIndex(e => e.Origin);
             });
 
             modelBuilder.Entity<EgwPage>(entity =>

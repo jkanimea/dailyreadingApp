@@ -9,5 +9,6 @@ namespace EncounterDaily.Core.DTOs.Auth
         public int SelectedSeriesId { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? LastLoginAt { get; set; }
+        public string Role { get; set; } = "User";
     }
 }
