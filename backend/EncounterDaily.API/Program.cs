@@ -156,11 +156,13 @@ builder.Services.AddHostedService<LogCleanupService>();
 
 var app = builder.Build();
 
-// Seed database: ensure tables and default roles exist
+// Ensure all tables exist (EnsureCreatedAsync only works on a brand-new DB;
+// EnsureSchemaAsync adds any missing tables safely to an existing DB).
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.EnsureCreatedAsync();
+    await EnsureSchemaAsync(dbContext);
     await SeedRolesAsync(dbContext);
 }
 
@@ -186,6 +188,61 @@ app.MapControllers()
    .RequireRateLimiting("PerIp");
 
 app.Run();
+
+// Creates any tables that exist in the EF model but are missing from the database.
+// Safe to run on an existing DB — uses IF NOT EXISTS so nothing is dropped or altered.
+static async Task EnsureSchemaAsync(AppDbContext context)
+{
+    await context.Database.ExecuteSqlRawAsync(@"
+        IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'Roles')
+        CREATE TABLE Roles (
+            Id          INT IDENTITY(1,1) PRIMARY KEY,
+            Name        NVARCHAR(50)  NOT NULL,
+            Description NVARCHAR(200) NOT NULL DEFAULT '',
+            CreatedAt   DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+            UpdatedAt   DATETIME2     NULL
+        );
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Roles_Name' AND object_id = OBJECT_ID('Roles'))
+        CREATE UNIQUE INDEX IX_Roles_Name ON Roles(Name);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'UserRoles')
+        CREATE TABLE UserRoles (
+            Id        INT IDENTITY(1,1) PRIMARY KEY,
+            UserId    INT NOT NULL REFERENCES Users(Id)  ON DELETE CASCADE,
+            RoleId    INT NOT NULL REFERENCES Roles(Id)  ON DELETE CASCADE,
+            CreatedAt DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+            UpdatedAt DATETIME2 NULL
+        );
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_UserRoles_UserId_RoleId' AND object_id = OBJECT_ID('UserRoles'))
+        CREATE UNIQUE INDEX IX_UserRoles_UserId_RoleId ON UserRoles(UserId, RoleId);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = 'AppLogs')
+        CREATE TABLE AppLogs (
+            Id         INT IDENTITY(1,1) PRIMARY KEY,
+            Level      NVARCHAR(20)  NOT NULL,
+            Message    NVARCHAR(MAX) NOT NULL,
+            Source     NVARCHAR(200) NULL,
+            Exception  NVARCHAR(MAX) NULL,
+            UserId     INT           NULL,
+            UserEmail  NVARCHAR(255) NULL,
+            IpAddress  NVARCHAR(50)  NULL,
+            Origin     NVARCHAR(20)  NOT NULL,
+            CreatedAt  DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+            UpdatedAt  DATETIME2     NULL
+        );
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AppLogs_CreatedAt' AND object_id = OBJECT_ID('AppLogs'))
+        CREATE INDEX IX_AppLogs_CreatedAt ON AppLogs(CreatedAt);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AppLogs_Level' AND object_id = OBJECT_ID('AppLogs'))
+        CREATE INDEX IX_AppLogs_Level ON AppLogs(Level);
+
+        IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_AppLogs_Origin' AND object_id = OBJECT_ID('AppLogs'))
+        CREATE INDEX IX_AppLogs_Origin ON AppLogs(Origin);
+    ");
+}
 
 static async Task SeedRolesAsync(AppDbContext context)
 {
