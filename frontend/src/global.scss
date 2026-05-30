@@ -55,6 +55,21 @@ body.light {
   --ion-text-color: #000000;
 }
 
+/* Action sheet: force white text + icons in dark mode, black in light mode */
+body.dark ion-action-sheet {
+  --color: #ffffff;
+  --button-color: #ffffff;
+  --background: #1e1e1e;
+  --button-background: #1e1e1e;
+}
+
+body.light ion-action-sheet {
+  --color: #000000;
+  --button-color: #000000;
+  --background: #ffffff;
+  --button-background: #ffffff;
+}
+
 .premium-card {
   background: rgba(var(--ion-color-step-100-rgb, 255, 255, 255), 0.7);
   backdrop-filter: blur(16px) saturate(120%);
