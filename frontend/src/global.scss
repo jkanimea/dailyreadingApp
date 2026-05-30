@@ -70,6 +70,56 @@ body.light ion-action-sheet {
   --button-background: #ffffff;
 }
 
+/* Alert/Select dialog: force correct colors in dark/light mode.
+   CSS custom properties (--var) pierce shadow DOM; !important handles light DOM overrides. */
+body.dark ion-alert {
+  --background: #1e1e1e;
+  --color: #ffffff;
+  /* Override primary color inside the alert so selected radio label inherits white */
+  --ion-color-primary: #ffffff;
+  --ion-color-primary-rgb: 255, 255, 255;
+  --ion-color-primary-contrast: #1e1e1e;
+  --ion-color-primary-shade: #e0e0e0;
+  --ion-color-primary-tint: #ffffff;
+}
+
+/* Fallback for any light-DOM label elements inside the alert */
+body.dark .alert-radio-label,
+body.dark .alert-checkbox-label,
+body.dark .alert-title,
+body.dark .alert-message {
+  color: #ffffff !important;
+}
+
+body.dark .alert-radio-icon {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+body.dark .alert-radio-inner {
+  background-color: #ffffff !important;
+}
+
+body.dark .alert-button {
+  color: #ffffff !important;
+}
+
+body.light ion-alert {
+  --background: #ffffff;
+  --color: #000000;
+  --ion-color-primary-contrast: #ffffff;
+}
+
+body.light .alert-radio-label,
+body.light .alert-checkbox-label,
+body.light .alert-title,
+body.light .alert-message {
+  color: #000000 !important;
+}
+
+body.light .alert-button {
+  color: #000000 !important;
+}
+
 .premium-card {
   background: rgba(var(--ion-color-step-100-rgb, 255, 255, 255), 0.7);
   backdrop-filter: blur(16px) saturate(120%);
