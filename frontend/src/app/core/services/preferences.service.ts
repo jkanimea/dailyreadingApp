@@ -64,6 +64,8 @@ export class PreferencesService {
     const isDark = mode === 'dark' || (mode === 'system' && prefersDark);
     document.body.classList.toggle('dark', isDark);
     document.body.classList.toggle('light', !isDark);
+    // Activates Ionic's full dark palette (dark.class.css) for all Ionic components
+    document.body.classList.toggle('ion-palette-dark', isDark);
   }
 
   private applyFontSize(size: FontSize): void {

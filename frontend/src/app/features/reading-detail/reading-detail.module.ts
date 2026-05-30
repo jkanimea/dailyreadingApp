@@ -87,7 +87,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
       font-size: 20px;
       font-weight: 700;
       margin: 16px 0 8px;
-      color: var(--ion-color-dark);
+      color: var(--ion-text-color);
     }
     .bible-text {
       font-style: italic;
