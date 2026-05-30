@@ -236,7 +236,7 @@ class LoginPage implements OnDestroy {
   private getGoogleCredential(): Promise<string> {
     return new Promise((resolve, reject) => {
       const { google } = window as any;
-      const clientId = 'your-google-client-id';
+      const clientId = '126956037492-0v2i92mj4q0ulko5u5io1bd5do619liu.apps.googleusercontent.com';
       google.accounts.id.initialize({
         client_id: clientId,
         callback: (response: any) => {
@@ -257,7 +257,7 @@ class LoginPage implements OnDestroy {
       (window as any).fbAsyncInit = () => {
         const { FB } = window as any;
         FB.init({
-          appId: 'your-facebook-app-id',
+          appId: '1510105297476514',
           version: 'v18.0'
         });
         resolve();
