@@ -21,6 +21,7 @@
       "es2018",
       "dom"
     ],
+    "types": ["jest"],
     "skipLibCheck": true,
     "useDefineForClassFields": false
   },
