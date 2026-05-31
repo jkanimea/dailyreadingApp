@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnDestroy } from '@angular/core';
+import { SharedModule } from '../../shared/shared.module';
 import { BaseReadingPageComponent } from '../base/base-reading-page-component';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
@@ -30,9 +31,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
-          <ion-button (click)="goToAccount()">
-            <ion-icon slot="icon-only" name="person-circle-outline"></ion-icon>
-          </ion-button>
+          <app-avatar-btn></app-avatar-btn>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -211,10 +210,6 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     this.router.navigate(['/settings']);
   }
 
-  goToAccount(): void {
-    this.router.navigate(['/account']);
-  }
-
   goToProgress(): void {
     this.router.navigate(['/progress']);
   }
@@ -339,6 +334,6 @@ const routes: Routes = [{ path: '', component: ReadingDetailPage }];
 
 @NgModule({
   declarations: [ReadingDetailPage],
-  imports: [CommonModule, IonicModule, RouterModule.forChild(routes)]
+  imports: [CommonModule, IonicModule, RouterModule.forChild(routes), SharedModule]
 })
 export class ReadingDetailModule {}

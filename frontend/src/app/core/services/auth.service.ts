@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, BehaviorSubject } from 'rxjs';
 import { TokenResponse, UserDto } from '../models/user.model';
 import { environment } from '../../../environments/environment';
 import { SecureStorageService } from './secure-storage.service';
@@ -12,10 +12,21 @@ export class AuthService {
   private readonly apiUrl = environment.apiUrl;
   private cachedRole: string | null = null;
 
+  private _user$ = new BehaviorSubject<UserDto | null>(null);
+  readonly user$ = this._user$.asObservable();
+  get currentUser(): UserDto | null { return this._user$.value; }
+
   constructor(
     private http: HttpClient,
     private secureStorage: SecureStorageService
-  ) {}
+  ) {
+    this.initUserFromToken();
+  }
+
+  private async initUserFromToken(): Promise<void> {
+    const user = await this.getUserFromToken();
+    this._user$.next(user);
+  }
 
   login(provider: 'google' | 'facebook', idToken: string): Observable<TokenResponse> {
     return this.http.post<TokenResponse>(`${this.apiUrl}/auth/${provider}`, { idToken });
@@ -89,6 +100,7 @@ export class AuthService {
   async storeTokens(response: TokenResponse): Promise<void> {
     this.clearRoleCache();
     await this.secureStorage.setTokens(response.accessToken, response.refreshToken);
+    this._user$.next(response.user ?? null);
   }
 
   async guestLogin(): Promise<void> {
@@ -96,12 +108,14 @@ export class AuthService {
     const guestId = localStorage.getItem(GUEST_ID_KEY) || String(Date.now());
     localStorage.setItem(GUEST_ID_KEY, guestId);
     await this.secureStorage.setTokens('guest-token-' + guestId, 'guest-refresh-' + guestId);
+    this._user$.next(null);
   }
 
   async logout(): Promise<void> {
     this.cachedRole = null;
     const refreshToken = await this.secureStorage.getRefreshToken().catch(() => null);
     await this.secureStorage.clearTokens();
+    this._user$.next(null);
     if (refreshToken && !refreshToken.startsWith('guest-')) {
       try {
         await firstValueFrom(this.http.post<void>(`${this.apiUrl}/auth/logout`, { refreshToken }));

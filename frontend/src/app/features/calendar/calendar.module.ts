@@ -7,6 +7,7 @@ import { takeUntil } from 'rxjs/operators';
 import { BaseCalendarPageComponent, CalendarDay } from '../base/base-calendar-page-component';
 import { ReadingService } from '../../core/services/reading.service';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { SharedModule } from '../../shared/shared.module';
 
 @Component({
   selector: 'app-calendar',
@@ -24,6 +25,7 @@ import { PreferencesService } from '../../core/services/preferences.service';
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
+          <app-avatar-btn></app-avatar-btn>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -201,6 +203,6 @@ const routes: Routes = [{ path: '', component: CalendarPage }];
 
 @NgModule({
   declarations: [CalendarPage],
-  imports: [CommonModule, IonicModule, RouterModule.forChild(routes)]
+  imports: [CommonModule, IonicModule, RouterModule.forChild(routes), SharedModule]
 })
 export class CalendarModule {}

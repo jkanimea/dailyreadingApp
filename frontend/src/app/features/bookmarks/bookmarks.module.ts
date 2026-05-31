@@ -6,6 +6,7 @@ import { Component } from '@angular/core';
 import { BookmarkService } from '../../core/services/bookmark.service';
 import { BookmarkDto } from '../../core/models/bookmark.model';
 import { firstValueFrom } from 'rxjs';
+import { SharedModule } from '../../shared/shared.module';
 
 @Component({
   template: `
@@ -22,6 +23,7 @@ import { firstValueFrom } from 'rxjs';
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
+          <app-avatar-btn></app-avatar-btn>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -134,6 +136,6 @@ const routes: Routes = [{ path: '', component: BookmarksPage }];
 
 @NgModule({
   declarations: [BookmarksPage],
-  imports: [CommonModule, IonicModule, RouterModule.forChild(routes)]
+  imports: [CommonModule, IonicModule, RouterModule.forChild(routes), SharedModule]
 })
 export class BookmarksModule {}

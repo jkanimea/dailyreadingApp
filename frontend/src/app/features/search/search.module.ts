@@ -9,6 +9,7 @@ import { PreferencesService } from '../../core/services/preferences.service';
 import { SearchResultDto } from '../../core/models/search-result.model';
 import { PagedResult } from '../../core/models/paged-result.model';
 import { firstValueFrom, Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { SharedModule } from '../../shared/shared.module';
 
 @Component({
   template: `
@@ -25,6 +26,7 @@ import { firstValueFrom, Subject, debounceTime, distinctUntilChanged } from 'rxj
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
+          <app-avatar-btn></app-avatar-btn>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -182,6 +184,6 @@ const routes: Routes = [{ path: '', component: SearchPage }];
 
 @NgModule({
   declarations: [SearchPage],
-  imports: [CommonModule, IonicModule, FormsModule, RouterModule.forChild(routes)]
+  imports: [CommonModule, IonicModule, FormsModule, RouterModule.forChild(routes), SharedModule]
 })
 export class SearchModule {}

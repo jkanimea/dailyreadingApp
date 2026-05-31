@@ -7,6 +7,7 @@ import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom } from 'rxjs';
+import { SharedModule } from '../../shared/shared.module';
 
 @Component({
   template: `
@@ -23,6 +24,7 @@ import { firstValueFrom } from 'rxjs';
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
+          <app-avatar-btn></app-avatar-btn>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -115,6 +117,6 @@ const routes: Routes = [{ path: '', component: SeriesPage }];
 
 @NgModule({
   declarations: [SeriesPage],
-  imports: [CommonModule, IonicModule, RouterModule.forChild(routes)]
+  imports: [CommonModule, IonicModule, RouterModule.forChild(routes), SharedModule]
 })
 export class SeriesModule {}

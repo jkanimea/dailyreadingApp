@@ -2,8 +2,8 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Component, OnDestroy } from '@angular/core';
+import { Subscription, firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { UserDto } from '../../core/models/user.model';
 
@@ -40,7 +40,10 @@ import { UserDto } from '../../core/models/user.model';
       <!-- Authenticated view -->
       <div *ngIf="!loading && !isGuest">
         <div class="avatar-section">
-          <div class="avatar">{{ initials }}</div>
+          <div class="avatar-photo" *ngIf="user?.photoUrl">
+            <img [src]="user!.photoUrl" class="avatar-img" alt="Profile photo">
+          </div>
+          <div class="avatar" *ngIf="!user?.photoUrl">{{ initials }}</div>
           <h2 class="display-name">{{ user?.displayName || 'Account' }}</h2>
           <p class="email">{{ user?.email || '' }}</p>
           <ion-badge *ngIf="user?.role" [color]="user?.role === 'Admin' ? 'danger' : 'primary'">
@@ -92,6 +95,19 @@ import { UserDto } from '../../core/models/user.model';
     .avatar ion-icon {
       font-size: 40px;
     }
+    .avatar-photo {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin: 0 auto 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
     .display-name {
       font-size: 22px;
       font-weight: 700;
@@ -115,34 +131,46 @@ import { UserDto } from '../../core/models/user.model';
     }
   `]
 })
-class AccountPage {
-  loading = true;
+class AccountPage implements OnDestroy {
+  loading = false;
   isGuest = false;
   user?: UserDto;
+
+  private userSub?: Subscription;
 
   constructor(
     private auth: AuthService,
     private router: Router
   ) {}
 
-  async ionViewWillEnter(): Promise<void> {
-    await this.loadUser();
+  ngOnDestroy(): void {
+    this.userSub?.unsubscribe();
   }
 
-  async loadUser(): Promise<void> {
+  ionViewWillEnter(): void {
+    // Show cached state immediately, then refresh from backend
+    this.userSub?.unsubscribe();
+    this.userSub = this.auth.user$.subscribe(user => {
+      this.user = user ?? undefined;
+      this.isGuest = !user;
+    });
+    this.refreshFromBackend();
+  }
+
+  ionViewDidLeave(): void {
+    this.userSub?.unsubscribe();
+    this.userSub = undefined;
+  }
+
+  private async refreshFromBackend(): Promise<void> {
+    this.isGuest = await this.auth.isGuest();
+    if (this.isGuest) return;
     this.loading = true;
-    this.user = undefined;
     try {
-      this.isGuest = await this.auth.isGuest();
-      if (!this.isGuest) {
-        try {
-          // Try backend first for fresh data
-          this.user = await firstValueFrom(this.auth.getCurrentUser());
-        } catch {
-          // Backend unreachable or token expired — decode claims from the JWT directly
-          this.user = await this.auth.getUserFromToken() ?? undefined;
-        }
-      }
+      const fresh = await firstValueFrom(this.auth.getCurrentUser());
+      this.user = fresh;
+    } catch {
+      // Backend unreachable — cached user$ value is already shown
     } finally {
       this.loading = false;
     }

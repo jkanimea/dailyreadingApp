@@ -7,6 +7,7 @@ import { SeriesService } from '../../core/services/series.service';
 import { ProgressService } from '../../core/services/progress.service';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom } from 'rxjs';
+import { SharedModule } from '../../shared/shared.module';
 
 interface SeriesStats {
   series: Series;
@@ -30,6 +31,7 @@ interface SeriesStats {
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
+          <app-avatar-btn></app-avatar-btn>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -153,6 +155,6 @@ const routes: Routes = [{ path: '', component: ProgressPage }];
 
 @NgModule({
   declarations: [ProgressPage],
-  imports: [CommonModule, IonicModule, RouterModule.forChild(routes)]
+  imports: [CommonModule, IonicModule, RouterModule.forChild(routes), SharedModule]
 })
 export class ProgressModule {}
