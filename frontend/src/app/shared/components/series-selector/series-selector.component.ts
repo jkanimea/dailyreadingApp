@@ -1,5 +1,5 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
-import { Series } from '../../core/models/series.model';
+import { Series } from '../../../core/models/series.model';
 
 @Component({
   selector: 'app-series-selector',
