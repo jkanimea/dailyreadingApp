@@ -1,7 +1,24 @@
-import { TestBed } from '@angular/core/testing';
+import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { AuthService } from './auth.service';
 import { SecureStorageService } from './secure-storage.service';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { TokenResponse, UserDto } from '../models/user.model';
+
+const mockUser: UserDto = {
+  id: 1,
+  email: 'test@example.com',
+  displayName: 'Test User',
+  provider: 'google',
+  selectedSeriesId: 1,
+  role: 'User'
+};
+
+const mockTokenResponse: TokenResponse = {
+  accessToken: 'jwt-123',
+  refreshToken: 'rt-123',
+  expiresIn: 3600,
+  user: mockUser
+};
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -87,5 +104,107 @@ describe('AuthService', () => {
 
     await promise;
     expect(secureStorage.clearTokens).toHaveBeenCalled();
+  });
+
+  describe('user$ reactive state', () => {
+    it('should emit user from TokenResponse after storeTokens', async () => {
+      const emitted: (UserDto | null)[] = [];
+      service.user$.subscribe(u => emitted.push(u));
+
+      await service.storeTokens(mockTokenResponse);
+
+      const last = emitted[emitted.length - 1];
+      expect(last).toEqual(mockUser);
+      expect(service.currentUser).toEqual(mockUser);
+    });
+
+    it('should emit null after guestLogin', async () => {
+      // First set a real user
+      await service.storeTokens(mockTokenResponse);
+      expect(service.currentUser).toEqual(mockUser);
+
+      // Guest login should clear it
+      await service.guestLogin();
+      expect(service.currentUser).toBeNull();
+    });
+
+    it('should emit null immediately after logout before network call', async () => {
+      await service.storeTokens(mockTokenResponse);
+
+      const nullEmitted = new Promise<boolean>(resolve => {
+        service.user$.subscribe(u => { if (u === null) resolve(true); });
+      });
+
+      const logoutPromise = service.logout();
+      const wasNull = await nullEmitted;
+      expect(wasNull).toBe(true);
+
+      // Flush the logout HTTP request
+      const req = httpMock.expectOne('/api/v1/auth/logout');
+      req.flush(null);
+      await logoutPromise;
+    });
+
+    it('currentUser should return the latest emitted value synchronously', async () => {
+      await service.storeTokens(mockTokenResponse);
+      expect(service.currentUser?.displayName).toBe('Test User');
+
+      await service.guestLogin();
+      expect(service.currentUser).toBeNull();
+    });
+
+    it('storeTokens should handle missing user field gracefully', async () => {
+      const responseWithoutUser = { ...mockTokenResponse, user: undefined as any };
+      await service.storeTokens(responseWithoutUser);
+      expect(service.currentUser).toBeNull();
+    });
+  });
+
+  describe('isGuest', () => {
+    it('should return false when token is a real JWT', async () => {
+      secureStorage.getToken.mockResolvedValue('real.jwt.token');
+      expect(await service.isGuest()).toBe(false);
+    });
+
+    it('should return true when token starts with guest-', async () => {
+      secureStorage.getToken.mockResolvedValue('guest-token-12345');
+      expect(await service.isGuest()).toBe(true);
+    });
+
+    it('should return true when no token', async () => {
+      secureStorage.getToken.mockResolvedValue(null);
+      expect(await service.isGuest()).toBe(true);
+    });
+  });
+
+  describe('getUserFromToken', () => {
+    it('should return null for guest token', async () => {
+      secureStorage.getToken.mockResolvedValue('guest-token-abc');
+      expect(await service.getUserFromToken()).toBeNull();
+    });
+
+    it('should return null for invalid JWT format', async () => {
+      secureStorage.getToken.mockResolvedValue('not.a.valid.jwt.format.extra');
+      expect(await service.getUserFromToken()).toBeNull();
+    });
+
+    it('should decode claims from a valid JWT', async () => {
+      const payload = {
+        nameid: '42',
+        email: 'decoded@example.com',
+        unique_name: 'Decoded User',
+        provider: 'facebook',
+        role: 'Admin'
+      };
+      const encoded = btoa(JSON.stringify(payload));
+      secureStorage.getToken.mockResolvedValue(`header.${encoded}.signature`);
+
+      const user = await service.getUserFromToken();
+      expect(user?.id).toBe(42);
+      expect(user?.email).toBe('decoded@example.com');
+      expect(user?.displayName).toBe('Decoded User');
+      expect(user?.provider).toBe('facebook');
+      expect(user?.role).toBe('Admin');
+    });
   });
 });

@@ -7,6 +7,8 @@ import { ProgressService } from '../../core/services/progress.service';
 import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { ReadingDetailPage } from './reading-detail.module';
+import { SharedModule } from '../../shared/shared.module';
+import { AuthService } from '../../core/services/auth.service';
 
 describe('ReadingDetailPage', () => {
   let component: ReadingDetailPage;
@@ -74,7 +76,7 @@ describe('ReadingDetailPage', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ReadingDetailPage],
-      imports: [IonicModule.forRoot()],
+      imports: [IonicModule.forRoot(), SharedModule],
       providers: [
         { provide: ReadingService, useValue: mockReadingService },
         { provide: ProgressService, useValue: mockProgressService },
@@ -83,7 +85,8 @@ describe('ReadingDetailPage', () => {
         { provide: Router, useValue: mockRouter },
         { provide: ActionSheetController, useValue: mockActionSheet },
         { provide: NavController, useValue: { navigateRoot: jest.fn(), push: jest.fn(), back: jest.fn() } },
-        { provide: ActivatedRoute, useValue: { paramMap: paramMapSubject } }
+        { provide: ActivatedRoute, useValue: { paramMap: paramMapSubject } },
+        { provide: AuthService, useValue: { user$: new BehaviorSubject(null) } }
       ]
     }).compileComponents();
 
