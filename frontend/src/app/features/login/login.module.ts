@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
@@ -47,6 +47,9 @@ import { environment } from '../../../environments/environment';
 
         <p class="version-text">v0.1.0</p>
       </div>
+
+      <!-- Off-screen container: Google button pre-rendered here for popup click -->
+      <div #gBtnHost class="g-btn-host" aria-hidden="true"></div>
     </ion-content>
   `,
   standalone: false,
@@ -150,12 +153,20 @@ import { environment } from '../../../environments/environment';
       font-size: 12px;
       color: var(--ion-color-step-300, #ccc);
     }
+    .g-btn-host {
+      position: fixed;
+      top: -9999px;
+      left: -9999px;
+      opacity: 0;
+    }
   `]
 })
 export class LoginPage implements OnDestroy {
   loading = false;
   error?: string;
   bypassAuth = environment.bypassAuth;
+
+  @ViewChild('gBtnHost') gBtnHost?: ElementRef<HTMLDivElement>;
 
   private googleInitialized = false;
   private facebookInitialized = false;
@@ -204,6 +215,16 @@ export class LoginPage implements OnDestroy {
         cancel_on_tap_outside: false,
         auto_select: false
       });
+      // Pre-render the Google button (popup flow — no FedCM) into the hidden host.
+      // This must happen before the user clicks so the element exists in the DOM
+      // and gBtn.click() runs synchronously within the user-gesture context.
+      const container = this.gBtnHost?.nativeElement;
+      if (container) {
+        (window as any).google.accounts.id.renderButton(container, {
+          type: 'standard', size: 'large', theme: 'outline',
+          text: 'sign_in_with', shape: 'rectangular'
+        });
+      }
       this.googleInitialized = true;
     } catch { /* will show error on button click */ }
   }
@@ -242,36 +263,38 @@ export class LoginPage implements OnDestroy {
     this.error = undefined;
     try {
       if (!this.googleInitialized) await this.initGoogle();
-      const google = (window as any).google;
-      if (!google?.accounts?.id) {
+      if (!(window as any).google?.accounts?.id) {
         throw new Error('Google Sign-In unavailable. Please refresh and try again.');
       }
 
-      const credential = await new Promise<string>((resolve, reject) => {
-        this.googleCredResolve = resolve;
-        this.googleCredReject = reject;
+      // Find the pre-rendered Google button and click it synchronously within
+      // the user-gesture context so Chrome allows the popup to open.
+      const gBtn = this.gBtnHost?.nativeElement?.querySelector<HTMLElement>('[role="button"]');
+      if (!gBtn) {
+        throw new Error('Google Sign-In is still loading — please try again in a moment.');
+      }
 
-        google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed()) {
-            const reason = notification.getNotDisplayedReason?.() ?? 'unknown';
-            reject(new Error(
-              `Google One Tap could not be shown (${reason}). ` +
-              `Make sure you are signed in to Google in your browser and not in incognito mode.`
-            ));
-            this.googleCredResolve = undefined;
-            this.googleCredReject = undefined;
-          } else if (notification.isSkippedMoment()) {
-            reject(new Error('Google sign-in was skipped. Please try again.'));
-            this.googleCredResolve = undefined;
-            this.googleCredReject = undefined;
-          } else if (notification.isDismissedMoment()) {
-            if (notification.getDismissedReason?.() !== 'credential_returned') {
-              reject(new Error('Google sign-in was cancelled.'));
-              this.googleCredResolve = undefined;
-              this.googleCredReject = undefined;
-            }
-          }
-        });
+      const credential = await new Promise<string>((resolve, reject) => {
+        let settled = false;
+        const settle = (fn: 'resolve' | 'reject', val: any) => {
+          if (settled) return;
+          settled = true;
+          this.googleCredResolve = undefined;
+          this.googleCredReject = undefined;
+          window.removeEventListener('focus', onFocus);
+          if (fn === 'resolve') resolve(val); else reject(val);
+        };
+
+        this.googleCredResolve = (cred) => settle('resolve', cred);
+        this.googleCredReject = (err) => settle('reject', err);
+
+        // When the popup closes without a credential the browser refocuses
+        // our window — wait 600 ms to let the credential callback fire first.
+        const onFocus = () =>
+          setTimeout(() => settle('reject', new Error('Google sign-in was cancelled.')), 600);
+        window.addEventListener('focus', onFocus);
+
+        gBtn.click(); // triggers popup — must be synchronous here
       });
 
       const res = await firstValueFrom(this.authService.login('google', credential));
