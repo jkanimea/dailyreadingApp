@@ -1,8 +1,11 @@
 import { Component, Input } from '@angular/core';
-import { DailyReading } from '../../core/models/reading.model';
+import { IonicModule } from '@ionic/angular';
+import { DailyReading } from '../../../core/models/reading.model';
 
 @Component({
   selector: 'app-reading-card',
+  standalone: true,
+  imports: [IonicModule],
   template: `
     <ion-card *ngIf="reading" (click)="onClick()">
       <ion-card-header>

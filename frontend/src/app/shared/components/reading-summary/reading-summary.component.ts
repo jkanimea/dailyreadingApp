@@ -1,8 +1,11 @@
 import { Component, Input } from '@angular/core';
-import { ReadingSummary } from '../../core/models/reading.model';
+import { IonicModule } from '@ionic/angular';
+import { ReadingSummary } from '../../../core/models/reading.model';
 
 @Component({
   selector: 'app-reading-summary',
+  standalone: true,
+  imports: [IonicModule],
   template: `
     <ion-card *ngIf="summary?.summaryPoints">
       <ion-card-header>
