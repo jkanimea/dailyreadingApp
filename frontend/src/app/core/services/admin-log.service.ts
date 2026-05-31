@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AppLogQuery, PagedLogsResult } from '../models/log.model';
@@ -6,9 +6,9 @@ import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AdminLogService {
-  private readonly apiUrl = `${environment.apiUrl}/logs`;
+  private http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {}
+  private readonly apiUrl = `${environment.apiUrl}/logs`;
 
   getLogs(query: AppLogQuery = {}): Observable<PagedLogsResult> {
     let params = new HttpParams();

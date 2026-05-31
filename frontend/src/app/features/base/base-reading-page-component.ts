@@ -1,4 +1,4 @@
-import { Directive, OnDestroy } from '@angular/core';
+import { Directive, OnDestroy, inject } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ReadingService } from '../../core/services/reading.service';
 import { DailyReading, ReadingDetail, ReadingSummary } from '../../core/models/reading.model';
@@ -13,7 +13,7 @@ export abstract class BaseReadingPageComponent implements OnDestroy {
   loading = false;
   error?: string;
 
-  constructor(protected readingService: ReadingService) {}
+  protected readingService = inject(ReadingService);
 
   ionViewWillEnter(): void {
     this.load();

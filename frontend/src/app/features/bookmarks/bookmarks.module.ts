@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -70,15 +70,13 @@ import { SharedModule } from '../../shared/shared.module';
   `]
 })
 class BookmarksPage {
+  private router = inject(Router);
+  private bookmarkService = inject(BookmarkService);
+  private actionSheetCtrl = inject(ActionSheetController);
+
   bookmarks: BookmarkDto[] = [];
   loading = false;
   error?: string;
-
-  constructor(
-    private router: Router,
-    private bookmarkService: BookmarkService,
-    private actionSheetCtrl: ActionSheetController
-  ) {}
 
   async openFeatures(): Promise<void> {
     const sheet = await this.actionSheetCtrl.create({

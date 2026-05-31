@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -91,6 +91,11 @@ import { SharedModule } from '../../shared/shared.module';
   `]
 })
 class SearchPage {
+  private router = inject(Router);
+  private searchService = inject(SearchService);
+  private prefs = inject(PreferencesService);
+  private actionSheetCtrl = inject(ActionSheetController);
+
   query = '';
   results: SearchResultDto[] = [];
   loading = false;
@@ -100,12 +105,7 @@ class SearchPage {
   totalPages = 0;
   private searchSubject = new Subject<string>();
 
-  constructor(
-    private router: Router,
-    private searchService: SearchService,
-    private prefs: PreferencesService,
-    private actionSheetCtrl: ActionSheetController
-  ) {
+  constructor() {
     this.searchSubject.pipe(
       debounceTime(400),
       distinctUntilChanged()

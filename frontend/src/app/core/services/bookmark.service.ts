@@ -1,11 +1,12 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { BookmarkDto } from '../models/bookmark.model';
 
 @Injectable({ providedIn: 'root' })
 export class BookmarkService {
-  constructor(private api: ApiService) {}
+  private api = inject(ApiService);
+
 
   getAll(): Observable<BookmarkDto[]> {
     return this.api.get<BookmarkDto[]>('/bookmarks');

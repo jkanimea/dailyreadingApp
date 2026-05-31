@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -132,16 +132,14 @@ import { UserDto } from '../../core/models/user.model';
   `]
 })
 class AccountPage implements OnDestroy {
+  private auth = inject(AuthService);
+  private router = inject(Router);
+
   loading = false;
   isGuest = false;
   user?: UserDto;
 
   private userSub?: Subscription;
-
-  constructor(
-    private auth: AuthService,
-    private router: Router
-  ) {}
 
   ngOnDestroy(): void {
     this.userSub?.unsubscribe();

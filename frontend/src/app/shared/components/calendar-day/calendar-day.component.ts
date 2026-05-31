@@ -16,7 +16,7 @@ export interface CalendarDayData {
       [class.completed]="day?.isCompleted"
       [class.today]="day?.isToday"
       [class.bookmarked]="day?.hasBookmark"
-      (click)="select.emit(day)"
+      (click)="daySelected.emit(day)"
     >
       <span class="day-number">{{ day?.day }}</span>
       <span *ngIf="day?.isCompleted" class="check-mark">✓</span>
@@ -31,5 +31,5 @@ export interface CalendarDayData {
 })
 export class CalendarDayComponent {
   @Input() day?: CalendarDayData;
-  @Output() select = new EventEmitter<CalendarDayData>();
+  @Output() daySelected = new EventEmitter<CalendarDayData>();
 }

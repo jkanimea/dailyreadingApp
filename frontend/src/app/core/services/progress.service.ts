@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { HttpParams } from '@angular/common/http';
@@ -6,7 +6,8 @@ import { ProgressDto } from '../models/progress.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
-  constructor(private api: ApiService) {}
+  private api = inject(ApiService);
+
 
   getSeriesProgress(seriesId: number): Observable<ProgressDto[]> {
     return this.api.get<ProgressDto[]>(`/progress/series/${seriesId}`);

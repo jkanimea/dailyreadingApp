@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { PreferencesService } from './core/services/preferences.service';
 
 @Component({
@@ -8,6 +8,4 @@ import { PreferencesService } from './core/services/preferences.service';
   standalone: false,
 })
 export class AppComponent {
-  constructor(prefs: PreferencesService) {
-  }
 }

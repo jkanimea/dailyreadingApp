@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { AdminLogService } from '../../../core/services/admin-log.service';
 import { AppLogDto, AppLogQuery, PagedLogsResult } from '../../../core/models/log.model';
 
@@ -9,6 +9,8 @@ import { AppLogDto, AppLogQuery, PagedLogsResult } from '../../../core/models/lo
   standalone: false
 })
 export class LogViewerComponent implements OnInit {
+  private adminLogService = inject(AdminLogService);
+
   logs: AppLogDto[] = [];
   totalCount = 0;
   totalPages = 0;
@@ -24,8 +26,6 @@ export class LogViewerComponent implements OnInit {
 
   readonly levels = ['', 'info', 'warn', 'error', 'debug'];
   readonly origins = ['', 'client', 'server'];
-
-  constructor(private adminLogService: AdminLogService) {}
 
   ngOnInit(): void {
     this.loadLogs();

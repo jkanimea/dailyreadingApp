@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { OfflineStorageService } from './offline-storage.service';
 
@@ -11,6 +11,8 @@ const PREFS_SERIES_ID = 'prefs_series_id';
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
+  private storage = inject(OfflineStorageService);
+
   private readonly themeSubject = new BehaviorSubject<ThemeMode>('system');
   readonly theme$ = this.themeSubject.asObservable();
 
@@ -20,7 +22,7 @@ export class PreferencesService {
   private readonly seriesIdSubject = new BehaviorSubject<number>(1);
   readonly seriesId$ = this.seriesIdSubject.asObservable();
 
-  constructor(private storage: OfflineStorageService) {
+  constructor() {
     this.load();
   }
 

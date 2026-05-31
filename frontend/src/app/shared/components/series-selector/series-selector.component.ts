@@ -5,7 +5,7 @@ import { Series } from '../../../core/models/series.model';
   selector: 'app-series-selector',
   template: `
     <ion-list *ngIf="series.length > 0">
-      <ion-radio-group [value]="selectedId" (ionChange)="select.emit($event.detail.value)">
+      <ion-radio-group [value]="selectedId" (ionChange)="seriesSelected.emit($event.detail.value)">
         <ion-item *ngFor="let s of series">
           <ion-label>{{ s.name }}</ion-label>
           <ion-radio [value]="s.id"></ion-radio>
@@ -17,5 +17,5 @@ import { Series } from '../../../core/models/series.model';
 export class SeriesSelectorComponent {
   @Input() series: Series[] = [];
   @Input() selectedId = 1;
-  @Output() select = new EventEmitter<number>();
+  @Output() seriesSelected = new EventEmitter<number>();
 }

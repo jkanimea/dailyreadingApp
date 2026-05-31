@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
@@ -46,12 +46,15 @@ import { UserDto } from '../../../core/models/user.model';
   standalone: false
 })
 export class AvatarButtonComponent implements OnDestroy {
+  private auth = inject(AuthService);
+  private router = inject(Router);
+
   initials = '';
   photoUrl = '';
 
   private sub: Subscription;
 
-  constructor(private auth: AuthService, private router: Router) {
+  constructor() {
     this.sub = this.auth.user$.subscribe((user: UserDto | null) => {
       this.photoUrl = user?.photoUrl ?? '';
       this.initials = user ? this.getInitials(user.displayName) : '';

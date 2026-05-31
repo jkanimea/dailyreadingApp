@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -69,16 +69,14 @@ import { NotificationService } from '../../core/services/notification.service';
   standalone: false
 })
 class SettingsPage implements OnInit {
+  private prefs = inject(PreferencesService);
+  private notifications = inject(NotificationService);
+  private router = inject(Router);
+
   currentTheme: ThemeMode = 'system';
   currentFontSize: FontSize = 'medium';
   reminderEnabled = false;
   reminderTime = '07:00';
-
-  constructor(
-    private prefs: PreferencesService,
-    private notifications: NotificationService,
-    private router: Router
-  ) {}
 
   ngOnInit(): void {
     this.prefs.theme$.subscribe(t => this.currentTheme = t);

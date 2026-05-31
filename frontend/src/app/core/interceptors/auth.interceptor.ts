@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
 import { Observable, BehaviorSubject, throwError, from, of } from 'rxjs';
 import { catchError, filter, take, switchMap, map } from 'rxjs/operators';
@@ -8,14 +8,12 @@ import { LoggingService } from '../services/logging.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
+  private authService = inject(AuthService);
+  private secureStorage = inject(SecureStorageService);
+  private logging = inject(LoggingService);
+
   private isRefreshing = false;
   private refreshTokenSubject = new BehaviorSubject<string | null>(null);
-
-  constructor(
-    private authService: AuthService,
-    private secureStorage: SecureStorageService,
-    private logging: LoggingService
-  ) {}
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     if (req.url.includes('/auth/')) {

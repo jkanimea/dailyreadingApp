@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -62,16 +62,14 @@ import { SharedModule } from '../../shared/shared.module';
   `]
 })
 class SeriesPage implements OnInit {
+  private router = inject(Router);
+  private seriesService = inject(SeriesService);
+  private prefs = inject(PreferencesService);
+  private actionSheetCtrl = inject(ActionSheetController);
+
   series: Series[] = [];
   loading = false;
   error?: string;
-
-  constructor(
-    private router: Router,
-    private seriesService: SeriesService,
-    private prefs: PreferencesService,
-    private actionSheetCtrl: ActionSheetController
-  ) {}
 
   ngOnInit(): void {
     this.loadSeries();

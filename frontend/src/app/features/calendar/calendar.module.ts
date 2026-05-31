@@ -1,11 +1,10 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { takeUntil } from 'rxjs/operators';
 import { BaseCalendarPageComponent, CalendarDay } from '../base/base-calendar-page-component';
-import { ReadingService } from '../../core/services/reading.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { SharedModule } from '../../shared/shared.module';
 
@@ -111,17 +110,12 @@ import { SharedModule } from '../../shared/shared.module';
   standalone: false
 })
 class CalendarPage extends BaseCalendarPageComponent {
+  private router = inject(Router);
+  private prefs = inject(PreferencesService);
+  private actionSheetCtrl = inject(ActionSheetController);
+
   dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   private seriesId = 1;
-
-  constructor(
-    private router: Router,
-    readingService: ReadingService,
-    private prefs: PreferencesService,
-    private actionSheetCtrl: ActionSheetController
-  ) {
-    super(readingService);
-  }
 
   override ionViewWillEnter(): void {
     this.seriesId = this.prefs.getSeriesId();

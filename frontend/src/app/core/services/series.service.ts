@@ -1,11 +1,12 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { Series, SeriesConfig } from '../models/series.model';
 
 @Injectable({ providedIn: 'root' })
 export class SeriesService {
-  constructor(private api: ApiService) {}
+  private api = inject(ApiService);
+
 
   getAll(): Observable<Series[]> {
     return this.api.get<Series[]>('/series');

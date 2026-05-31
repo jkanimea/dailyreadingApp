@@ -1,4 +1,4 @@
-import { Directive, OnDestroy } from '@angular/core';
+import { Directive, OnDestroy, inject } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ReadingService } from '../../core/services/reading.service';
 import { DailyReading } from '../../core/models/reading.model';
@@ -23,7 +23,9 @@ export abstract class BaseCalendarPageComponent implements OnDestroy {
   loading = false;
   monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
-  constructor(protected readingService: ReadingService) {
+  protected readingService = inject(ReadingService);
+
+  constructor() {
     const now = new Date();
     this.currentMonth = now.getMonth() + 1;
     this.currentYear = now.getFullYear();

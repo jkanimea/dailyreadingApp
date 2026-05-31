@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 
@@ -12,11 +12,13 @@ export interface LogEntry {
 
 @Injectable({ providedIn: 'root' })
 export class LoggingService {
+  private http = inject(HttpClient);
+
   private buffer: LogEntry[] = [];
   private flushing = false;
   private apiUrl: string;
 
-  constructor(private http: HttpClient) {
+  constructor() {
     this.apiUrl = environment.apiUrl;
   }
 

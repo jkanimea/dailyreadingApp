@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -162,6 +162,9 @@ import { environment } from '../../../environments/environment';
   `]
 })
 export class LoginPage implements OnDestroy {
+  private router = inject(Router);
+  private authService = inject(AuthService);
+
   loading = false;
   error?: string;
   bypassAuth = environment.bypassAuth;
@@ -174,11 +177,6 @@ export class LoginPage implements OnDestroy {
   // Bridge for the async Google credential callback → current promise
   private googleCredResolve?: (cred: string) => void;
   private googleCredReject?: (err: Error) => void;
-
-  constructor(
-    private router: Router,
-    private authService: AuthService
-  ) {}
 
   ngOnDestroy(): void {
     this.loading = false;

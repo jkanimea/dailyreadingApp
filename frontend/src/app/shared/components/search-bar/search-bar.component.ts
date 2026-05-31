@@ -6,8 +6,8 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
     <ion-searchbar
       [value]="query"
       [placeholder]="placeholder"
-      (ionInput)="search.emit($event.detail.value ?? '')"
-      (ionClear)="search.emit('')"
+      (ionInput)="searched.emit($event.detail.value ?? '')"
+      (ionClear)="searched.emit('')"
       debounce="300"
     ></ion-searchbar>
   `
@@ -15,5 +15,5 @@ import { Component, Input, Output, EventEmitter } from '@angular/core';
 export class SearchBarComponent {
   @Input() query = '';
   @Input() placeholder = 'Search readings...';
-  @Output() search = new EventEmitter<string>();
+  @Output() searched = new EventEmitter<string>();
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { PagedResult } from '../models/paged-result.model';
@@ -7,7 +7,8 @@ import { HttpParams } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class SearchService {
-  constructor(private api: ApiService) {}
+  private api = inject(ApiService);
+
 
   search(query: string, seriesId = 1, page = 1, pageSize = 20): Observable<PagedResult<SearchResultDto>> {
     const params = new HttpParams()

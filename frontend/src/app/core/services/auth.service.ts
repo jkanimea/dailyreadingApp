@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, firstValueFrom, BehaviorSubject } from 'rxjs';
 import { TokenResponse, UserDto } from '../models/user.model';
@@ -9,6 +9,9 @@ const GUEST_ID_KEY = 'encounter_guest_id';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private http = inject(HttpClient);
+  private secureStorage = inject(SecureStorageService);
+
   private readonly apiUrl = environment.apiUrl;
   private cachedRole: string | null = null;
 
@@ -16,10 +19,7 @@ export class AuthService {
   readonly user$ = this._user$.asObservable();
   get currentUser(): UserDto | null { return this._user$.value; }
 
-  constructor(
-    private http: HttpClient,
-    private secureStorage: SecureStorageService
-  ) {
+  constructor() {
     this.initUserFromToken();
   }
 

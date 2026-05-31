@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -85,16 +85,14 @@ interface SeriesStats {
   `]
 })
 class ProgressPage {
+  private router = inject(Router);
+  private seriesService = inject(SeriesService);
+  private progressService = inject(ProgressService);
+  private actionSheetCtrl = inject(ActionSheetController);
+
   stats: SeriesStats[] = [];
   loading = false;
   error?: string;
-
-  constructor(
-    private router: Router,
-    private seriesService: SeriesService,
-    private progressService: ProgressService,
-    private actionSheetCtrl: ActionSheetController
-  ) {}
 
   async openFeatures(): Promise<void> {
     const sheet = await this.actionSheetCtrl.create({

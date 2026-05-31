@@ -1,4 +1,4 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, NgZone, inject } from '@angular/core';
 import { BehaviorSubject, Subject, fromEvent, merge } from 'rxjs';
 import { debounceTime, filter, concatMap } from 'rxjs/operators';
 import { OfflineStorageService } from './offline-storage.service';
@@ -16,6 +16,11 @@ export interface SyncQueueItem {
 
 @Injectable({ providedIn: 'root' })
 export class SyncService {
+  private storage = inject(OfflineStorageService);
+  private progress = inject(ProgressService);
+  private bookmark = inject(BookmarkService);
+  private zone = inject(NgZone);
+
   private readonly isOnlineSubject = new BehaviorSubject<boolean>(navigator.onLine);
   readonly isOnline$ = this.isOnlineSubject.asObservable();
 
@@ -24,12 +29,7 @@ export class SyncService {
   private readonly SYNC_DEBOUNCE_MS = 2500;
   private readonly QUEUE_KEY = 'sync_queue';
 
-  constructor(
-    private storage: OfflineStorageService,
-    private progress: ProgressService,
-    private bookmark: BookmarkService,
-    private zone: NgZone
-  ) {
+  constructor() {
     this.zone.runOutsideAngular(() => {
       merge(
         fromEvent(window, 'online'),

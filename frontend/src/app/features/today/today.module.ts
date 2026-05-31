@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -42,15 +42,13 @@ import { SharedModule } from '../../shared/shared.module';
   `]
 })
 class TodayPage {
+  private router = inject(Router);
+  private readingService = inject(ReadingService);
+  private prefs = inject(PreferencesService);
+  private actionSheetCtrl = inject(ActionSheetController);
+
   loading = false;
   error?: string;
-
-  constructor(
-    private router: Router,
-    private readingService: ReadingService,
-    private prefs: PreferencesService,
-    private actionSheetCtrl: ActionSheetController
-  ) {}
 
   ionViewWillEnter(): void {
     this.loadToday();

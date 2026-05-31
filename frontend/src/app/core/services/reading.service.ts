@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { DailyReading, ReadingDetail, ReadingSummary } from '../models/reading.model';
@@ -6,7 +6,8 @@ import { HttpParams } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class ReadingService {
-  constructor(private api: ApiService) {}
+  private api = inject(ApiService);
+
 
   getToday(seriesId: number, month?: number, day?: number): Observable<DailyReading> {
     let params = new HttpParams();

@@ -1,11 +1,10 @@
-import { NgModule } from '@angular/core';
+import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnDestroy } from '@angular/core';
 import { SharedModule } from '../../shared/shared.module';
 import { BaseReadingPageComponent } from '../base/base-reading-page-component';
-import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
 import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService } from '../../core/services/preferences.service';
@@ -145,21 +144,16 @@ import { firstValueFrom, Subscription } from 'rxjs';
   `]
 })
 export class ReadingDetailPage extends BaseReadingPageComponent implements OnDestroy {
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private seriesService = inject(SeriesService);
+  private prefs = inject(PreferencesService);
+  private actionSheetCtrl = inject(ActionSheetController);
+  private progressService = inject(ProgressService);
+
   seriesList: Series[] = [];
   private routeSub?: Subscription;
   completed = false;
-
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router,
-    private seriesService: SeriesService,
-    private prefs: PreferencesService,
-    private actionSheetCtrl: ActionSheetController,
-    private progressService: ProgressService,
-    readingService: ReadingService
-  ) {
-    super(readingService);
-  }
 
   override ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
