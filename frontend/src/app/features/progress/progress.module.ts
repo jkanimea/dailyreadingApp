@@ -118,9 +118,10 @@ class ProgressPage {
     this.loadStats();
   }
 
-  displayPercentage(s: SeriesStats): number {
-    if (s.completedCount === 0) return 0;
-    return s.percentage < 1 ? 1 : Math.round(s.percentage);
+  displayPercentage(s: SeriesStats): string {
+    if (s.completedCount === 0) return '0';
+    if (s.percentage < 1) return s.percentage.toFixed(1);
+    return String(Math.round(s.percentage));
   }
 
   private async loadStats(): Promise<void> {
