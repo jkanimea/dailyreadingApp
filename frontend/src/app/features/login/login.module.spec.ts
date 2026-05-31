@@ -1,0 +1,358 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { IonicModule } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
+import { of, throwError } from 'rxjs';
+import { AuthService } from '../../core/services/auth.service';
+import { LoginPage } from './login.module';
+import { TokenResponse } from '../../core/models/user.model';
+
+const mockTokenResponse: TokenResponse = {
+  accessToken: 'jwt-123',
+  refreshToken: 'rt-123',
+  expiresIn: 3600,
+  user: {
+    id: 1,
+    email: 'test@example.com',
+    displayName: 'Test User',
+    provider: 'google',
+    selectedSeriesId: 1,
+    role: 'User'
+  }
+};
+
+describe('LoginPage', () => {
+  let component: LoginPage;
+  let fixture: ComponentFixture<LoginPage>;
+  let authService: any;
+  let router: any;
+  let googleIdMock: any;
+  // Captured from google.accounts.id.initialize({ callback }) — called when a credential arrives
+  let googleCredentialCallback: (response: any) => void;
+
+  beforeEach(async () => {
+    googleCredentialCallback = jest.fn() as any;
+
+    googleIdMock = {
+      initialize: jest.fn().mockImplementation((config: any) => {
+        googleCredentialCallback = config.callback;
+      }),
+      prompt: jest.fn()
+    };
+    (window as any).google = { accounts: { id: googleIdMock } };
+    delete (window as any).FB;
+
+    authService = {
+      login: jest.fn().mockReturnValue(of(mockTokenResponse)),
+      storeTokens: jest.fn().mockResolvedValue(undefined),
+      guestLogin: jest.fn().mockResolvedValue(undefined)
+    };
+    router = { navigate: jest.fn() };
+
+    await TestBed.configureTestingModule({
+      declarations: [LoginPage],
+      imports: [CommonModule, IonicModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authService },
+        { provide: Router, useValue: router }
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(LoginPage);
+    component = fixture.componentInstance;
+
+    // Call initGoogle so initialize() runs and googleCredentialCallback is captured.
+    // window.google is already set so no script loading happens.
+    await (component as any).initGoogle();
+  });
+
+  afterEach(() => {
+    delete (window as any).google;
+    delete (window as any).FB;
+  });
+
+  // ─── Guest ────────────────────────────────────────────────────────────────
+
+  describe('continueAsGuest', () => {
+    it('should call guestLogin and navigate to /series on success', async () => {
+      await component.continueAsGuest();
+
+      expect(authService.guestLogin).toHaveBeenCalled();
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+      expect(component.loading).toBe(false);
+      expect(component.error).toBeUndefined();
+    });
+
+    it('should show error message when guestLogin throws', async () => {
+      authService.guestLogin.mockRejectedValue(new Error('network'));
+
+      await component.continueAsGuest();
+
+      expect(component.error).toBe('Failed to start guest session.');
+      expect(component.loading).toBe(false);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── Google ───────────────────────────────────────────────────────────────
+
+  describe('loginWithGoogle', () => {
+    it('should show error when Google SDK is not available', async () => {
+      // initGoogle ran in beforeEach so googleInitialized = true — won't re-init.
+      // Removing google from window simulates the SDK being absent at call time.
+      delete (window as any).google;
+
+      await component.loginWithGoogle();
+
+      expect(component.error).toBe('Google Sign-In unavailable. Please refresh and try again.');
+      expect(component.loading).toBe(false);
+      expect(authService.login).not.toHaveBeenCalled();
+    });
+
+    it('should show error with reason when One Tap prompt is not displayed', async () => {
+      googleIdMock.prompt.mockImplementation((notificationCb: any) => {
+        notificationCb({
+          isNotDisplayed: () => true,
+          getNotDisplayedReason: () => 'suppressed_by_user',
+          isSkippedMoment: () => false,
+          isDismissedMoment: () => false
+        });
+      });
+
+      await component.loginWithGoogle();
+
+      expect(component.error).toContain('suppressed_by_user');
+      expect(component.loading).toBe(false);
+      expect(authService.login).not.toHaveBeenCalled();
+    });
+
+    it('should show error when One Tap prompt is skipped', async () => {
+      googleIdMock.prompt.mockImplementation((notificationCb: any) => {
+        notificationCb({
+          isNotDisplayed: () => false,
+          isSkippedMoment: () => true,
+          isDismissedMoment: () => false
+        });
+      });
+
+      await component.loginWithGoogle();
+
+      expect(component.error).toBe('Google sign-in was skipped. Please try again.');
+      expect(component.loading).toBe(false);
+      expect(authService.login).not.toHaveBeenCalled();
+    });
+
+    it('should show error when prompt is dismissed by user (cancelled)', async () => {
+      googleIdMock.prompt.mockImplementation((notificationCb: any) => {
+        notificationCb({
+          isNotDisplayed: () => false,
+          isSkippedMoment: () => false,
+          isDismissedMoment: () => true,
+          getDismissedReason: () => 'user_cancel'
+        });
+      });
+
+      await component.loginWithGoogle();
+
+      expect(component.error).toBe('Google sign-in was cancelled.');
+      expect(component.loading).toBe(false);
+      expect(authService.login).not.toHaveBeenCalled();
+    });
+
+    it('should not reject when dismissed reason is credential_returned', async () => {
+      // credential_returned = user selected an account → credential arrives via initialize callback
+      googleIdMock.prompt.mockImplementation((notificationCb: any) => {
+        notificationCb({
+          isNotDisplayed: () => false,
+          isSkippedMoment: () => false,
+          isDismissedMoment: () => true,
+          getDismissedReason: () => 'credential_returned'
+        });
+        // Simulate Google calling back with the credential token
+        googleCredentialCallback({ credential: 'google-id-token' });
+      });
+
+      await component.loginWithGoogle();
+
+      expect(authService.login).toHaveBeenCalledWith('google', 'google-id-token');
+      expect(authService.storeTokens).toHaveBeenCalledWith(mockTokenResponse);
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+      expect(component.loading).toBe(false);
+      expect(component.error).toBeUndefined();
+    });
+
+    it('should navigate to /series after successful Google login', async () => {
+      googleIdMock.prompt.mockImplementation((notificationCb: any) => {
+        notificationCb({
+          isNotDisplayed: () => false,
+          isSkippedMoment: () => false,
+          isDismissedMoment: () => true,
+          getDismissedReason: () => 'credential_returned'
+        });
+        googleCredentialCallback({ credential: 'google-id-token' });
+      });
+
+      await component.loginWithGoogle();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+    });
+
+    it('should show error when backend rejects Google credential', async () => {
+      googleIdMock.prompt.mockImplementation((notificationCb: any) => {
+        notificationCb({
+          isNotDisplayed: () => false,
+          isSkippedMoment: () => false,
+          isDismissedMoment: () => true,
+          getDismissedReason: () => 'credential_returned'
+        });
+        googleCredentialCallback({ credential: 'google-id-token' });
+      });
+      authService.login.mockReturnValue(throwError(() => new Error('401 Unauthorized')));
+
+      await component.loginWithGoogle();
+
+      expect(component.error).toBe('401 Unauthorized');
+      expect(component.loading).toBe(false);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should clear loading state regardless of outcome', async () => {
+      googleIdMock.prompt.mockImplementation((notificationCb: any) => {
+        notificationCb({
+          isNotDisplayed: () => true,
+          getNotDisplayedReason: () => 'opt_out_or_no_session',
+          isSkippedMoment: () => false,
+          isDismissedMoment: () => false
+        });
+      });
+
+      expect(component.loading).toBe(false);
+      const p = component.loginWithGoogle();
+      expect(component.loading).toBe(true);
+      await p;
+      expect(component.loading).toBe(false);
+    });
+  });
+
+  // ─── Facebook ─────────────────────────────────────────────────────────────
+
+  describe('loginWithFacebook', () => {
+    beforeEach(() => {
+      // Skip initFacebook so no script loading is attempted
+      (component as any).facebookInitialized = true;
+    });
+
+    it('should show error when Facebook SDK is not available', async () => {
+      delete (window as any).FB;
+
+      await component.loginWithFacebook();
+
+      expect(component.error).toBe('Facebook Sign-In unavailable. Please refresh and try again.');
+      expect(component.loading).toBe(false);
+      expect(authService.login).not.toHaveBeenCalled();
+    });
+
+    it('should show error when user cancels Facebook login', async () => {
+      (window as any).FB = {
+        login: jest.fn().mockImplementation((cb: any) => {
+          cb({ authResponse: null });
+        })
+      };
+
+      await component.loginWithFacebook();
+
+      expect(component.error).toBe('Facebook login was cancelled.');
+      expect(component.loading).toBe(false);
+      expect(authService.login).not.toHaveBeenCalled();
+    });
+
+    it('should call backend with accessToken on successful Facebook login', async () => {
+      (window as any).FB = {
+        login: jest.fn().mockImplementation((cb: any) => {
+          cb({ authResponse: { accessToken: 'fb-access-token' } });
+        })
+      };
+
+      await component.loginWithFacebook();
+
+      expect(authService.login).toHaveBeenCalledWith('facebook', 'fb-access-token');
+      expect(authService.storeTokens).toHaveBeenCalledWith(mockTokenResponse);
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+      expect(component.loading).toBe(false);
+      expect(component.error).toBeUndefined();
+    });
+
+    it('should request public_profile scope', async () => {
+      (window as any).FB = {
+        login: jest.fn().mockImplementation((cb: any) => {
+          cb({ authResponse: null }); // cancelled — we just care about the scope argument
+        })
+      };
+
+      await component.loginWithFacebook();
+
+      expect((window as any).FB.login).toHaveBeenCalledWith(
+        expect.any(Function),
+        { scope: 'public_profile' }
+      );
+    });
+
+    it('should show error when backend rejects Facebook token', async () => {
+      (window as any).FB = {
+        login: jest.fn().mockImplementation((cb: any) => {
+          cb({ authResponse: { accessToken: 'fb-access-token' } });
+        })
+      };
+      authService.login.mockReturnValue(throwError(() => new Error('Invalid token')));
+
+      await component.loginWithFacebook();
+
+      expect(component.error).toBe('Invalid token');
+      expect(component.loading).toBe(false);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should clear loading state regardless of outcome', async () => {
+      (window as any).FB = {
+        login: jest.fn().mockImplementation((cb: any) => {
+          cb({ authResponse: null }); // cancelled
+        })
+      };
+
+      expect(component.loading).toBe(false);
+      const p = component.loginWithFacebook();
+      expect(component.loading).toBe(true);
+      await p;
+      expect(component.loading).toBe(false);
+    });
+  });
+
+  // ─── Lifecycle ────────────────────────────────────────────────────────────
+
+  describe('ngOnDestroy', () => {
+    it('should reset loading, error and credential promise handlers', () => {
+      component.loading = true;
+      component.error = 'some error';
+      (component as any).googleCredResolve = jest.fn();
+      (component as any).googleCredReject = jest.fn();
+
+      component.ngOnDestroy();
+
+      expect(component.loading).toBe(false);
+      expect(component.error).toBeUndefined();
+      expect((component as any).googleCredResolve).toBeUndefined();
+      expect((component as any).googleCredReject).toBeUndefined();
+    });
+  });
+
+  describe('ionViewWillEnter', () => {
+    it('should trigger Google SDK initialization', async () => {
+      (component as any).googleInitialized = false;
+
+      component.ionViewWillEnter();
+      await new Promise(r => setTimeout(r, 0)); // flush microtasks
+
+      expect(googleIdMock.initialize).toHaveBeenCalled();
+    });
+  });
+});

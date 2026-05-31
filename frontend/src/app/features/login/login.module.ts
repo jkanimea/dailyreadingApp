@@ -152,7 +152,7 @@ import { environment } from '../../../environments/environment';
     }
   `]
 })
-class LoginPage implements OnDestroy {
+export class LoginPage implements OnDestroy {
   loading = false;
   error?: string;
   bypassAuth = environment.bypassAuth;
