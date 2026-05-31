@@ -93,3 +93,4 @@ appsettings.Development.json
 /.browserslistrc
 /.editorconfig
 /.eslintrc.json
+dev-rsa-key.pem

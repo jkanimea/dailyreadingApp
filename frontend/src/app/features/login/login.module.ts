@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnDestroy } from '@angular/core';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { environment } from '../../../environments/environment';
 
@@ -156,6 +157,13 @@ class LoginPage implements OnDestroy {
   error?: string;
   bypassAuth = environment.bypassAuth;
 
+  private googleInitialized = false;
+  private facebookInitialized = false;
+
+  // Bridge for the async Google credential callback → current promise
+  private googleCredResolve?: (cred: string) => void;
+  private googleCredReject?: (err: Error) => void;
+
   constructor(
     private router: Router,
     private authService: AuthService
@@ -164,6 +172,56 @@ class LoginPage implements OnDestroy {
   ngOnDestroy(): void {
     this.loading = false;
     this.error = undefined;
+    this.googleCredResolve = undefined;
+    this.googleCredReject = undefined;
+  }
+
+  /** Pre-load both SDKs as soon as the page is visible so they are ready
+   *  before the user taps a button (preserves the user-gesture chain). */
+  ionViewWillEnter(): void {
+    this.initGoogle().catch(() => {});
+    this.initFacebook().catch(() => {});
+  }
+
+  private async initGoogle(): Promise<void> {
+    if (this.googleInitialized) return;
+    try {
+      if (!(window as any).google?.accounts?.id) {
+        await this.loadScript('https://accounts.google.com/gsi/client');
+      }
+      (window as any).google.accounts.id.initialize({
+        client_id: '126956037492-0v2i92mj4q0ulko5u5io1bd5do619liu.apps.googleusercontent.com',
+        callback: (response: any) => {
+          if (response?.credential) {
+            this.googleCredResolve?.(response.credential);
+          } else {
+            this.googleCredReject?.(new Error('Google sign-in failed'));
+          }
+          this.googleCredResolve = undefined;
+          this.googleCredReject = undefined;
+        },
+        use_fedcm_for_prompt: false,
+        cancel_on_tap_outside: false,
+        auto_select: false
+      });
+      this.googleInitialized = true;
+    } catch { /* will show error on button click */ }
+  }
+
+  private async initFacebook(): Promise<void> {
+    if (this.facebookInitialized) return;
+    try {
+      if (!(window as any).FB) {
+        await new Promise<void>((resolve, reject) => {
+          (window as any).fbAsyncInit = () => {
+            (window as any).FB.init({ appId: '1510105297476514', version: 'v18.0' });
+            resolve();
+          };
+          this.loadScript('https://connect.facebook.net/en_US/sdk.js').catch(reject);
+        });
+      }
+      this.facebookInitialized = true;
+    } catch { /* will show error on button click */ }
   }
 
   async continueAsGuest(): Promise<void> {
@@ -172,7 +230,7 @@ class LoginPage implements OnDestroy {
     try {
       await this.authService.guestLogin();
       this.router.navigate(['/series']);
-    } catch (e) {
+    } catch {
       this.error = 'Failed to start guest session.';
     } finally {
       this.loading = false;
@@ -183,14 +241,42 @@ class LoginPage implements OnDestroy {
     this.loading = true;
     this.error = undefined;
     try {
-      const { google } = window as any;
+      if (!this.googleInitialized) await this.initGoogle();
+      const google = (window as any).google;
       if (!google?.accounts?.id) {
-        await this.loadGoogleScript();
+        throw new Error('Google Sign-In unavailable. Please refresh and try again.');
       }
-      const credential = await this.getGoogleCredential();
-      const res = await this.authService.login('google', credential).toPromise();
+
+      const credential = await new Promise<string>((resolve, reject) => {
+        this.googleCredResolve = resolve;
+        this.googleCredReject = reject;
+
+        google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed()) {
+            const reason = notification.getNotDisplayedReason?.() ?? 'unknown';
+            reject(new Error(
+              `Google One Tap could not be shown (${reason}). ` +
+              `Make sure you are signed in to Google in your browser and not in incognito mode.`
+            ));
+            this.googleCredResolve = undefined;
+            this.googleCredReject = undefined;
+          } else if (notification.isSkippedMoment()) {
+            reject(new Error('Google sign-in was skipped. Please try again.'));
+            this.googleCredResolve = undefined;
+            this.googleCredReject = undefined;
+          } else if (notification.isDismissedMoment()) {
+            if (notification.getDismissedReason?.() !== 'credential_returned') {
+              reject(new Error('Google sign-in was cancelled.'));
+              this.googleCredResolve = undefined;
+              this.googleCredReject = undefined;
+            }
+          }
+        });
+      });
+
+      const res = await firstValueFrom(this.authService.login('google', credential));
       if (res) {
-        await this.authService['secureStorage'].setTokens(res.accessToken, res.refreshToken);
+        await this.authService.storeTokens(res);
         this.router.navigate(['/series']);
       }
     } catch (e: any) {
@@ -204,14 +290,27 @@ class LoginPage implements OnDestroy {
     this.loading = true;
     this.error = undefined;
     try {
+      if (!this.facebookInitialized) await this.initFacebook();
       const { FB } = window as any;
       if (!FB) {
-        await this.loadFacebookScript();
+        throw new Error('Facebook Sign-In unavailable. Please refresh and try again.');
       }
-      const accessToken = await this.getFacebookAccessToken();
-      const res = await this.authService.login('facebook', accessToken).toPromise();
+
+      // FB.login() must be called within a user-gesture handler — SDK is pre-loaded
+      // so this runs synchronously within the button click event.
+      const accessToken = await new Promise<string>((resolve, reject) => {
+        FB.login((response: any) => {
+          if (response?.authResponse?.accessToken) {
+            resolve(response.authResponse.accessToken);
+          } else {
+            reject(new Error('Facebook login was cancelled.'));
+          }
+        }, { scope: 'public_profile' });
+      });
+
+      const res = await firstValueFrom(this.authService.login('facebook', accessToken));
       if (res) {
-        await this.authService['secureStorage'].setTokens(res.accessToken, res.refreshToken);
+        await this.authService.storeTokens(res);
         this.router.navigate(['/series']);
       }
     } catch (e: any) {
@@ -221,66 +320,17 @@ class LoginPage implements OnDestroy {
     }
   }
 
-  private loadGoogleScript(): Promise<void> {
+  private loadScript(src: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[src="${src}"]`);
+      if (existing) { resolve(); return; }
       const script = document.createElement('script');
-      script.src = 'https://accounts.google.com/gsi/client';
+      script.src = src;
       script.async = true;
       script.defer = true;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Google Sign-In'));
+      script.onerror = () => reject(new Error(`Failed to load: ${src}`));
       document.head.appendChild(script);
-    });
-  }
-
-  private getGoogleCredential(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const { google } = window as any;
-      const clientId = '126956037492-0v2i92mj4q0ulko5u5io1bd5do619liu.apps.googleusercontent.com';
-      google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (response: any) => {
-          if (response?.credential) {
-            resolve(response.credential);
-          } else {
-            reject(new Error('Google sign-in cancelled'));
-          }
-        },
-        cancel_on_tap_outside: false
-      });
-      google.accounts.id.prompt();
-    });
-  }
-
-  private loadFacebookScript(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      (window as any).fbAsyncInit = () => {
-        const { FB } = window as any;
-        FB.init({
-          appId: '1510105297476514',
-          version: 'v18.0'
-        });
-        resolve();
-      };
-      const script = document.createElement('script');
-      script.src = 'https://connect.facebook.net/en_US/sdk.js';
-      script.async = true;
-      script.defer = true;
-      script.onerror = () => reject(new Error('Failed to load Facebook SDK'));
-      document.head.appendChild(script);
-    });
-  }
-
-  private getFacebookAccessToken(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const { FB } = window as any;
-      FB.login((response: any) => {
-        if (response?.authResponse?.accessToken) {
-          resolve(response.authResponse.accessToken);
-        } else {
-          reject(new Error('Facebook login cancelled'));
-        }
-      }, { scope: 'public_profile,email' });
     });
   }
 }

@@ -14,9 +14,9 @@ if (-not $FrontendOnly) {
 }
 
 if (-not $BackendOnly) {
-  Write-Host ">>> Starting frontend on http://localhost:4200 ..." -ForegroundColor Green
+  Write-Host ">>> Starting frontend on https://localhost:4200 ..." -ForegroundColor Green
   Set-Location $frontendPath
-  npx ng serve --host 0.0.0.0 --port 4200
+  npx ionic serve --ssl --host 0.0.0.0 --port 4200
 }
 
 if ($BackendOnly) {

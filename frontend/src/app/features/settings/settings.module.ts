@@ -5,7 +5,6 @@ import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnInit } from '@angular/core';
 import { PreferencesService, ThemeMode, FontSize } from '../../core/services/preferences.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { AuthService } from '../../core/services/auth.service';
 
 @Component({
   selector: 'app-settings',
@@ -39,18 +38,6 @@ import { AuthService } from '../../core/services/auth.service';
             <ion-select-option value="medium">Medium</ion-select-option>
             <ion-select-option value="large">Large</ion-select-option>
           </ion-select>
-        </ion-item>
-      </ion-list>
-
-      <ion-list>
-        <ion-list-header>Account</ion-list-header>
-        <ion-item button (click)="goToLogin()">
-          <ion-icon slot="start" name="log-in-outline"></ion-icon>
-          <ion-label>Switch Account</ion-label>
-        </ion-item>
-        <ion-item button (click)="logout()">
-          <ion-icon slot="start" name="log-out-outline"></ion-icon>
-          <ion-label>Logout</ion-label>
         </ion-item>
       </ion-list>
 
@@ -90,22 +77,12 @@ class SettingsPage implements OnInit {
   constructor(
     private prefs: PreferencesService,
     private notifications: NotificationService,
-    private auth: AuthService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     this.prefs.theme$.subscribe(t => this.currentTheme = t);
     this.prefs.fontSize$.subscribe(s => this.currentFontSize = s);
-  }
-
-  goToLogin(): void {
-    this.router.navigate(['/login']);
-  }
-
-  async logout(): Promise<void> {
-    await this.auth.logout();
-    this.router.navigate(['/login']);
   }
 
   onThemeChange(event: CustomEvent): void {

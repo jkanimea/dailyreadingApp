@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, from, of } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { TokenResponse, UserDto } from '../models/user.model';
 import { environment } from '../../../environments/environment';
 import { SecureStorageService } from './secure-storage.service';
@@ -60,6 +60,37 @@ export class AuthService {
     this.cachedRole = null;
   }
 
+  /** Reads user info directly from the stored JWT claims — no network call needed. */
+  async getUserFromToken(): Promise<UserDto | null> {
+    const token = await this.secureStorage.getToken().catch(() => null);
+    if (!token || token.startsWith('guest-')) return null;
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payload = JSON.parse(atob(parts[1]));
+      return {
+        id: parseInt(payload['nameid'] ?? '0', 10),
+        email: payload['email'] ?? '',
+        displayName: payload['unique_name'] ?? payload['name'] ?? '',
+        provider: payload['provider'] ?? '',
+        selectedSeriesId: 1,
+        role: payload['role'] ?? 'User'
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async isGuest(): Promise<boolean> {
+    const token = await this.secureStorage.getToken().catch(() => null);
+    return !token || token.startsWith('guest-');
+  }
+
+  async storeTokens(response: TokenResponse): Promise<void> {
+    this.clearRoleCache();
+    await this.secureStorage.setTokens(response.accessToken, response.refreshToken);
+  }
+
   async guestLogin(): Promise<void> {
     this.cachedRole = null;
     const guestId = localStorage.getItem(GUEST_ID_KEY) || String(Date.now());
@@ -69,9 +100,12 @@ export class AuthService {
 
   async logout(): Promise<void> {
     this.cachedRole = null;
+    const refreshToken = await this.secureStorage.getRefreshToken().catch(() => null);
     await this.secureStorage.clearTokens();
-    try {
-      await this.http.post<void>(`${this.apiUrl}/auth/logout`, {}).toPromise();
-    } catch { }
+    if (refreshToken && !refreshToken.startsWith('guest-')) {
+      try {
+        await firstValueFrom(this.http.post<void>(`${this.apiUrl}/auth/logout`, { refreshToken }));
+      } catch { }
+    }
   }
 }

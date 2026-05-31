@@ -30,6 +30,9 @@ import { firstValueFrom, Subscription } from 'rxjs';
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
+          <ion-button (click)="goToAccount()">
+            <ion-icon slot="icon-only" name="person-circle-outline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
@@ -206,6 +209,10 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
+  }
+
+  goToAccount(): void {
+    this.router.navigate(['/account']);
   }
 
   goToProgress(): void {

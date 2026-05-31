@@ -51,10 +51,25 @@ if (!bypassAuth)
     });
 
     var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
-    var rsa = RSA.Create();
+    var rsa = RSA.Create(2048);
+
     if (!string.IsNullOrEmpty(jwtSettings.RsaPrivateKey))
     {
+        // Production: use key from config
         rsa.ImportFromPem(jwtSettings.RsaPrivateKey.ToCharArray());
+    }
+    else if (builder.Environment.IsDevelopment())
+    {
+        // Development: persist a local key so tokens survive backend restarts
+        var keyPath = Path.Combine(builder.Environment.ContentRootPath, "dev-rsa-key.pem");
+        if (File.Exists(keyPath))
+        {
+            rsa.ImportFromPem(File.ReadAllText(keyPath));
+        }
+        else
+        {
+            File.WriteAllText(keyPath, rsa.ExportRSAPrivateKeyPem());
+        }
     }
 
     builder.Services.AddSingleton(rsa);
