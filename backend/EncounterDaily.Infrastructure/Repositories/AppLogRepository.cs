@@ -47,9 +47,11 @@ namespace EncounterDaily.Infrastructure.Repositories
 
         public async Task<int> DeleteOlderThanAsync(DateTime cutoff)
         {
-            return await _dbSet
-                .Where(l => l.CreatedAt < cutoff)
-                .ExecuteDeleteAsync();
+            var old = await _dbSet.Where(l => l.CreatedAt < cutoff).ToListAsync();
+            if (old.Count == 0) return 0;
+            _dbSet.RemoveRange(old);
+            await _context.SaveChangesAsync();
+            return old.Count;
         }
     }
 }
