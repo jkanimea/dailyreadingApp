@@ -1,5 +1,3 @@
 {
-  "typescript.preferences.autoImportFileExcludePatterns": ["@ionic/angular/common", "@ionic/angular/standalone"],
-  "typescript.tsconfig": "frontend/tsconfig.app.json",
-  "angular.enable-strict-mode-prompt": false
+  "typescript.preferences.autoImportFileExcludePatterns": ["@ionic/angular/common", "@ionic/angular/standalone"]
 }
