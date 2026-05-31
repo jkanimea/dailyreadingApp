@@ -28,37 +28,37 @@ jobs:
           name: build-output
           path: publish/
 
-  deploy-staging:
-    if: github.ref == 'refs/heads/develop'
-    needs: [build]
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: https://staging.encounterdaily.com
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: build-output
-      - name: Deploy to Azure App Service (Staging)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: encounter-daily-staging
-          slot-name: staging
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+  # deploy-staging:
+  #   if: github.ref == 'refs/heads/develop'
+  #   needs: [build]
+  #   runs-on: ubuntu-latest
+  #   environment:
+  #     name: staging
+  #     url: https://staging.encounterdaily.com
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: build-output
+  #     - name: Deploy to Azure App Service (Staging)
+  #       uses: azure/webapps-deploy@v3
+  #       with:
+  #         app-name: encounter-daily-staging
+  #         slot-name: staging
+  #         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
 
-  deploy-production:
-    if: github.ref == 'refs/heads/main'
-    needs: [build]
-    runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: https://encounterdaily.com
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: build-output
-      - name: Deploy to Azure App Service (Production)
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: encounter-daily-prod
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PRODUCTION }}
+  # deploy-production:
+  #   if: github.ref == 'refs/heads/main'
+  #   needs: [build]
+  #   runs-on: ubuntu-latest
+  #   environment:
+  #     name: production
+  #     url: https://encounterdaily.com
+  #   steps:
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: build-output
+  #     - name: Deploy to Azure App Service (Production)
+  #       uses: azure/webapps-deploy@v3
+  #       with:
+  #         app-name: encounter-daily-prod
+  #         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PRODUCTION }}
