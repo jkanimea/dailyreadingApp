@@ -8,6 +8,7 @@ import { ProgressService } from '../../core/services/progress.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { JournalEntryDto } from '../../core/models/journal-entry.model';
 import { firstValueFrom } from 'rxjs';
+import { ToastController } from '@ionic/angular';
 
 @Component({
   template: `
@@ -163,6 +164,7 @@ class JournalPage {
   private router = inject(Router);
   private progressService = inject(ProgressService);
   private prefs = inject(PreferencesService);
+  private toastCtrl = inject(ToastController);
 
   entries: JournalEntryDto[] = [];
   seriesName = '';
@@ -252,14 +254,23 @@ class JournalPage {
     });
   }
 
-  shareToFacebook(): void {
+  async shareToFacebook(): Promise<void> {
     const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
     if (selected.length === 0) return;
 
     const text = this.buildShareText(selected);
-    const url = 'https://www.facebook.com/sharer/sharer.php'
-      + '?quote=' + encodeURIComponent(text);
-    window.open(url, '_blank', 'width=600,height=400');
+    try {
+      await navigator.clipboard.writeText(text);
+      const toast = await this.toastCtrl.create({
+        message: 'Journal text copied! Paste into your Facebook post.',
+        duration: 4000,
+        position: 'bottom'
+      });
+      await toast.present();
+    } catch {
+      // clipboard not available; open Facebook anyway
+    }
+    window.open('https://www.facebook.com', '_blank');
   }
 
   private buildShareText(selected: JournalEntryDto[]): string {

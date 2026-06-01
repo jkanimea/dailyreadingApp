@@ -90,13 +90,14 @@ describe('JournalPage', () => {
         if (selected.length === 0) return;
         navigator.share({ title: `My Reading Journal — ${this.seriesName}`, text: this.buildShareText(selected) });
       },
-      shareToFacebook() {
+      async shareToFacebook() {
         const selected = this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId));
         if (selected.length === 0) return;
         const text = this.buildShareText(selected);
-        const url = 'https://www.facebook.com/sharer/sharer.php'
-          + '?quote=' + encodeURIComponent(text);
-        window.open(url, '_blank', 'width=600,height=400');
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch { }
+        window.open('https://www.facebook.com', '_blank');
       },
       buildShareText(selected: JournalEntryDto[]) {
         const lines: string[] = [`My Reading Journal — ${this.seriesName}`, ''];
@@ -325,33 +326,40 @@ describe('JournalPage', () => {
     openSpy.mockRestore();
   });
 
-  it('shareToFacebook should include journal content for selected entries', () => {
+  it('shareToFacebook should include journal content for selected entries', async () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: jest.fn().mockResolvedValue(undefined) },
+      configurable: true, writable: true
+    });
     component.ionViewWillEnter();
     component.deselectAllEntries();
     component.toggleSelected(1);
 
-    component.shareToFacebook();
+    await component.shareToFacebook();
 
-    const url = openSpy.mock.calls[0][0] as string;
-    expect(url).toContain('facebook.com/sharer');
-    expect(decodeURIComponent(url)).toContain('January 5 — Mark 1:1');
-    expect(decodeURIComponent(url)).toContain('Notes: Great insight');
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('January 5 — Mark 1:1'));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('Notes: Great insight'));
+    expect(openSpy).toHaveBeenCalledWith('https://www.facebook.com', '_blank');
     openSpy.mockRestore();
   });
 
-  it('shareToFacebook should include only selected entries, not deselected', () => {
+  it('shareToFacebook should include only selected entries, not deselected', async () => {
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: jest.fn().mockResolvedValue(undefined) },
+      configurable: true, writable: true
+    });
     component.ionViewWillEnter();
     component.deselectAllEntries();
     component.toggleSelected(1);
 
-    component.shareToFacebook();
+    await component.shareToFacebook();
 
-    const url = decodeURIComponent(openSpy.mock.calls[0][0] as string);
-    expect(url).toContain('January 5');
-    expect(url).not.toContain('January 10');
-    expect(url).not.toContain('February 1');
+    const text = (navigator.clipboard.writeText as jest.Mock).mock.calls[0][0] as string;
+    expect(text).toContain('January 5');
+    expect(text).not.toContain('January 10');
+    expect(text).not.toContain('February 1');
     openSpy.mockRestore();
   });
 });
