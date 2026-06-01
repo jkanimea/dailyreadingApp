@@ -119,6 +119,7 @@ class SearchPage {
         { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
         { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
         { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
+        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
         { text: 'Cancel', role: 'cancel' }
       ]
     });

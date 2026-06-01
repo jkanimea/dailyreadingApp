@@ -79,6 +79,33 @@ import { firstValueFrom, Subscription } from 'rxjs';
             I have read this passage
           </ion-checkbox>
         </div>
+
+        <div class="ion-margin-top journal-section" *ngIf="completed || notes">
+          <ion-item lines="none" button (click)="showNotes = !showNotes">
+            <ion-icon [name]="showNotes ? 'chevron-up-outline' : 'chevron-down-outline'" slot="start"></ion-icon>
+            <ion-label>My Journal Notes</ion-label>
+            <ion-note slot="end" *ngIf="notes && !showNotes">Has notes</ion-note>
+          </ion-item>
+
+          <div *ngIf="showNotes" class="notes-editor">
+            <ion-textarea
+              [value]="notes"
+              (ionInput)="onNotesChange($event)"
+              placeholder="Write your thoughts, key points, or reflections from today's reading..."
+              [autoGrow]="true"
+              rows="4"
+              [counter]="true"
+              [maxlength]="2000"
+              class="journal-textarea">
+            </ion-textarea>
+            <div class="notes-status">
+              <ion-note [color]="notesSaved ? 'success' : 'medium'">
+                <ion-icon [name]="notesSaved ? 'checkmark-circle' : 'time-outline'"></ion-icon>
+                {{ notesSaved ? 'Saved' : 'Unsaved' }}
+              </ion-note>
+            </div>
+          </div>
+        </div>
       </div>
     </ion-content>
   `,
@@ -141,6 +168,29 @@ import { firstValueFrom, Subscription } from 'rxjs';
       --size: 24px;
       font-size: 16px;
     }
+    .journal-section {
+      border-top: 1px solid var(--ion-color-light-shade);
+      margin-top: 16px;
+      padding-top: 8px;
+    }
+    .journal-textarea {
+      --padding-start: 0;
+      font-style: normal;
+      font-size: 15px;
+      line-height: 1.6;
+      border: 1px solid var(--ion-color-light-shade);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin-top: 8px;
+    }
+    .notes-status {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 4px;
+      margin-top: 4px;
+      font-size: 13px;
+    }
   `]
 })
 export class ReadingDetailPage extends BaseReadingPageComponent implements OnDestroy {
@@ -154,9 +204,14 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   seriesList: Series[] = [];
   private routeSub?: Subscription;
   completed = false;
+  notes = '';
+  showNotes = false;
+  notesSaved = false;
+  private notesDebounce?: ReturnType<typeof setTimeout>;
 
   override ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
+    clearTimeout(this.notesDebounce);
     super.ngOnDestroy();
   }
 
@@ -185,6 +240,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
         { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
         { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
         { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
+        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
         { text: 'Switch Series', icon: 'swap-horizontal', handler: () => this.switchSeries() },
         { text: 'Cancel', role: 'cancel' }
       ]
@@ -248,6 +304,25 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
       /* fall through to /today */
     }
     this.router.navigate(['/today']);
+  }
+
+  async onNotesChange(event: CustomEvent): Promise<void> {
+    this.notes = event.detail.value ?? '';
+    this.notesSaved = false;
+
+    clearTimeout(this.notesDebounce);
+    this.notesDebounce = setTimeout(async () => {
+      await this.saveNotes();
+    }, 1500);
+  }
+
+  private async saveNotes(): Promise<void> {
+    if (!this.detail) return;
+    try {
+      await firstValueFrom(this.progressService.saveNotes(this.detail.id, this.notes));
+      this.notesSaved = true;
+    } catch {
+    }
   }
 
   monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -318,6 +393,11 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     try {
       const allProgress = await firstValueFrom(this.progressService.getSeriesProgress(this.detail.seriesId));
       this.completed = allProgress.some(p => p.readingId === readingId && p.isCompleted);
+      const readingProgress = allProgress.find(p => p.readingId === readingId);
+      if (readingProgress?.notes) {
+        this.notes = readingProgress.notes;
+        this.showNotes = true;
+      }
     } catch {
       this.completed = false;
     }

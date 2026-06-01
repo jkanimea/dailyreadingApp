@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using EncounterDaily.Core.DTOs.Progress;
 using EncounterDaily.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -71,5 +72,39 @@ namespace EncounterDaily.API.Controllers
             return NoContent();
         }
 
+        [HttpPut("{readingId}/notes")]
+        public async Task<ActionResult<ProgressDto>> SaveNotes(int readingId, [FromBody] SaveNotesRequest request)
+        {
+            var userId = GetUserId();
+            var notes = request.Notes?.Trim();
+
+            if (notes?.Length > 2000)
+                return BadRequest(new { message = "Notes must be 2000 characters or fewer." });
+
+            try
+            {
+                var result = await _progressService.SaveNotesAsync(userId, readingId, notes);
+                if (result == null)
+                    return NoContent();
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning("Save notes failed: {Message} (readingId: {ReadingId})", ex.Message, readingId);
+                return NotFound(new { message = ex.Message });
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("series/{seriesId}/journal")]
+        public async Task<ActionResult<IEnumerable<JournalEntryDto>>> GetJournal(int seriesId)
+        {
+            var userId = GetUserId();
+            var entries = await _progressService.GetJournalAsync(userId, seriesId);
+            return Ok(entries);
+        }
     }
 }

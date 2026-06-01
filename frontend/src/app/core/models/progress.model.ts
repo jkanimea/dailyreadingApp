@@ -6,4 +6,5 @@ export interface ProgressDto {
   month: number;
   day: number;
   bibleReading: string;
+  notes?: string;
 }

@@ -85,6 +85,7 @@ class BookmarksPage {
         { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
         { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
         { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
+        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
         { text: 'Cancel', role: 'cancel' }
       ]
     });

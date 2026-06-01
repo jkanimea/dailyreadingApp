@@ -12,5 +12,7 @@ namespace EncounterDaily.Core.Interfaces.Services
         Task<int> GetCompletedCountAsync(int userId, int seriesId);
         Task<ProgressDto> MarkCompleteAsync(int userId, int readingId);
         Task UnmarkCompleteAsync(int userId, int readingId);
+        Task<ProgressDto?> SaveNotesAsync(int userId, int readingId, string? notes);
+        Task<IEnumerable<JournalEntryDto>> GetJournalAsync(int userId, int seriesId);
     }
 }

@@ -74,5 +74,16 @@ namespace EncounterDaily.Infrastructure.Repositories
             return await _dbSet
                 .CountAsync(p => p.UserId == userId && p.SeriesId == seriesId && p.IsCompleted);
         }
+
+        public async Task<IEnumerable<UserProgress>> GetJournalEntriesAsync(int userId, int seriesId)
+        {
+            return await _dbSet
+                .Include(p => p.DailyReading)
+                    .ThenInclude(d => d.Series)
+                .Where(p => p.UserId == userId && p.SeriesId == seriesId && (p.IsCompleted || p.Notes != null))
+                .OrderBy(p => p.DailyReading.Month)
+                    .ThenBy(p => p.DailyReading.Day)
+                .ToListAsync();
+        }
     }
 }

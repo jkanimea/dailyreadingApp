@@ -49,6 +49,11 @@ const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'journal',
+    loadChildren: () => import('./features/journal/journal.module').then(m => m.JournalModule),
+    canActivate: [AuthGuard]
+  },
+  {
     path: 'account',
     loadChildren: () => import('./features/account/account.module').then(m => m.AccountModule),
     canActivate: [AuthGuard]

@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { HttpParams } from '@angular/common/http';
 import { ProgressDto } from '../models/progress.model';
+import { JournalEntryDto } from '../models/journal-entry.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
@@ -31,5 +32,13 @@ export class ProgressService {
 
   unmarkComplete(readingId: number): Observable<void> {
     return this.api.delete<void>(`/progress/${readingId}/complete`);
+  }
+
+  saveNotes(readingId: number, notes: string): Observable<ProgressDto> {
+    return this.api.put<ProgressDto>(`/progress/${readingId}/notes`, { notes });
+  }
+
+  getJournal(seriesId: number): Observable<JournalEntryDto[]> {
+    return this.api.get<JournalEntryDto[]>(`/progress/series/${seriesId}/journal`);
   }
 }

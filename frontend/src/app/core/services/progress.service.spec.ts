@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { ProgressService } from './progress.service';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { ProgressDto } from '../models/progress.model';
+import { JournalEntryDto } from '../models/journal-entry.model';
 
 describe('ProgressService', () => {
   let service: ProgressService;
@@ -48,5 +50,38 @@ describe('ProgressService', () => {
     const req = httpMock.expectOne('/api/v1/progress/10/complete');
     expect(req.request.method).toBe('DELETE');
     req.flush(null);
+  });
+
+  it('saveNotes should PUT to correct endpoint with notes body', () => {
+    const mockResponse: ProgressDto = {
+      readingId: 1, seriesId: 2, isCompleted: true,
+      month: 3, day: 15, bibleReading: 'Mark 1:1', notes: 'Great reading'
+    };
+
+    service.saveNotes(1, 'Great reading').subscribe(result => {
+      expect(result.notes).toBe('Great reading');
+    });
+
+    const req = httpMock.expectOne('/api/v1/progress/1/notes');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ notes: 'Great reading' });
+    req.flush(mockResponse);
+  });
+
+  it('getJournal should GET correct endpoint', () => {
+    const entries: JournalEntryDto[] = [
+      { readingId: 1, seriesId: 2, seriesName: 'Christ The Way',
+        month: 1, day: 5, bibleReading: 'Mark 1:1', primaryBookPageRange: 'DA 1-5',
+        isCompleted: true, notes: 'Great insight' }
+    ];
+
+    service.getJournal(2).subscribe(result => {
+      expect(result.length).toBe(1);
+      expect(result[0].notes).toBe('Great insight');
+    });
+
+    const req = httpMock.expectOne('/api/v1/progress/series/2/journal');
+    expect(req.request.method).toBe('GET');
+    req.flush(entries);
   });
 });
