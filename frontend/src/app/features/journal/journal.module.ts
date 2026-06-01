@@ -1,6 +1,6 @@
 import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { SharedModule } from '../../shared/shared.module';
@@ -64,7 +64,7 @@ import { firstValueFrom } from 'rxjs';
           365-Day Reading Journey
         </div>
 
-        <div *ngFor="let entry of entries" class="journal-entry">
+        <div *ngFor="let entry of entries" class="journal-entry" [class.print-hide]="!isSelected(entry.readingId)">
           <ion-card>
             <div class="journal-entry-header">
               <ion-checkbox (ionChange)="toggleSelected(entry.readingId); $event.stopPropagation()" [checked]="isSelected(entry.readingId)" class="entry-checkbox"></ion-checkbox>
@@ -84,6 +84,13 @@ import { firstValueFrom } from 'rxjs';
               </div>
               <div *ngIf="entry.notes" class="notes-content">{{ entry.notes }}</div>
               <div *ngIf="!entry.notes" class="no-notes">No notes written</div>
+              <div *ngIf="entry.notes" class="summarize-actions print-hide">
+                <ion-button fill="clear" size="small" [disabled]="summarizingStates.get(entry.readingId)" (click)="onSummarize(entry.readingId, entry.notes!)">
+                  <ion-icon slot="start" name="bulb-outline"></ion-icon>
+                  {{ summarizingStates.get(entry.readingId) ? 'Summarizing...' : 'AI Summarize' }}
+                </ion-button>
+                <ion-spinner *ngIf="summarizingStates.get(entry.readingId)" name="dots" size="small"></ion-spinner>
+              </div>
             </ion-card-content>
           </ion-card>
         </div>
@@ -148,6 +155,14 @@ import { firstValueFrom } from 'rxjs';
       font-style: italic;
       font-size: 14px;
     }
+    .summarize-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--ion-color-light);
+    }
     @media print {
       ion-header, ion-footer, .print-hide { display: none !important; }
       ion-content { --padding-top: 0; --padding-bottom: 0; }
@@ -159,6 +174,7 @@ class JournalPage {
   private router = inject(Router);
   private progressService = inject(ProgressService);
   private prefs = inject(PreferencesService);
+  private alertCtrl = inject(AlertController);
 
   entries: JournalEntryDto[] = [];
   seriesName = '';
@@ -166,6 +182,7 @@ class JournalPage {
   error?: string;
   allExpanded = false;
   canShare = !!navigator.share;
+  summarizingStates = new Map<number, boolean>();
   expandedEntries = new Set<number>();
   selectedEntryIds = new Set<number>();
   selectedCount = 0;
@@ -233,6 +250,9 @@ class JournalPage {
 
   printJournal(): void {
     this.allExpanded = true;
+    if (this.selectedCount > 0) {
+      this.expandedEntries = new Set(this.selectedEntryIds);
+    }
     setTimeout(() => window.print(), 100);
   }
 
@@ -264,6 +284,44 @@ class JournalPage {
       lines.push('');
     }
     return lines.join('\n');
+  }
+
+  async onSummarize(readingId: number, notes: string): Promise<void> {
+    this.summarizingStates.set(readingId, true);
+    try {
+      const result = await firstValueFrom(this.progressService.summarizeNotes(readingId, notes));
+      const alert = await this.alertCtrl.create({
+        header: 'AI Summary',
+        message: result.summary,
+        buttons: [
+          { text: 'Dismiss', role: 'cancel' },
+          {
+            text: 'Replace Notes',
+            handler: () => this.replaceNotesWithSummary(readingId, result.summary)
+          }
+        ]
+      });
+      await alert.present();
+    } catch {
+      const alert = await this.alertCtrl.create({
+        header: 'Error',
+        message: 'Failed to summarize notes. Please try again.',
+        buttons: ['OK']
+      });
+      await alert.present();
+    } finally {
+      this.summarizingStates.set(readingId, false);
+    }
+  }
+
+  private async replaceNotesWithSummary(readingId: number, summary: string): Promise<void> {
+    const entry = this.entries.find(e => e.readingId === readingId);
+    if (!entry) return;
+    entry.notes = summary;
+    try {
+      await firstValueFrom(this.progressService.saveNotes(readingId, summary));
+    } catch {
+    }
   }
 
   goToSettings(): void {
