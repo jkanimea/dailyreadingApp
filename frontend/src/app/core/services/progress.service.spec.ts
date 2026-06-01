@@ -84,4 +84,15 @@ describe('ProgressService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(entries);
   });
+
+  it('summarizeNotes should POST to correct endpoint with notes body', () => {
+    service.summarizeNotes(1, 'My notes to summarize').subscribe(result => {
+      expect(result.summary).toBe('Condensed summary');
+    });
+
+    const req = httpMock.expectOne('/api/v1/progress/1/summarize');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ notes: 'My notes to summarize' });
+    req.flush({ summary: 'Condensed summary' });
+  });
 });

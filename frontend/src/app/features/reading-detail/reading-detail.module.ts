@@ -1,6 +1,6 @@
 import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, ActionSheetController } from '@ionic/angular';
+import { IonicModule, ActionSheetController, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnDestroy } from '@angular/core';
 import { SharedModule } from '../../shared/shared.module';
@@ -103,6 +103,13 @@ import { firstValueFrom, Subscription } from 'rxjs';
                 <ion-icon [name]="notesSaved ? 'checkmark-circle' : 'time-outline'"></ion-icon>
                 {{ notesSaved ? 'Saved' : 'Unsaved' }}
               </ion-note>
+              <div class="summarize-actions" *ngIf="notes">
+                <ion-button fill="clear" size="small" [disabled]="summarizing" (click)="onSummarize()">
+                  <ion-icon slot="start" name="bulb-outline"></ion-icon>
+                  {{ summarizing ? 'Summarizing...' : 'AI Summarize' }}
+                </ion-button>
+                <ion-spinner *ngIf="summarizing" name="dots" size="small"></ion-spinner>
+              </div>
             </div>
           </div>
         </div>
@@ -185,11 +192,16 @@ import { firstValueFrom, Subscription } from 'rxjs';
     }
     .notes-status {
       display: flex;
-      justify-content: flex-end;
+      justify-content: space-between;
       align-items: center;
       gap: 4px;
       margin-top: 4px;
       font-size: 13px;
+    }
+    .summarize-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
   `]
 })
@@ -199,6 +211,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   private seriesService = inject(SeriesService);
   private prefs = inject(PreferencesService);
   private actionSheetCtrl = inject(ActionSheetController);
+  private alertCtrl = inject(AlertController);
   private progressService = inject(ProgressService);
 
   seriesList: Series[] = [];
@@ -207,6 +220,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   notes = '';
   showNotes = false;
   notesSaved = false;
+  summarizing = false;
   private notesDebounce?: ReturnType<typeof setTimeout>;
 
   override ngOnDestroy(): void {
@@ -323,6 +337,38 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
       this.notesSaved = true;
     } catch {
     }
+  }
+
+  async onSummarize(): Promise<void> {
+    if (!this.detail || !this.notes) return;
+    this.summarizing = true;
+    try {
+      const result = await firstValueFrom(this.progressService.summarizeNotes(this.detail.id, this.notes));
+      const alert = await this.alertCtrl.create({
+        header: 'AI Summary',
+        message: result.summary,
+        buttons: [
+          { text: 'Dismiss', role: 'cancel' },
+          { text: 'Replace Notes', handler: () => this.replaceNotesWithSummary(result.summary) }
+        ]
+      });
+      await alert.present();
+    } catch {
+      const alert = await this.alertCtrl.create({
+        header: 'Error',
+        message: 'Failed to summarize notes. Please try again.',
+        buttons: ['OK']
+      });
+      await alert.present();
+    } finally {
+      this.summarizing = false;
+    }
+  }
+
+  private async replaceNotesWithSummary(summary: string): Promise<void> {
+    this.notes = summary;
+    this.notesSaved = false;
+    await this.saveNotes();
   }
 
   monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

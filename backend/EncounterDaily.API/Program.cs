@@ -42,6 +42,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<AiSettings>(builder.Configuration.GetSection("Ai"));
 
 if (!bypassAuth)
 {
@@ -166,6 +167,12 @@ builder.Services.AddHttpClient("FacebookGraph", client =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISearchService, SearchService>();
 builder.Services.AddScoped<IAppLogService, AppLogService>();
+builder.Services.AddScoped<IAiSummaryService, AiSummaryService>();
+builder.Services.AddHttpClient("DeepSeek", client =>
+{
+    client.BaseAddress = new Uri("https://api.deepseek.com");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 builder.Services.AddHostedService<BibleSeedService>();
 builder.Services.AddHostedService<LogCleanupService>();
 

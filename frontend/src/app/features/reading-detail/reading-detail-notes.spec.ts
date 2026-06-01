@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { IonicModule, ActionSheetController, NavController } from '@ionic/angular';
+import { IonicModule, ActionSheetController, AlertController, NavController } from '@ionic/angular';
 import { BehaviorSubject, of, throwError, firstValueFrom } from 'rxjs';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
@@ -19,6 +19,7 @@ describe('ReadingDetailPage — notes', () => {
   let mockPrefs: any;
   let mockRouter: any;
   let mockActionSheet: any;
+  let mockAlertCtrl: any;
   let paramMapSubject: BehaviorSubject<any>;
 
   const mockDetail = {
@@ -64,7 +65,8 @@ describe('ReadingDetailPage — notes', () => {
       markComplete: jest.fn().mockReturnValue(of({ readingId: 5, isCompleted: true })),
       unmarkComplete: jest.fn().mockReturnValue(of(undefined)),
       getSeriesProgress: jest.fn().mockReturnValue(of([])),
-      saveNotes: jest.fn()
+      saveNotes: jest.fn(),
+      summarizeNotes: jest.fn()
     };
 
     mockRouter = {
@@ -72,6 +74,12 @@ describe('ReadingDetailPage — notes', () => {
     };
 
     mockActionSheet = {
+      create: jest.fn().mockResolvedValue({
+        present: jest.fn().mockResolvedValue(undefined)
+      })
+    };
+
+    mockAlertCtrl = {
       create: jest.fn().mockResolvedValue({
         present: jest.fn().mockResolvedValue(undefined)
       })
@@ -87,6 +95,7 @@ describe('ReadingDetailPage — notes', () => {
         { provide: PreferencesService, useValue: mockPrefs },
         { provide: Router, useValue: mockRouter },
         { provide: ActionSheetController, useValue: mockActionSheet },
+        { provide: AlertController, useValue: mockAlertCtrl },
         { provide: NavController, useValue: { navigateRoot: jest.fn(), push: jest.fn(), back: jest.fn() } },
         { provide: ActivatedRoute, useValue: { paramMap: paramMapSubject } },
         { provide: AuthService, useValue: { user$: new BehaviorSubject(null) } }
@@ -155,4 +164,93 @@ describe('ReadingDetailPage — notes', () => {
 
     expect(mockProgressService.saveNotes).not.toHaveBeenCalled();
   }));
+
+  describe('summarize', () => {
+    it('should show summarize actions when notes exist and editor open', () => {
+      component.notes = 'Some notes';
+      component.showNotes = true;
+      fixture.detectChanges();
+      const btn: HTMLElement = fixture.nativeElement.querySelector('.summarize-actions ion-button');
+      expect(btn).toBeTruthy();
+    });
+
+    it('should not show summarize actions when notes empty', () => {
+      component.showNotes = true;
+      component.notes = '';
+      fixture.detectChanges();
+      const el = fixture.nativeElement.querySelector('.summarize-actions');
+      expect(el).toBeFalsy();
+    });
+
+    it('should call summarizeNotes with correct args', async () => {
+      mockProgressService.summarizeNotes.mockReturnValue(of({ summary: 'Condensed summary' }));
+      component.notes = 'My long notes text';
+
+      await component.onSummarize();
+
+      expect(mockProgressService.summarizeNotes).toHaveBeenCalledWith(5, 'My long notes text');
+    });
+
+    it('should show alert with summary on success', async () => {
+      mockProgressService.summarizeNotes.mockReturnValue(of({ summary: 'Condensed summary' }));
+      component.notes = 'My notes';
+
+      await component.onSummarize();
+
+      expect(mockAlertCtrl.create).toHaveBeenCalledWith(expect.objectContaining({
+        header: 'AI Summary',
+        message: 'Condensed summary'
+      }));
+    });
+
+    it('should show error alert when summarize fails', async () => {
+      mockProgressService.summarizeNotes.mockReturnValue(throwError(() => new Error('API error')));
+      component.notes = 'My notes';
+
+      await component.onSummarize();
+
+      expect(mockAlertCtrl.create).toHaveBeenCalledWith(expect.objectContaining({
+        header: 'Error',
+        message: 'Failed to summarize notes. Please try again.'
+      }));
+    });
+
+    it('should set summarizing to true during API call and false after', async () => {
+      mockProgressService.summarizeNotes.mockReturnValue(of({ summary: 'S' }));
+      component.notes = 'Notes';
+
+      const promise = component.onSummarize();
+      expect(component.summarizing).toBe(true);
+      await promise;
+      expect(component.summarizing).toBe(false);
+    });
+
+    it('should do nothing if detail is null', async () => {
+      component.detail = null as any;
+      component.notes = 'Notes';
+
+      await component.onSummarize();
+
+      expect(mockProgressService.summarizeNotes).not.toHaveBeenCalled();
+    });
+
+    it('should do nothing if notes is empty', async () => {
+      component.notes = '';
+
+      await component.onSummarize();
+
+      expect(mockProgressService.summarizeNotes).not.toHaveBeenCalled();
+    });
+
+    it('should replace notes with summary and save on "Replace Notes"', async () => {
+      mockProgressService.saveNotes.mockReturnValue(of({} as any));
+      component.notes = 'Original notes';
+      component.detail = mockDetail;
+
+      await component['replaceNotesWithSummary']('Replaced summary');
+
+      expect(component.notes).toBe('Replaced summary');
+      expect(mockProgressService.saveNotes).toHaveBeenCalledWith(5, 'Replaced summary');
+    });
+  });
 });

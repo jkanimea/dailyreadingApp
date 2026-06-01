@@ -41,4 +41,8 @@ export class ProgressService {
   getJournal(seriesId: number): Observable<JournalEntryDto[]> {
     return this.api.get<JournalEntryDto[]>(`/progress/series/${seriesId}/journal`);
   }
+
+  summarizeNotes(readingId: number, notes: string): Observable<{ summary: string }> {
+    return this.api.post<{ summary: string }>(`/progress/${readingId}/summarize`, { notes });
+  }
 }

@@ -8,11 +8,13 @@ namespace EncounterDaily.API.Controllers
     public class ProgressController : BaseApiController
     {
         private readonly IProgressService _progressService;
+        private readonly IAiSummaryService _aiSummaryService;
         private readonly ILogger<ProgressController> _logger;
 
-        public ProgressController(IProgressService progressService, ILogger<ProgressController> logger)
+        public ProgressController(IProgressService progressService, IAiSummaryService aiSummaryService, ILogger<ProgressController> logger)
         {
             _progressService = progressService;
+            _aiSummaryService = aiSummaryService;
             _logger = logger;
         }
 
@@ -105,6 +107,29 @@ namespace EncounterDaily.API.Controllers
             var userId = GetUserId();
             var entries = await _progressService.GetJournalAsync(userId, seriesId);
             return Ok(entries);
+        }
+
+        [HttpPost("{readingId}/summarize")]
+        public async Task<ActionResult<SummarizeNotesResponse>> SummarizeNotes(int readingId, [FromBody] SummarizeNotesRequest request)
+        {
+            var userId = GetUserId();
+            var notes = request.Notes?.Trim();
+
+            if (string.IsNullOrWhiteSpace(notes))
+                return BadRequest(new { message = "No notes to summarize." });
+            if (notes.Length > 2000)
+                return BadRequest(new { message = "Notes must be 2000 characters or fewer." });
+
+            try
+            {
+                var summary = await _aiSummaryService.SummarizeAsync(notes);
+                return Ok(new SummarizeNotesResponse { Summary = summary });
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Summarize failed: {Message}", ex.Message);
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
