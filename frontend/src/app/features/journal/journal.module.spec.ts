@@ -82,6 +82,7 @@ describe('JournalPage', () => {
       },
       printJournal() {
         this.allExpanded = true;
+        window.addEventListener('afterprint', () => { this.allExpanded = false; }, { once: true });
         setTimeout(() => window.print(), 100);
       },
       shareJournal() {
@@ -284,6 +285,26 @@ describe('JournalPage', () => {
 
     expect(component.allExpanded).toBe(true);
     expect(printSpy).toHaveBeenCalled();
+  }));
+
+  it('toggleEntry should work after print preview closes (allExpanded resets on afterprint)', fakeAsync(() => {
+    jest.spyOn(window, 'print').mockImplementation(() => {});
+    component.ionViewWillEnter();
+
+    component.printJournal();
+    tick(100);
+    expect(component.allExpanded).toBe(true);
+
+    window.dispatchEvent(new Event('afterprint'));
+
+    expect(component.allExpanded).toBe(false);
+    expect(component.isExpanded(1)).toBe(false);
+
+    component.toggleEntry(1);
+    expect(component.isExpanded(1)).toBe(true);
+
+    component.toggleEntry(1);
+    expect(component.isExpanded(1)).toBe(false);
   }));
 
   // ─── Share ────────────────────────────────────────────────────────────

@@ -69,11 +69,13 @@ import { firstValueFrom } from 'rxjs';
             <div class="journal-entry-header" (click)="toggleEntry(entry.readingId)">
               <ion-checkbox (click)="$event.stopPropagation()" (ionChange)="toggleSelected(entry.readingId)" [checked]="isSelected(entry.readingId)" class="entry-checkbox"></ion-checkbox>
               <div class="header-body">
-                <ion-card-title>{{ getMonthName(entry.month) }} {{ entry.day }}</ion-card-title>
+                <div class="title-row">
+                  <ion-card-title>{{ getMonthName(entry.month) }} {{ entry.day }}</ion-card-title>
+                  <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'" class="completion-badge print-hide">
+                    {{ entry.isCompleted ? 'Completed' : 'Not Completed' }}
+                  </ion-badge>
+                </div>
                 <ion-card-subtitle>{{ entry.bibleReading }} — {{ entry.primaryBookPageRange }}</ion-card-subtitle>
-                <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'" class="completion-badge print-hide">
-                  {{ entry.isCompleted ? 'Completed' : 'Not Completed' }}
-                </ion-badge>
               </div>
               <ion-icon [name]="isExpanded(entry.readingId) ? 'chevron-up' : 'chevron-down'" class="entry-chevron"></ion-icon>
             </div>
@@ -138,9 +140,14 @@ import { firstValueFrom } from 'rxjs';
       margin-top: 4px;
       flex-shrink: 0;
     }
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
     .completion-badge {
-      margin-top: 8px;
-      display: inline-block;
+      font-size: 11px;
     }
     .secondary-range {
       font-size: 14px;
@@ -259,6 +266,7 @@ class JournalPage {
     if (this.selectedCount > 0) {
       this.expandedEntries = new Set(this.selectedEntryIds);
     }
+    window.addEventListener('afterprint', () => { this.allExpanded = false; }, { once: true });
     setTimeout(() => window.print(), 100);
   }
 
