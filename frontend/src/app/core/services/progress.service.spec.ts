@@ -53,13 +53,13 @@ describe('ProgressService', () => {
   });
 
   it('saveNotes should PUT to correct endpoint with notes body', () => {
-    const mockResponse: ProgressDto = {
+    const mockResponse: ProgressDto | null = {
       readingId: 1, seriesId: 2, isCompleted: true,
       month: 3, day: 15, bibleReading: 'Mark 1:1', notes: 'Great reading'
     };
 
     service.saveNotes(1, 'Great reading').subscribe(result => {
-      expect(result.notes).toBe('Great reading');
+      expect(result!.notes).toBe('Great reading');
     });
 
     const req = httpMock.expectOne('/api/v1/progress/1/notes');

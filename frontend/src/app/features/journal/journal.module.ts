@@ -148,7 +148,7 @@ class JournalPage {
   canShare = !!navigator.share;
   expandedEntries = new Set<number>();
 
-  monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   async ionViewWillEnter(): Promise<void> {
     await this.loadJournal();

@@ -862,8 +862,8 @@ async shareJournal(): Promise<void> {
 }
 ```
 
-Template note sections use `*ngIf="entry.showNotes || allExpanded"` so the print handler
-forces all content visible before `window.print()` fires.
+Template note sections use `*ngIf="isExpanded(entry.readingId)"` so the print handler
+forces all content visible before `window.print()` fires. `allExpanded` makes `isExpanded()` return `true` for all entries.
 
 **Routing addition** in `frontend/src/app/app-routing.module.ts`:
 ```typescript

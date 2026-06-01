@@ -34,7 +34,7 @@ export class ProgressService {
     return this.api.delete<void>(`/progress/${readingId}/complete`);
   }
 
-  saveNotes(readingId: number, notes: string): Observable<ProgressDto> {
+  saveNotes(readingId: number, notes: string): Observable<ProgressDto | null> {
     return this.api.put<ProgressDto>(`/progress/${readingId}/notes`, { notes });
   }
 
