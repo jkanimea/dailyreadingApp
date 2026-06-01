@@ -95,8 +95,7 @@ describe('JournalPage', () => {
         if (selected.length === 0) return;
         const text = this.buildShareText(selected);
         const url = 'https://www.facebook.com/sharer/sharer.php'
-          + '?quote=' + encodeURIComponent(text)
-          + '&u=' + encodeURIComponent(window.location.href);
+          + '?quote=' + encodeURIComponent(text);
         window.open(url, '_blank', 'width=600,height=400');
       },
       buildShareText(selected: JournalEntryDto[]) {
