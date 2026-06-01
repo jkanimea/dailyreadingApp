@@ -115,15 +115,17 @@ describe('LoginPage', () => {
       expect(authService.login).not.toHaveBeenCalled();
     });
 
-    it('should show error when the Google button has not been rendered yet', async () => {
-      // Clear the container so [role="button"] cannot be found
+    it('should re-init Google SDK when the button is missing (fallback in loginWithGoogle)', async () => {
       (component as any).gBtnHost.nativeElement.innerHTML = '';
+      googleIdMock.initialize.mockClear();
+      // Prevent the fallback from re-rendering so it hits the error path
+      googleIdMock.renderButton = jest.fn().mockImplementation(() => {});
 
       await component.loginWithGoogle();
 
+      // The fallback should have called initGoogle again (second initialize call)
+      expect(googleIdMock.initialize).toHaveBeenCalledTimes(1);
       expect(component.error).toBe('Google Sign-In is still loading — please try again in a moment.');
-      expect(component.loading).toBe(false);
-      expect(authService.login).not.toHaveBeenCalled();
     });
 
     it('should navigate to /series after successful Google login', async () => {
@@ -301,14 +303,60 @@ describe('LoginPage', () => {
   });
 
   describe('ionViewWillEnter', () => {
-    it('should trigger Google SDK initialization', async () => {
-      (component as any).googleInitialized = false;
+    it('should reset googleInitialized and re-initialize Google SDK on each entry', async () => {
+      (component as any).googleInitialized = true;
       googleIdMock.initialize.mockClear();
 
       component.ionViewWillEnter();
       await new Promise(r => setTimeout(r, 0)); // flush microtasks
 
+      // Should have been reset by ionViewWillEnter and re-set by initGoogle
+      expect((component as any).googleInitialized).toBe(true);
       expect(googleIdMock.initialize).toHaveBeenCalled();
+    });
+
+    it('should recover from Ionic page cache: logout → re-login succeeds', async () => {
+      // --- First visit: normal login ---
+      (component as any).googleInitialized = true;
+
+      // --- Simulate Ionic page cache: the Google button DOM is stripped ---
+      (component as any).gBtnHost.nativeElement.innerHTML = '';
+
+      // --- Logout and revisit login page ---
+      component.ionViewWillEnter();
+      await new Promise(r => setTimeout(r, 0)); // flush initGoogle
+
+      // googleInitialized should have been reset to false, then re-set by initGoogle
+      expect((component as any).googleInitialized).toBe(true);
+
+      // renderButton should have been called again to re-render the button
+      expect(googleIdMock.renderButton).toHaveBeenCalledTimes(2);
+
+      // loginWithGoogle should find the re-rendered button and succeed
+      const p = component.loginWithGoogle();
+      googleCredentialCallback({ credential: 'google-id-token' });
+      await p;
+
+      expect(component.error).toBeUndefined();
+      expect(authService.login).toHaveBeenCalledWith('google', 'google-id-token');
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+    });
+
+    it('should show error when Google button is missing AND re-init also fails', async () => {
+      // Make renderButton a no-op on the second call (simulates persistent failure)
+      googleIdMock.renderButton
+        .mockImplementationOnce(() => { /* first call in beforeEach already consumed */ })
+        .mockImplementationOnce(() => { /* don't render anything */ })
+        .mockImplementation(() => {});
+
+      // Clear the container so [role="button"] cannot be found
+      (component as any).gBtnHost.nativeElement.innerHTML = '';
+
+      await component.loginWithGoogle();
+
+      expect(component.error).toBe('Google Sign-In is still loading — please try again in a moment.');
+      expect(component.loading).toBe(false);
+      expect(authService.login).not.toHaveBeenCalled();
     });
   });
 });

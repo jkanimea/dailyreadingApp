@@ -188,6 +188,8 @@ export class LoginPage implements OnDestroy {
   /** Pre-load both SDKs as soon as the page is visible so they are ready
    *  before the user taps a button (preserves the user-gesture chain). */
   ionViewWillEnter(): void {
+    this.googleInitialized = false;
+    this.facebookInitialized = false;
     this.initGoogle().catch(() => {});
     this.initFacebook().catch(() => {});
   }
@@ -265,9 +267,14 @@ export class LoginPage implements OnDestroy {
         throw new Error('Google Sign-In unavailable. Please refresh and try again.');
       }
 
-      // Find the pre-rendered Google button and click it synchronously within
-      // the user-gesture context so Chrome allows the popup to open.
-      const gBtn = this.gBtnHost?.nativeElement?.querySelector<HTMLElement>('[role="button"]');
+      // Find the pre-rendered Google button. If missing (e.g., after Ionic page
+      // cache), re-initialize once before giving up.
+      let gBtn = this.gBtnHost?.nativeElement?.querySelector<HTMLElement>('[role="button"]');
+      if (!gBtn) {
+        this.googleInitialized = false;
+        await this.initGoogle();
+        gBtn = this.gBtnHost?.nativeElement?.querySelector<HTMLElement>('[role="button"]');
+      }
       if (!gBtn) {
         throw new Error('Google Sign-In is still loading — please try again in a moment.');
       }

@@ -154,7 +154,7 @@ class JournalPage {
     await this.loadJournal();
   }
 
-  private async loadJournal(): Promise<void> {
+  async loadJournal(): Promise<void> {
     this.loading = true;
     this.error = undefined;
     try {
