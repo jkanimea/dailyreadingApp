@@ -61,17 +61,17 @@ import { firstValueFrom } from 'rxjs';
         </div>
 
         <div class="subheader">
-          365-Day Reading Journey
+          Daily Reading — Series {{ seriesId }} — {{ seriesName }}
         </div>
 
         <div *ngFor="let entry of entries" class="journal-entry" [class.print-hide]="!isSelected(entry.readingId)">
           <ion-card>
-            <div class="journal-entry-header">
-              <ion-checkbox (ionChange)="toggleSelected(entry.readingId); $event.stopPropagation()" [checked]="isSelected(entry.readingId)" class="entry-checkbox"></ion-checkbox>
-              <div class="header-body" (click)="toggleEntry(entry.readingId)">
+            <div class="journal-entry-header" (click)="toggleEntry(entry.readingId)">
+              <ion-checkbox (click)="$event.stopPropagation()" (ionChange)="toggleSelected(entry.readingId)" [checked]="isSelected(entry.readingId)" class="entry-checkbox"></ion-checkbox>
+              <div class="header-body">
                 <ion-card-title>{{ getMonthName(entry.month) }} {{ entry.day }}</ion-card-title>
                 <ion-card-subtitle>{{ entry.bibleReading }} — {{ entry.primaryBookPageRange }}</ion-card-subtitle>
-                <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'" class="completion-badge">
+                <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'" class="completion-badge print-hide">
                   {{ entry.isCompleted ? 'Completed' : 'Not Completed' }}
                 </ion-badge>
               </div>
@@ -129,6 +129,9 @@ import { firstValueFrom } from 'rxjs';
       flex: 1;
       min-width: 0;
     }
+    .header-body ion-card-title {
+      --color: var(--ion-text-color);
+    }
     .entry-chevron {
       font-size: 20px;
       color: var(--ion-color-medium);
@@ -166,7 +169,9 @@ import { firstValueFrom } from 'rxjs';
     @media print {
       ion-header, ion-footer, .print-hide { display: none !important; }
       ion-content { --padding-top: 0; --padding-bottom: 0; }
-      .journal-entry { break-inside: avoid; page-break-inside: avoid; }
+      .journal-entry { break-inside: avoid; page-break-inside: avoid; margin-bottom: 8px; }
+      .journal-entry-header { padding: 8px 12px; }
+      ion-card-content { --padding-top: 4px; --padding-bottom: 8px; --padding-start: 12px; --padding-end: 12px; }
     }
   `]
 })
@@ -178,6 +183,7 @@ class JournalPage {
 
   entries: JournalEntryDto[] = [];
   seriesName = '';
+  seriesId = 0;
   loading = false;
   error?: string;
   allExpanded = false;
@@ -197,8 +203,8 @@ class JournalPage {
     this.loading = true;
     this.error = undefined;
     try {
-      const seriesId = this.prefs.getSeriesId();
-      this.entries = await firstValueFrom(this.progressService.getJournal(seriesId));
+      this.seriesId = this.prefs.getSeriesId();
+      this.entries = await firstValueFrom(this.progressService.getJournal(this.seriesId));
       this.seriesName = this.entries.length > 0 ? this.entries[0].seriesName : 'Reading';
       this.selectAllEntries();
     } catch {

@@ -210,6 +210,69 @@ describe('JournalPage', () => {
     expect(component.selectedCount).toBe(1);
   });
 
+  // ─── Expand / Collapse ───────────────────────────────────────────────
+
+  it('should start with all entries collapsed', () => {
+    component.ionViewWillEnter();
+
+    expect(component.isExpanded(1)).toBe(false);
+    expect(component.isExpanded(2)).toBe(false);
+    expect(component.isExpanded(3)).toBe(false);
+  });
+
+  it('toggleEntry should expand a collapsed entry', () => {
+    component.ionViewWillEnter();
+
+    component.toggleEntry(1);
+
+    expect(component.isExpanded(1)).toBe(true);
+  });
+
+  it('toggleEntry should collapse an expanded entry', () => {
+    component.ionViewWillEnter();
+    component.toggleEntry(1);
+
+    component.toggleEntry(1);
+
+    expect(component.isExpanded(1)).toBe(false);
+  });
+
+  it('toggleEntry should expand one entry without affecting others', () => {
+    component.ionViewWillEnter();
+
+    component.toggleEntry(2);
+
+    expect(component.isExpanded(1)).toBe(false);
+    expect(component.isExpanded(2)).toBe(true);
+    expect(component.isExpanded(3)).toBe(false);
+  });
+
+  it('toggleEntry should be independent of toggleSelected — selecting does not expand', () => {
+    component.ionViewWillEnter();
+
+    component.toggleSelected(1);
+
+    expect(component.isExpanded(1)).toBe(false);
+  });
+
+  it('toggleSelected should be independent of toggleEntry — expanding does not change selection', () => {
+    component.ionViewWillEnter();
+
+    component.toggleEntry(1);
+
+    expect(component.isSelected(1)).toBe(true); // selection unchanged
+    expect(component.selectedCount).toBe(3);
+  });
+
+  it('allExpanded true should make isExpanded return true for all entries', () => {
+    component.ionViewWillEnter();
+    component.allExpanded = true;
+
+    expect(component.isExpanded(1)).toBe(true);
+    expect(component.isExpanded(2)).toBe(true);
+    expect(component.isExpanded(3)).toBe(true);
+  });
+
   // ─── Print ────────────────────────────────────────────────────────────
 
   it('printJournal should set allExpanded to true before printing', fakeAsync(() => {
