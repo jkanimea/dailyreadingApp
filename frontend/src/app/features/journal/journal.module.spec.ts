@@ -88,6 +88,18 @@ describe('JournalPage', () => {
         if (!navigator.share) return;
         const selected = this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId));
         if (selected.length === 0) return;
+        navigator.share({ title: `My Reading Journal — ${this.seriesName}`, text: this.buildShareText(selected) });
+      },
+      shareToFacebook() {
+        const selected = this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId));
+        if (selected.length === 0) return;
+        const text = this.buildShareText(selected);
+        const url = 'https://www.facebook.com/sharer/sharer.php'
+          + '?quote=' + encodeURIComponent(text)
+          + '&u=' + encodeURIComponent(window.location.href);
+        window.open(url, '_blank', 'width=600,height=400');
+      },
+      buildShareText(selected: JournalEntryDto[]) {
         const lines: string[] = [`My Reading Journal — ${this.seriesName}`, ''];
         for (const entry of selected) {
           const date = `${this.getMonthName(entry.month)} ${entry.day}`;
@@ -101,7 +113,7 @@ describe('JournalPage', () => {
           }
           lines.push('');
         }
-        navigator.share({ title: `My Reading Journal — ${this.seriesName}`, text: lines.join('\n') });
+        return lines.join('\n');
       }
     };
   });
@@ -299,5 +311,48 @@ describe('JournalPage', () => {
     const text: string = shareMock.mock.calls[0][0].text;
     expect(text).toContain('February 1');
     expect(text).not.toContain('Notes:');
+  });
+
+  // ─── Facebook Share ───────────────────────────────────────────────────
+
+  it('shareToFacebook should not share when no entries selected', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
+
+    component.shareToFacebook();
+
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
+  it('shareToFacebook should include journal content for selected entries', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
+    component.toggleSelected(1);
+
+    component.shareToFacebook();
+
+    const url = openSpy.mock.calls[0][0] as string;
+    expect(url).toContain('facebook.com/sharer');
+    expect(decodeURIComponent(url)).toContain('January 5 — Mark 1:1');
+    expect(decodeURIComponent(url)).toContain('Notes: Great insight');
+    openSpy.mockRestore();
+  });
+
+  it('shareToFacebook should include only selected entries, not deselected', () => {
+    const openSpy = jest.spyOn(window, 'open').mockImplementation(() => null);
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
+    component.toggleSelected(1);
+
+    component.shareToFacebook();
+
+    const url = decodeURIComponent(openSpy.mock.calls[0][0] as string);
+    expect(url).toContain('January 5');
+    expect(url).not.toContain('January 10');
+    expect(url).not.toContain('February 1');
+    openSpy.mockRestore();
   });
 });

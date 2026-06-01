@@ -58,6 +58,10 @@ import { firstValueFrom } from 'rxjs';
             <ion-icon name="share-outline" slot="start"></ion-icon>
             Share{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
           </ion-button>
+          <ion-button fill="outline" (click)="shareToFacebook()" [disabled]="selectedCount === 0">
+            <ion-icon name="logo-facebook" slot="start"></ion-icon>
+            Facebook
+          </ion-button>
         </div>
 
         <div class="subheader">
@@ -241,6 +245,25 @@ class JournalPage {
     const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
     if (selected.length === 0) return;
 
+    const text = this.buildShareText(selected);
+    await navigator.share({
+      title: `My Reading Journal — ${this.seriesName}`,
+      text
+    });
+  }
+
+  shareToFacebook(): void {
+    const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
+    if (selected.length === 0) return;
+
+    const text = this.buildShareText(selected);
+    const url = 'https://www.facebook.com/sharer/sharer.php'
+      + '?quote=' + encodeURIComponent(text)
+      + '&u=' + encodeURIComponent(window.location.href);
+    window.open(url, '_blank', 'width=600,height=400');
+  }
+
+  private buildShareText(selected: JournalEntryDto[]): string {
     const lines: string[] = [`My Reading Journal — ${this.seriesName}`, ''];
     for (const entry of selected) {
       const date = `${this.getMonthName(entry.month)} ${entry.day}`;
@@ -254,11 +277,7 @@ class JournalPage {
       }
       lines.push('');
     }
-
-    await navigator.share({
-      title: `My Reading Journal — ${this.seriesName}`,
-      text: lines.join('\n')
-    });
+    return lines.join('\n');
   }
 
   goToSettings(): void {
