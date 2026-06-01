@@ -88,7 +88,7 @@ describe('JournalPage', () => {
         if (!navigator.share) return;
         const selected = this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId));
         if (selected.length === 0) return;
-        navigator.share({ title: `My Reading Journal — ${this.seriesName}`, text: this.buildShareText(selected) });
+        navigator.share({ title: `My Reading Journal — ${this.seriesName}`, text: this.buildShareText(selected), url: window.location.href });
       },
       async shareToFacebook() {
         const selected = this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId));
@@ -96,8 +96,20 @@ describe('JournalPage', () => {
         const text = this.buildShareText(selected);
         try {
           await navigator.clipboard.writeText(text);
-        } catch { }
-        window.open('https://www.facebook.com', '_blank');
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        window.open(
+          'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href),
+          '_blank', 'width=600,height=400'
+        );
       },
       buildShareText(selected: JournalEntryDto[]) {
         const lines: string[] = [`My Reading Journal — ${this.seriesName}`, ''];
@@ -261,14 +273,14 @@ describe('JournalPage', () => {
 
     component.shareJournal();
 
-    expect(shareMock).toHaveBeenCalledWith({
+    expect(shareMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'My Reading Journal — Christ The Way',
       text: expect.stringContaining('January 5 — Mark 1:1')
-    });
-    expect(shareMock).toHaveBeenCalledWith({
+    }));
+    expect(shareMock).toHaveBeenCalledWith(expect.objectContaining({
       title: 'My Reading Journal — Christ The Way',
       text: expect.stringContaining('Notes: Great insight')
-    });
+    }));
   });
 
   it('shareJournal should include only selected entries, not deselected ones', () => {
@@ -340,7 +352,9 @@ describe('JournalPage', () => {
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('January 5 — Mark 1:1'));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(expect.stringContaining('Notes: Great insight'));
-    expect(openSpy).toHaveBeenCalledWith('https://www.facebook.com', '_blank');
+    expect(openSpy).toHaveBeenCalled();
+    const url = openSpy.mock.calls[0][0] as string;
+    expect(url).toContain('facebook.com/sharer/sharer.php?u=');
     openSpy.mockRestore();
   });
 

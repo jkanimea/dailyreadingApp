@@ -250,7 +250,8 @@ class JournalPage {
     const text = this.buildShareText(selected);
     await navigator.share({
       title: `My Reading Journal — ${this.seriesName}`,
-      text
+      text,
+      url: window.location.href
     });
   }
 
@@ -261,16 +262,29 @@ class JournalPage {
     const text = this.buildShareText(selected);
     try {
       await navigator.clipboard.writeText(text);
-      const toast = await this.toastCtrl.create({
-        message: 'Journal text copied! Paste into your Facebook post.',
-        duration: 4000,
-        position: 'bottom'
-      });
-      await toast.present();
     } catch {
-      // clipboard not available; open Facebook anyway
+      // fallback for older browsers
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
     }
-    window.open('https://www.facebook.com', '_blank');
+    const toast = await this.toastCtrl.create({
+      message: 'Journal text copied! Ready to paste into Facebook.',
+      duration: 4000,
+      position: 'bottom'
+    });
+    await toast.present();
+
+    // Opens Facebook share dialog with a link to the journal page
+    window.open(
+      'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href),
+      '_blank', 'width=600,height=400'
+    );
   }
 
   private buildShareText(selected: JournalEntryDto[]): string {
