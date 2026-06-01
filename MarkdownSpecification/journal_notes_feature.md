@@ -760,8 +760,11 @@ A new lazy-loaded feature module. This is the dedicated view where users can **r
 - Loading spinner (shown while API call is in flight)
 - Error message (shown if API call fails; includes retry button)
 - Action buttons:
+    "All"   — select all entries for sharing
+    "None"  — deselect all entries
     "Print"  — expand all collapsed sections, then window.print()
-    "Share"  — Web Share API (navigator.share); button hidden if unavailable
+    "Share"  — Web Share API (navigator.share); button disabled when 0 entries selected;
+              shows selected count e.g. "Share (3)"; button hidden if `navigator.share` unavailable
 - Scrollable card list, one card per reading that is completed or has notes,
   sorted chronologically (Month/Day ascending)
   Each card shows:
@@ -786,6 +789,8 @@ error?: string;
 allExpanded = false;
 canShare = !!navigator.share;
 expandedEntries = new Set<number>(); // tracks which readingIds have notes open
+selectedEntryIds = new Set<number>(); // tracks which entries are checked for sharing
+selectedCount = 0;
 
 isExpanded(readingId: number): boolean {
   return this.allExpanded || this.expandedEntries.has(readingId);
@@ -797,6 +802,30 @@ toggleEntry(readingId: number): void {
   } else {
     this.expandedEntries.add(readingId);
   }
+}
+
+selectAllEntries(): void {
+  this.selectedEntryIds.clear();
+  this.entries.forEach(e => this.selectedEntryIds.add(e.readingId));
+  this.selectedCount = this.selectedEntryIds.size;
+}
+
+deselectAllEntries(): void {
+  this.selectedEntryIds.clear();
+  this.selectedCount = 0;
+}
+
+isSelected(readingId: number): boolean {
+  return this.selectedEntryIds.has(readingId);
+}
+
+toggleSelected(readingId: number): void {
+  if (this.selectedEntryIds.has(readingId)) {
+    this.selectedEntryIds.delete(readingId);
+  } else {
+    this.selectedEntryIds.add(readingId);
+  }
+  this.selectedCount = this.selectedEntryIds.size;
 }
 ```
 
@@ -820,7 +849,40 @@ toggleEntry(readingId: number): void {
 
   <!-- cards -->
   <div *ngIf="!loading && !error && entries.length > 0">
-    ...cards...
+    <div class="action-buttons print-hide">
+      <ion-button fill="outline" (click)="selectAllEntries()">All</ion-button>
+      <ion-button fill="outline" (click)="deselectAllEntries()">None</ion-button>
+      <ion-button fill="outline" (click)="printJournal()">Print</ion-button>
+      <ion-button fill="outline" (click)="shareJournal()" [disabled]="selectedCount === 0"
+        >Share ({{ selectedCount }})</ion-button
+      >
+    </div>
+
+    <div class="subheader">365-Day Reading Journey</div>
+
+    <div *ngFor="let entry of entries" class="journal-entry">
+      <ion-card>
+        <div class="journal-entry-header">
+          <ion-checkbox
+            (ionChange)="toggleSelected(entry.readingId); $event.stopPropagation()"
+            [checked]="isSelected(entry.readingId)"
+          ></ion-checkbox>
+          <div class="header-body" (click)="toggleEntry(entry.readingId)">
+            <ion-card-title>{{ getMonthName(entry.month) }} {{ entry.day }}</ion-card-title>
+            <ion-card-subtitle>{{ entry.bibleReading }} — {{ entry.primaryBookPageRange }}</ion-card-subtitle>
+            <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'">
+              {{ entry.isCompleted ? 'Completed' : 'Not Completed' }}
+            </ion-badge>
+          </div>
+          <ion-icon [name]="isExpanded(entry.readingId) ? 'chevron-up' : 'chevron-down'"></ion-icon>
+        </div>
+        <ion-card-content *ngIf="isExpanded(entry.readingId)">
+          <div *ngIf="entry.secondaryBookPageRange">{{ entry.secondaryBookPageRange }}</div>
+          <div *ngIf="entry.notes">{{ entry.notes }}</div>
+          <div *ngIf="!entry.notes">No notes written</div>
+        </ion-card-content>
+      </ion-card>
+    </div>
   </div>
 </ion-content>
 ```
@@ -838,6 +900,7 @@ private async loadJournal(): Promise<void> {
     const seriesId = this.prefs.getSeriesId();
     this.entries = await firstValueFrom(this.progressService.getJournal(seriesId));
     this.seriesName = this.entries.length > 0 ? this.entries[0].seriesName : 'Reading';
+    this.selectAllEntries(); // default: all entries checked for sharing
   } catch {
     this.error = 'Failed to load journal. Make sure the API is running.';
   } finally {
@@ -846,7 +909,7 @@ private async loadJournal(): Promise<void> {
 }
 ```
 
-**Print handler** — expand all note sections before printing:
+**Print and Share handlers:**
 ```typescript
 allExpanded = false;
 canShare = !!navigator.share;
@@ -858,7 +921,27 @@ printJournal(): void {
 
 async shareJournal(): Promise<void> {
   if (!navigator.share) return;
-  await navigator.share({ title: 'My Reading Journal', text: 'My 365-day reading journal' });
+  const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
+  if (selected.length === 0) return;
+
+  const lines: string[] = [`My Reading Journal — ${this.seriesName}`, ''];
+  for (const entry of selected) {
+    const date = `${this.getMonthName(entry.month)} ${entry.day}`;
+    lines.push(`${date} — ${entry.bibleReading}`);
+    lines.push(`${entry.primaryBookPageRange}`);
+    if (entry.secondaryBookPageRange) {
+      lines.push(entry.secondaryBookPageRange);
+    }
+    if (entry.notes) {
+      lines.push(`Notes: ${entry.notes}`);
+    }
+    lines.push('');
+  }
+
+  await navigator.share({
+    title: `My Reading Journal — ${this.seriesName}`,
+    text: lines.join('\n')
+  });
 }
 ```
 
@@ -1245,9 +1328,11 @@ describe('JournalPage', () => {
   → Clean document with all readings and notes ready for Master Guide submission
 
 [User clicks Share]
-  → canShare = !!navigator.share (evaluated on page init)
-  → Button only rendered if canShare is true
-  → navigator.share({ title, text })
+  → All entries selected by default (selectAllEntries() called in loadJournal)
+  → User can toggle per-entry checkboxes or use All/None buttons
+  → Only selected entries are included
+  → navigator.share({ title: `My Reading Journal — ${seriesName}`, text: builtText })
+  → Share button disabled when selectedCount === 0
 ```
 
 ---
@@ -1266,6 +1351,7 @@ describe('JournalPage', () => {
 | User switches series | Journal reads `PreferencesService.getSeriesId()` on load; shows that series only. |
 | User prints with collapsed notes | `printJournal()` sets `allExpanded = true` and waits one render cycle before `window.print()`. |
 | `navigator.share` not available | `canShare = !!navigator.share` evaluated on init; Share button rendered only when true. |
+| No entries selected when Share clicked | Button disabled (`[disabled]="selectedCount === 0"`); guarded in method by `selected.length === 0` early return. |
 | `SaveNotesAsync` — no existing UserProgress | Look up `DailyReading` by `readingId` to obtain `SeriesId` before creating the new record. |
 
 ---
@@ -1284,6 +1370,11 @@ describe('JournalPage', () => {
 - [ ] Each journal card shows: date, Bible passage, primary page range, secondary page range (if present), completion badge, and notes
 - [ ] Journal page can be printed with all note sections fully expanded (clean print layout)
 - [ ] Share button is hidden when `navigator.share` is unavailable
+- [ ] Share builds text content from all selected entries (date, Bible passage, page ranges, notes)
+- [ ] Each journal card has a checkbox; user can select/deselect individual entries before sharing
+- [ ] "All" and "None" buttons select/deselect all entries
+- [ ] Share button shows selected count e.g. "Share (3)" and is disabled when 0 are selected
+- [ ] All entries are selected by default on page load; stale readingIds from previous series are cleared on reload
 - [ ] Journal page is accessible from the features action sheet on all 7 pages
 - [ ] Notes are capped at 2000 characters
 - [ ] Backend validates max length and returns 400 if exceeded

@@ -61,6 +61,7 @@ describe('JournalPage', () => {
         }
       },
       selectAllEntries() {
+        this.selectedEntryIds.clear();
         this.entries.forEach((e: JournalEntryDto) => this.selectedEntryIds.add(e.readingId));
         this.selectedCount = this.selectedEntryIds.size;
       },
@@ -132,6 +133,25 @@ describe('JournalPage', () => {
 
     const noNotes = component.entries.find((e: JournalEntryDto) => e.isCompleted && !e.notes);
     expect(noNotes).toBeDefined();
+  });
+
+  it('should clear stale selectedEntryIds on reload with different entries', () => {
+    component.ionViewWillEnter();
+    component.toggleSelected(1);
+    expect(component.selectedEntryIds.has(1)).toBe(false);
+
+    const newEntries: JournalEntryDto[] = [
+      { readingId: 99, seriesId: 3, seriesName: 'New Series', month: 6, day: 1,
+        bibleReading: 'Gen 1:1', primaryBookPageRange: 'PP 1-5', isCompleted: true,
+        notes: 'New note' }
+    ];
+    mockGetJournal.mockReturnValue(newEntries);
+
+    component.loadJournal();
+
+    expect(component.selectedCount).toBe(1);
+    expect(component.isSelected(1)).toBe(false);
+    expect(component.isSelected(99)).toBe(true);
   });
 
   // ─── Selection ────────────────────────────────────────────────────────

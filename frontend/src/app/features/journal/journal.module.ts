@@ -208,6 +208,7 @@ class JournalPage {
   }
 
   selectAllEntries(): void {
+    this.selectedEntryIds.clear();
     this.entries.forEach(e => this.selectedEntryIds.add(e.readingId));
     this.selectedCount = this.selectedEntryIds.size;
   }
