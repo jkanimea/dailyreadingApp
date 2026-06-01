@@ -30,18 +30,25 @@ describe('JournalPage', () => {
       allExpanded: false,
       canShare: true,
       expandedEntries: new Set<number>(),
+      selectedEntryIds: new Set<number>(),
+      selectedCount: 0,
       progressService: { getJournal: mockGetJournal },
       prefs: { getSeriesId: mockGetSeriesId },
+      monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
       loadJournal() {
         this.loading = true;
         this.error = undefined;
         const seriesId = this.prefs.getSeriesId();
         this.entries = this.progressService.getJournal(seriesId);
         this.seriesName = this.entries.length > 0 ? this.entries[0].seriesName : 'Reading';
+        this.selectAllEntries();
         this.loading = false;
       },
       ionViewWillEnter() {
         this.loadJournal();
+      },
+      getMonthName(month: number) {
+        return this.monthNames[month - 1] || '';
       },
       isExpanded(readingId: number) {
         return this.allExpanded || this.expandedEntries.has(readingId);
@@ -53,16 +60,52 @@ describe('JournalPage', () => {
           this.expandedEntries.add(readingId);
         }
       },
+      selectAllEntries() {
+        this.entries.forEach((e: JournalEntryDto) => this.selectedEntryIds.add(e.readingId));
+        this.selectedCount = this.selectedEntryIds.size;
+      },
+      deselectAllEntries() {
+        this.selectedEntryIds.clear();
+        this.selectedCount = 0;
+      },
+      isSelected(readingId: number) {
+        return this.selectedEntryIds.has(readingId);
+      },
+      toggleSelected(readingId: number) {
+        if (this.selectedEntryIds.has(readingId)) {
+          this.selectedEntryIds.delete(readingId);
+        } else {
+          this.selectedEntryIds.add(readingId);
+        }
+        this.selectedCount = this.selectedEntryIds.size;
+      },
       printJournal() {
         this.allExpanded = true;
         setTimeout(() => window.print(), 100);
       },
       shareJournal() {
         if (!navigator.share) return;
-        navigator.share({ title: 'My Reading Journal', text: 'My 365-day reading journal' });
+        const selected = this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId));
+        if (selected.length === 0) return;
+        const lines: string[] = [`My Reading Journal — ${this.seriesName}`, ''];
+        for (const entry of selected) {
+          const date = `${this.getMonthName(entry.month)} ${entry.day}`;
+          lines.push(`${date} — ${entry.bibleReading}`);
+          lines.push(`${entry.primaryBookPageRange}`);
+          if (entry.secondaryBookPageRange) {
+            lines.push(entry.secondaryBookPageRange);
+          }
+          if (entry.notes) {
+            lines.push(`Notes: ${entry.notes}`);
+          }
+          lines.push('');
+        }
+        navigator.share({ title: `My Reading Journal — ${this.seriesName}`, text: lines.join('\n') });
       }
     };
   });
+
+  // ─── Loading ─────────────────────────────────────────────────────────
 
   it('should load journal entries on ionViewWillEnter', () => {
     component.ionViewWillEnter();
@@ -91,6 +134,61 @@ describe('JournalPage', () => {
     expect(noNotes).toBeDefined();
   });
 
+  // ─── Selection ────────────────────────────────────────────────────────
+
+  it('should select all entries by default after loading', () => {
+    component.ionViewWillEnter();
+
+    expect(component.selectedCount).toBe(3);
+    expect(component.isSelected(1)).toBe(true);
+    expect(component.isSelected(2)).toBe(true);
+    expect(component.isSelected(3)).toBe(true);
+  });
+
+  it('should deselect all entries', () => {
+    component.ionViewWillEnter();
+
+    component.deselectAllEntries();
+
+    expect(component.selectedCount).toBe(0);
+    expect(component.isSelected(1)).toBe(false);
+  });
+
+  it('should select all entries after deselecting', () => {
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
+
+    component.selectAllEntries();
+
+    expect(component.selectedCount).toBe(3);
+    expect(component.isSelected(1)).toBe(true);
+  });
+
+  it('should toggle individual entry selection', () => {
+    component.ionViewWillEnter();
+
+    component.toggleSelected(1);
+
+    expect(component.selectedCount).toBe(2);
+    expect(component.isSelected(1)).toBe(false);
+
+    component.toggleSelected(1);
+
+    expect(component.selectedCount).toBe(3);
+    expect(component.isSelected(1)).toBe(true);
+  });
+
+  it('should update selectedCount when toggling', () => {
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
+
+    component.toggleSelected(2);
+
+    expect(component.selectedCount).toBe(1);
+  });
+
+  // ─── Print ────────────────────────────────────────────────────────────
+
   it('printJournal should set allExpanded to true before printing', fakeAsync(() => {
     const printSpy = jest.spyOn(window, 'print').mockImplementation(() => {});
     component.allExpanded = false;
@@ -102,6 +200,8 @@ describe('JournalPage', () => {
     expect(printSpy).toHaveBeenCalled();
   }));
 
+  // ─── Share ────────────────────────────────────────────────────────────
+
   it('shareJournal should not throw when navigator.share is undefined', () => {
     Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
     component.canShare = false;
@@ -109,13 +209,75 @@ describe('JournalPage', () => {
     expect(() => component.shareJournal()).not.toThrow();
   });
 
-  it('shareJournal should call navigator.share when available', () => {
+  it('shareJournal should not share when no entries are selected', () => {
     const shareMock = jest.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
-    component.canShare = true;
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
 
     component.shareJournal();
 
-    expect(shareMock).toHaveBeenCalledWith(expect.objectContaining({ title: 'My Reading Journal' }));
+    expect(shareMock).not.toHaveBeenCalled();
+  });
+
+  it('shareJournal should include journal entry content for selected entries', () => {
+    const shareMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
+    component.toggleSelected(1);
+
+    component.shareJournal();
+
+    expect(shareMock).toHaveBeenCalledWith({
+      title: 'My Reading Journal — Christ The Way',
+      text: expect.stringContaining('January 5 — Mark 1:1')
+    });
+    expect(shareMock).toHaveBeenCalledWith({
+      title: 'My Reading Journal — Christ The Way',
+      text: expect.stringContaining('Notes: Great insight')
+    });
+  });
+
+  it('shareJournal should include only selected entries, not deselected ones', () => {
+    const shareMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
+    component.toggleSelected(1);
+
+    component.shareJournal();
+
+    const text: string = shareMock.mock.calls[0][0].text;
+    expect(text).toContain('January 5');
+    expect(text).not.toContain('January 10');
+    expect(text).not.toContain('February 1');
+  });
+
+  it('shareJournal should include all entries when all are selected', () => {
+    const shareMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    component.ionViewWillEnter();
+
+    component.shareJournal();
+
+    const text: string = shareMock.mock.calls[0][0].text;
+    expect(text).toContain('January 5');
+    expect(text).toContain('January 10');
+    expect(text).toContain('February 1');
+  });
+
+  it('shareJournal should handle entries without notes', () => {
+    const shareMock = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'share', { value: shareMock, configurable: true });
+    component.ionViewWillEnter();
+    component.deselectAllEntries();
+    component.toggleSelected(3);
+
+    component.shareJournal();
+
+    const text: string = shareMock.mock.calls[0][0].text;
+    expect(text).toContain('February 1');
+    expect(text).not.toContain('Notes:');
   });
 });

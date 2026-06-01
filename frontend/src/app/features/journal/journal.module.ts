@@ -42,13 +42,21 @@ import { firstValueFrom } from 'rxjs';
 
       <div *ngIf="!loading && !error && entries.length > 0">
         <div class="action-buttons print-hide">
+          <ion-button fill="outline" (click)="selectAllEntries()">
+            <ion-icon name="checkbox-outline" slot="start"></ion-icon>
+            All
+          </ion-button>
+          <ion-button fill="outline" (click)="deselectAllEntries()">
+            <ion-icon name="square-outline" slot="start"></ion-icon>
+            None
+          </ion-button>
           <ion-button fill="outline" (click)="printJournal()">
             <ion-icon name="print-outline" slot="start"></ion-icon>
             Print
           </ion-button>
-          <ion-button fill="outline" (click)="shareJournal()" *ngIf="canShare">
+          <ion-button fill="outline" (click)="shareJournal()" *ngIf="canShare" [disabled]="selectedCount === 0">
             <ion-icon name="share-outline" slot="start"></ion-icon>
-            Share
+            Share{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
           </ion-button>
         </div>
 
@@ -58,14 +66,17 @@ import { firstValueFrom } from 'rxjs';
 
         <div *ngFor="let entry of entries" class="journal-entry">
           <ion-card>
-            <ion-card-header (click)="toggleEntry(entry.readingId)" class="journal-entry-header">
-              <ion-card-title>{{ getMonthName(entry.month) }} {{ entry.day }}</ion-card-title>
-              <ion-card-subtitle>{{ entry.bibleReading }} — {{ entry.primaryBookPageRange }}</ion-card-subtitle>
-              <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'" class="completion-badge">
-                {{ entry.isCompleted ? 'Completed' : 'Not Completed' }}
-              </ion-badge>
-              <ion-icon [name]="isExpanded(entry.readingId) ? 'chevron-up' : 'chevron-down'" slot="end"></ion-icon>
-            </ion-card-header>
+            <div class="journal-entry-header">
+              <ion-checkbox (ionChange)="toggleSelected(entry.readingId); $event.stopPropagation()" [checked]="isSelected(entry.readingId)" class="entry-checkbox"></ion-checkbox>
+              <div class="header-body" (click)="toggleEntry(entry.readingId)">
+                <ion-card-title>{{ getMonthName(entry.month) }} {{ entry.day }}</ion-card-title>
+                <ion-card-subtitle>{{ entry.bibleReading }} — {{ entry.primaryBookPageRange }}</ion-card-subtitle>
+                <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'" class="completion-badge">
+                  {{ entry.isCompleted ? 'Completed' : 'Not Completed' }}
+                </ion-badge>
+              </div>
+              <ion-icon [name]="isExpanded(entry.readingId) ? 'chevron-up' : 'chevron-down'" class="entry-chevron"></ion-icon>
+            </div>
 
             <ion-card-content *ngIf="isExpanded(entry.readingId)">
               <div *ngIf="entry.secondaryBookPageRange" class="secondary-range">
@@ -97,16 +108,25 @@ import { firstValueFrom } from 'rxjs';
       margin-bottom: 16px;
     }
     .journal-entry-header {
-      position: relative;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
       cursor: pointer;
+      padding: 16px;
     }
-    .journal-entry-header ion-icon {
-      position: absolute;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
+    .entry-checkbox {
+      margin-top: 2px;
+      --size: 20px;
+    }
+    .header-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .entry-chevron {
       font-size: 20px;
       color: var(--ion-color-medium);
+      margin-top: 4px;
+      flex-shrink: 0;
     }
     .completion-badge {
       margin-top: 8px;
@@ -147,6 +167,8 @@ class JournalPage {
   allExpanded = false;
   canShare = !!navigator.share;
   expandedEntries = new Set<number>();
+  selectedEntryIds = new Set<number>();
+  selectedCount = 0;
 
   monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -161,6 +183,7 @@ class JournalPage {
       const seriesId = this.prefs.getSeriesId();
       this.entries = await firstValueFrom(this.progressService.getJournal(seriesId));
       this.seriesName = this.entries.length > 0 ? this.entries[0].seriesName : 'Reading';
+      this.selectAllEntries();
     } catch {
       this.error = 'Failed to load journal. Make sure the API is running.';
     } finally {
@@ -184,6 +207,29 @@ class JournalPage {
     }
   }
 
+  selectAllEntries(): void {
+    this.entries.forEach(e => this.selectedEntryIds.add(e.readingId));
+    this.selectedCount = this.selectedEntryIds.size;
+  }
+
+  deselectAllEntries(): void {
+    this.selectedEntryIds.clear();
+    this.selectedCount = 0;
+  }
+
+  isSelected(readingId: number): boolean {
+    return this.selectedEntryIds.has(readingId);
+  }
+
+  toggleSelected(readingId: number): void {
+    if (this.selectedEntryIds.has(readingId)) {
+      this.selectedEntryIds.delete(readingId);
+    } else {
+      this.selectedEntryIds.add(readingId);
+    }
+    this.selectedCount = this.selectedEntryIds.size;
+  }
+
   printJournal(): void {
     this.allExpanded = true;
     setTimeout(() => window.print(), 100);
@@ -191,7 +237,27 @@ class JournalPage {
 
   async shareJournal(): Promise<void> {
     if (!navigator.share) return;
-    await navigator.share({ title: 'My Reading Journal', text: 'My 365-day reading journal' });
+    const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
+    if (selected.length === 0) return;
+
+    const lines: string[] = [`My Reading Journal — ${this.seriesName}`, ''];
+    for (const entry of selected) {
+      const date = `${this.getMonthName(entry.month)} ${entry.day}`;
+      lines.push(`${date} — ${entry.bibleReading}`);
+      lines.push(`${entry.primaryBookPageRange}`);
+      if (entry.secondaryBookPageRange) {
+        lines.push(entry.secondaryBookPageRange);
+      }
+      if (entry.notes) {
+        lines.push(`Notes: ${entry.notes}`);
+      }
+      lines.push('');
+    }
+
+    await navigator.share({
+      title: `My Reading Journal — ${this.seriesName}`,
+      text: lines.join('\n')
+    });
   }
 
   goToSettings(): void {
