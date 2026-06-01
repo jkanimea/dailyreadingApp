@@ -8,7 +8,6 @@ import { ProgressService } from '../../core/services/progress.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { JournalEntryDto } from '../../core/models/journal-entry.model';
 import { firstValueFrom } from 'rxjs';
-import { ToastController } from '@ionic/angular';
 
 @Component({
   template: `
@@ -58,10 +57,6 @@ import { ToastController } from '@ionic/angular';
           <ion-button fill="outline" (click)="shareJournal()" *ngIf="canShare" [disabled]="selectedCount === 0">
             <ion-icon name="share-outline" slot="start"></ion-icon>
             Share{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
-          </ion-button>
-          <ion-button fill="outline" (click)="shareToFacebook()" [disabled]="selectedCount === 0">
-            <ion-icon name="logo-facebook" slot="start"></ion-icon>
-            Facebook
           </ion-button>
         </div>
 
@@ -164,7 +159,6 @@ class JournalPage {
   private router = inject(Router);
   private progressService = inject(ProgressService);
   private prefs = inject(PreferencesService);
-  private toastCtrl = inject(ToastController);
 
   entries: JournalEntryDto[] = [];
   seriesName = '';
@@ -253,38 +247,6 @@ class JournalPage {
       text,
       url: window.location.href
     });
-  }
-
-  async shareToFacebook(): Promise<void> {
-    const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
-    if (selected.length === 0) return;
-
-    const text = this.buildShareText(selected);
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // fallback for older browsers
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand('copy');
-      document.body.removeChild(ta);
-    }
-    const toast = await this.toastCtrl.create({
-      message: 'Journal text copied! Ready to paste into Facebook.',
-      duration: 4000,
-      position: 'bottom'
-    });
-    await toast.present();
-
-    // Opens Facebook share dialog with a link to the journal page
-    window.open(
-      'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(window.location.href),
-      '_blank', 'width=600,height=400'
-    );
   }
 
   private buildShareText(selected: JournalEntryDto[]): string {
