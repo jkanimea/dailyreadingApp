@@ -39,11 +39,11 @@ export abstract class BaseReadingPageComponent implements OnDestroy {
     }
   }
 
-  protected async loadDetail(readingId: number): Promise<void> {
+  protected async loadDetail(readingId: number, translation = 'KJV'): Promise<void> {
     this.loading = true;
     this.error = undefined;
     try {
-      this.detail = await this.readingService.getFullReading(readingId).toPromise();
+      this.detail = await this.readingService.getFullReading(readingId, translation).toPromise();
       if (this.detail) {
         this.summary = await this.readingService.getSummary(readingId).toPromise();
       }

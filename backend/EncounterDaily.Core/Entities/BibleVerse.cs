@@ -10,5 +10,8 @@ public class BibleVerse : BaseEntity
     public short Chapter { get; set; }
     public short Verse { get; set; }
 
+    [MaxLength(10)]
+    public string Translation { get; set; } = "KJV";
+
     public string Text { get; set; } = string.Empty;
 }

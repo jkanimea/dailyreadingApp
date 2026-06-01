@@ -111,13 +111,13 @@ namespace EncounterDaily.Services
             return MapToDto(reading);
         }
 
-        public async Task<ReadingDetailDto> GetFullReadingAsync(int readingId)
+        public async Task<ReadingDetailDto> GetFullReadingAsync(int readingId, string translation = "KJV")
         {
             var reading = await _unitOfWork.Readings.GetByIdAsync(readingId);
             if (reading == null)
                 throw new KeyNotFoundException($"Reading {readingId} not found");
 
-            var bibleText = await LookupBibleTextAsync(reading.BibleReading);
+            var bibleText = await LookupBibleTextAsync(reading.BibleReading, translation);
             var primaryText = await AssembleEgwTextAsync(
                 reading.Series?.PrimaryBookId, reading.PrimaryBookPageStart, reading.PrimaryBookPageEnd);
             var secondaryText = await AssembleEgwTextAsync(
@@ -165,7 +165,7 @@ namespace EncounterDaily.Services
             };
         }
 
-        private async Task<string> LookupBibleTextAsync(string? bibleReading)
+        private async Task<string> LookupBibleTextAsync(string? bibleReading, string translation = "KJV")
         {
             if (string.IsNullOrWhiteSpace(bibleReading))
                 return string.Empty;
@@ -178,21 +178,21 @@ namespace EncounterDaily.Services
                 var verseMatch = BibleRefRegex.Match(part);
                 if (verseMatch.Success)
                 {
-                    await ProcessVerseRef(verseMatch, resultParts);
+                    await ProcessVerseRef(verseMatch, resultParts, translation);
                     continue;
                 }
 
                 var chapterMatch = ChapterOnlyRefRegex.Match(part);
                 if (chapterMatch.Success)
                 {
-                    await ProcessChapterRef(chapterMatch, resultParts);
+                    await ProcessChapterRef(chapterMatch, resultParts, translation);
                 }
             }
 
             return resultParts.Count > 0 ? string.Join("\n\n", resultParts) : string.Empty;
         }
 
-        private async Task ProcessVerseRef(Match match, List<string> resultParts)
+        private async Task ProcessVerseRef(Match match, List<string> resultParts, string translation = "KJV")
         {
             var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
             var chapter = short.Parse(match.Groups[3].Value);
@@ -215,7 +215,7 @@ namespace EncounterDaily.Services
 
                 var found = await _unitOfWork.Repository<BibleVerse>()
                     .Query()
-                    .Where(v => v.BookId == book.Id && v.Chapter == chapter && v.Verse >= verseNum && v.Verse <= endVerse)
+                    .Where(v => v.BookId == book.Id && v.Translation == translation && v.Chapter == chapter && v.Verse >= verseNum && v.Verse <= endVerse)
                     .OrderBy(v => v.Verse)
                     .Select(v => new { v.Verse, v.Text })
                     .ToListAsync();
@@ -234,7 +234,7 @@ namespace EncounterDaily.Services
             }
         }
 
-        private async Task ProcessChapterRef(Match match, List<string> resultParts)
+        private async Task ProcessChapterRef(Match match, List<string> resultParts, string translation = "KJV")
         {
             var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
             var chapterSpec = match.Groups[3].Value;
@@ -256,7 +256,7 @@ namespace EncounterDaily.Services
                 {
                     var found = await _unitOfWork.Repository<BibleVerse>()
                         .Query()
-                        .Where(v => v.BookId == book.Id && v.Chapter >= chapterStart && v.Chapter <= chapterEnd)
+                        .Where(v => v.BookId == book.Id && v.Translation == translation && v.Chapter >= chapterStart && v.Chapter <= chapterEnd)
                         .OrderBy(v => v.Chapter)
                         .ThenBy(v => v.Verse)
                         .Select(v => new { v.Chapter, v.Verse, v.Text })

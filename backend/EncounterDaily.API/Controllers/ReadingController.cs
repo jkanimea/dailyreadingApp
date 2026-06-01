@@ -61,11 +61,11 @@ namespace EncounterDaily.API.Controllers
         }
 
         [HttpGet("{id}/full")]
-        public async Task<ActionResult<ReadingDetailDto>> GetFullReading(int id)
+        public async Task<ActionResult<ReadingDetailDto>> GetFullReading(int id, [FromQuery] string translation = "KJV")
         {
             try
             {
-                var result = await _readingService.GetFullReadingAsync(id);
+                var result = await _readingService.GetFullReadingAsync(id, translation);
                 return Ok(result);
             }
             catch (KeyNotFoundException)

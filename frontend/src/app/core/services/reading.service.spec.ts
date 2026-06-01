@@ -50,11 +50,18 @@ describe('ReadingService', () => {
     req.flush([]);
   });
 
-  it('getFullReading should call correct endpoint', () => {
+  it('getFullReading should call correct endpoint with default KJV translation', () => {
     service.getFullReading(42).subscribe(r => expect(r.fullTextPrimary).toBe('text'));
-    const req = httpMock.expectOne('/api/v1/reading/42/full');
+    const req = httpMock.expectOne('/api/v1/reading/42/full?translation=KJV');
     expect(req.request.method).toBe('GET');
     req.flush({ id: 42, fullTextPrimary: 'text' });
+  });
+
+  it('getFullReading should pass chosen translation as query param', () => {
+    service.getFullReading(42, 'ASV').subscribe();
+    const req = httpMock.expectOne('/api/v1/reading/42/full?translation=ASV');
+    expect(req.request.method).toBe('GET');
+    req.flush({});
   });
 
   it('getSummary should call correct endpoint', () => {

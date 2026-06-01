@@ -121,7 +121,7 @@ namespace EncounterDaily.Infrastructure.Data
 
             modelBuilder.Entity<BibleVerse>(entity =>
             {
-                entity.HasIndex(e => new { e.BookId, e.Chapter, e.Verse }).IsUnique();
+                entity.HasIndex(e => new { e.BookId, e.Chapter, e.Verse, e.Translation }).IsUnique();
                 entity.HasOne(e => e.Book)
                     .WithMany(b => b.Verses)
                     .HasForeignKey(e => e.BookId)

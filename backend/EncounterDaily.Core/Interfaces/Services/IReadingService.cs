@@ -10,7 +10,7 @@ namespace EncounterDaily.Core.Interfaces.Services
         Task<IEnumerable<DailyReading>> GetBySeriesYearAsync(int seriesId);
         Task<IEnumerable<DailyReading>> SearchByTextAsync(int seriesId, string searchTerm);
         Task<DailyReadingDto> GetTodayReadingAsync(int seriesId, int? month = null, int? day = null);
-        Task<ReadingDetailDto> GetFullReadingAsync(int readingId);
+        Task<ReadingDetailDto> GetFullReadingAsync(int readingId, string translation = "KJV");
         Task<SummaryDto> GetSummaryAsync(int readingId);
         Task<object> GetBibleStatusAsync();
     }

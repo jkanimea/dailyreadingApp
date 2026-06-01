@@ -7,7 +7,7 @@ import { SharedModule } from '../../shared/shared.module';
 import { BaseReadingPageComponent } from '../base/base-reading-page-component';
 import { ProgressService } from '../../core/services/progress.service';
 import { SeriesService } from '../../core/services/series.service';
-import { PreferencesService } from '../../core/services/preferences.service';
+import { PreferencesService, BibleTranslation } from '../../core/services/preferences.service';
 import { ActivatedRoute } from '@angular/router';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom, Subscription } from 'rxjs';
@@ -54,6 +54,13 @@ import { firstValueFrom, Subscription } from 'rxjs';
         </div>
 
         <div class="ion-margin-bottom">
+          <div class="translation-bar">
+            <ion-segment [value]="translation" (ionChange)="onTranslationChange($event)" mode="md">
+              <ion-segment-button value="KJV">KJV</ion-segment-button>
+              <ion-segment-button value="ASV">ASV</ion-segment-button>
+              <ion-segment-button value="WEB">WEB</ion-segment-button>
+            </ion-segment>
+          </div>
           <ng-container *ngIf="bibleSections.length > 0; else plainBible">
             <ng-container *ngFor="let section of bibleSections">
               <h3 class="bible-section-title">{{ section.title }}</h3>
@@ -203,6 +210,20 @@ import { firstValueFrom, Subscription } from 'rxjs';
       align-items: center;
       gap: 4px;
     }
+    .translation-bar {
+      margin-bottom: 10px;
+      ion-segment {
+        max-width: 220px;
+        --background: var(--ion-color-light);
+      }
+      ion-segment-button {
+        --padding-top: 4px;
+        --padding-bottom: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        min-height: 32px;
+      }
+    }
   `]
 })
 export class ReadingDetailPage extends BaseReadingPageComponent implements OnDestroy {
@@ -221,6 +242,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   showNotes = false;
   notesSaved = false;
   summarizing = false;
+  translation: BibleTranslation = 'KJV';
   private notesDebounce?: ReturnType<typeof setTimeout>;
 
   override ngOnDestroy(): void {
@@ -423,12 +445,21 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     return segments.length > 0 ? segments : [{ text, isRef: false }];
   }
 
+  async onTranslationChange(event: CustomEvent): Promise<void> {
+    this.translation = event.detail.value as BibleTranslation;
+    await this.prefs.setTranslation(this.translation);
+    if (this.detail?.id) {
+      await this.loadDetail(this.detail.id, this.translation);
+    }
+  }
+
   protected async load(): Promise<void> {
+    this.translation = this.prefs.getTranslation();
     this.routeSub?.unsubscribe();
     this.routeSub = this.route.paramMap.subscribe(async params => {
       const id = Number(params.get('id'));
       if (id) {
-        await this.loadDetail(id);
+        await this.loadDetail(id, this.translation);
         await this.checkCompleted(id);
       }
     });

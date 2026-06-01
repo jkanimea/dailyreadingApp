@@ -57,7 +57,9 @@ describe('ReadingDetailPage', () => {
 
     mockPrefs = {
       getSeriesId: jest.fn().mockReturnValue(2),
-      setSeriesId: jest.fn().mockResolvedValue(undefined)
+      setSeriesId: jest.fn().mockResolvedValue(undefined),
+      getTranslation: jest.fn().mockReturnValue('KJV'),
+      setTranslation: jest.fn().mockResolvedValue(undefined)
     };
 
     mockProgressService = {
@@ -235,7 +237,7 @@ describe('ReadingDetailPage', () => {
   describe('load with route param subscription', () => {
     it('should load detail on initial subscription with BehaviorSubject replay', () => {
       (component as any).load();
-      expect(mockReadingService.getFullReading).toHaveBeenCalledWith(5);
+      expect(mockReadingService.getFullReading).toHaveBeenCalledWith(5, 'KJV');
     });
 
     it('should load new detail when route params change', () => {
@@ -243,13 +245,13 @@ describe('ReadingDetailPage', () => {
       expect(mockReadingService.getFullReading).not.toHaveBeenCalled();
 
       (component as any).load();
-      expect(mockReadingService.getFullReading).toHaveBeenCalledWith(10);
+      expect(mockReadingService.getFullReading).toHaveBeenCalledWith(10, 'KJV');
     });
 
     it('should reload detail on subsequent param changes', () => {
       (component as any).load();
       paramMapSubject.next(convertToParamMap({ id: '10' }));
-      expect(mockReadingService.getFullReading).toHaveBeenCalledWith(10);
+      expect(mockReadingService.getFullReading).toHaveBeenCalledWith(10, 'KJV');
     });
 
     it('should clean up subscription on destroy', () => {

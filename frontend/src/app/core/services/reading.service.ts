@@ -25,8 +25,9 @@ export class ReadingService {
     return this.api.get<DailyReading[]>(`/reading/series/${seriesId}/month/${month}`);
   }
 
-  getFullReading(readingId: number): Observable<ReadingDetail> {
-    return this.api.get<ReadingDetail>(`/reading/${readingId}/full`);
+  getFullReading(readingId: number, translation = 'KJV'): Observable<ReadingDetail> {
+    const params = new HttpParams().set('translation', translation);
+    return this.api.get<ReadingDetail>(`/reading/${readingId}/full`, params);
   }
 
   getSummary(readingId: number): Observable<ReadingSummary> {

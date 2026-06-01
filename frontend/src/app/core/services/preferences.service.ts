@@ -4,10 +4,12 @@ import { OfflineStorageService } from './offline-storage.service';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type FontSize = 'small' | 'medium' | 'large';
+export type BibleTranslation = 'KJV' | 'ASV' | 'WEB';
 
 const PREFS_THEME = 'prefs_theme';
 const PREFS_FONT_SIZE = 'prefs_font_size';
 const PREFS_SERIES_ID = 'prefs_series_id';
+const PREFS_TRANSLATION = 'prefs_translation';
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
@@ -22,6 +24,9 @@ export class PreferencesService {
   private readonly seriesIdSubject = new BehaviorSubject<number>(1);
   readonly seriesId$ = this.seriesIdSubject.asObservable();
 
+  private readonly translationSubject = new BehaviorSubject<BibleTranslation>('KJV');
+  readonly translation$ = this.translationSubject.asObservable();
+
   constructor() {
     this.load();
   }
@@ -35,6 +40,9 @@ export class PreferencesService {
 
     const seriesId = await this.storage.get<number>(PREFS_SERIES_ID);
     if (seriesId) this.seriesIdSubject.next(seriesId);
+
+    const translation = await this.storage.get<BibleTranslation>(PREFS_TRANSLATION);
+    if (translation) this.translationSubject.next(translation);
 
     this.applyTheme(theme ?? 'system');
     this.applyFontSize(fontSize ?? 'medium');
@@ -59,6 +67,15 @@ export class PreferencesService {
   async setSeriesId(id: number): Promise<void> {
     this.seriesIdSubject.next(id);
     await this.storage.set(PREFS_SERIES_ID, id);
+  }
+
+  getTranslation(): BibleTranslation {
+    return this.translationSubject.value;
+  }
+
+  async setTranslation(t: BibleTranslation): Promise<void> {
+    this.translationSubject.next(t);
+    await this.storage.set(PREFS_TRANSLATION, t);
   }
 
   private applyTheme(mode: ThemeMode): void {
