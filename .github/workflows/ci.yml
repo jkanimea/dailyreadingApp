@@ -9,12 +9,10 @@ on:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
       - name: Restore dependencies
@@ -26,12 +24,10 @@ jobs:
 
   frontend-tests:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22.x
       - name: Install dependencies
@@ -45,9 +41,9 @@ jobs:
   #   runs-on: macos-latest
   #   needs: [backend-tests, frontend-tests]
   #   steps:
-  #     - uses: actions/checkout@v4
+  #     - uses: actions/checkout@v6
   #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
+  #       uses: actions/setup-node@v6
   #       with:
   #         node-version: 22.x
   #     - name: Install dependencies

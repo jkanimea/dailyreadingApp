@@ -7,16 +7,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
       - name: Build .NET API
         run: dotnet publish backend/EncounterDaily.API/EncounterDaily.API.csproj -c Release -o publish/api
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22.x
       - name: Build Angular app
@@ -25,7 +23,7 @@ jobs:
           npm ci
           npx ng build --configuration production
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: build-output
           path: publish/
@@ -38,7 +36,7 @@ jobs:
   #     name: staging
   #     url: https://staging.encounterdaily.com
   #   steps:
-  #     - uses: actions/download-artifact@v4
+  #     - uses: actions/download-artifact@v8
   #       with:
   #         name: build-output
   #     - name: Deploy to Azure App Service (Staging)
@@ -56,7 +54,7 @@ jobs:
   #     name: production
   #     url: https://encounterdaily.com
   #   steps:
-  #     - uses: actions/download-artifact@v4
+  #     - uses: actions/download-artifact@v8
   #       with:
   #         name: build-output
   #     - name: Deploy to Azure App Service (Production)
