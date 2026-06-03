@@ -74,6 +74,16 @@ namespace EncounterDaily.API.Controllers
             return NoContent();
         }
 
+        [HttpGet("{readingId}")]
+        public async Task<ActionResult<ProgressDto>> GetProgress(int readingId)
+        {
+            var userId = GetUserId();
+            var result = await _progressService.GetUserReadingProgressAsync(userId, readingId);
+            if (result == null)
+                return NotFound(new { message = "Progress not found for this reading" });
+            return Ok(result);
+        }
+
         [HttpPut("{readingId}/notes")]
         public async Task<ActionResult<ProgressDto>> SaveNotes(int readingId, [FromBody] SaveNotesRequest request)
         {

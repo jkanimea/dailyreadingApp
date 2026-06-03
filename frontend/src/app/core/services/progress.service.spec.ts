@@ -26,6 +26,19 @@ describe('ProgressService', () => {
     req.flush([]);
   });
 
+  it('getReadingProgress should GET correct endpoint', () => {
+    const mock: ProgressDto = {
+      readingId: 5, seriesId: 2, isCompleted: true,
+      month: 3, day: 15, bibleReading: 'Mark 1', notes: 'Good chapter'
+    };
+    service.getReadingProgress(5).subscribe(result => {
+      expect(result.notes).toBe('Good chapter');
+    });
+    const req = httpMock.expectOne('/api/v1/progress/5');
+    expect(req.request.method).toBe('GET');
+    req.flush(mock);
+  });
+
   it('getStreak should call correct endpoint', () => {
     service.getStreak(2).subscribe(n => expect(n).toBe(5));
     const req = httpMock.expectOne('/api/v1/progress/series/2/streak');

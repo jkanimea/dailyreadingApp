@@ -14,6 +14,10 @@ export class ProgressService {
     return this.api.get<ProgressDto[]>(`/progress/series/${seriesId}`);
   }
 
+  getReadingProgress(readingId: number): Observable<ProgressDto> {
+    return this.api.get<ProgressDto>(`/progress/${readingId}`);
+  }
+
   getStreak(seriesId: number): Observable<number> {
     return this.api.get<number>(`/progress/series/${seriesId}/streak`);
   }

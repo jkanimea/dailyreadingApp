@@ -1,5 +1,4 @@
-import { Directive, OnDestroy, inject } from '@angular/core';
-import { Subject } from 'rxjs';
+import { DestroyRef, Directive, inject } from '@angular/core';
 import { ReadingService } from '../../core/services/reading.service';
 import { DailyReading } from '../../core/models/reading.model';
 
@@ -14,8 +13,8 @@ export interface CalendarDay {
 }
 
 @Directive()
-export abstract class BaseCalendarPageComponent implements OnDestroy {
-  protected readonly destroy$ = new Subject<void>();
+export abstract class BaseCalendarPageComponent {
+  protected readonly destroyRef = inject(DestroyRef);
 
   currentMonth: number;
   currentYear: number;
@@ -33,11 +32,6 @@ export abstract class BaseCalendarPageComponent implements OnDestroy {
 
   ionViewWillEnter(): void {
     this.loadMonth(this.currentMonth);
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   abstract loadMonth(month: number): void;

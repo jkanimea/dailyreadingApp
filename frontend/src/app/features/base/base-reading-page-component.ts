@@ -1,11 +1,10 @@
-import { Directive, OnDestroy, inject } from '@angular/core';
-import { Subject } from 'rxjs';
+import { DestroyRef, Directive, inject } from '@angular/core';
 import { ReadingService } from '../../core/services/reading.service';
 import { DailyReading, ReadingDetail, ReadingSummary } from '../../core/models/reading.model';
 
 @Directive()
-export abstract class BaseReadingPageComponent implements OnDestroy {
-  protected readonly destroy$ = new Subject<void>();
+export abstract class BaseReadingPageComponent {
+  protected readonly destroyRef = inject(DestroyRef);
 
   reading?: DailyReading;
   detail?: ReadingDetail;
@@ -17,11 +16,6 @@ export abstract class BaseReadingPageComponent implements OnDestroy {
 
   ionViewWillEnter(): void {
     this.load();
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
   }
 
   protected abstract load(): void;

@@ -1,8 +1,9 @@
-import { NgModule, inject } from '@angular/core';
+import { NgModule, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnInit } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PreferencesService, ThemeMode, FontSize } from '../../core/services/preferences.service';
 import { NotificationService } from '../../core/services/notification.service';
 
@@ -72,6 +73,7 @@ class SettingsPage implements OnInit {
   private prefs = inject(PreferencesService);
   private notifications = inject(NotificationService);
   private router = inject(Router);
+  private destroyRef = inject(DestroyRef);
 
   currentTheme: ThemeMode = 'system';
   currentFontSize: FontSize = 'medium';
@@ -79,8 +81,8 @@ class SettingsPage implements OnInit {
   reminderTime = '07:00';
 
   ngOnInit(): void {
-    this.prefs.theme$.subscribe(t => this.currentTheme = t);
-    this.prefs.fontSize$.subscribe(s => this.currentFontSize = s);
+    this.prefs.theme$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(t => this.currentTheme = t);
+    this.prefs.fontSize$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(s => this.currentFontSize = s);
   }
 
   onThemeChange(event: CustomEvent): void {

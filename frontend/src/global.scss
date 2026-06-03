@@ -39,6 +39,9 @@
 :root {
   --app-font-size: 17px;
   --app-line-height: 1.6;
+  --heading-font-size: calc(var(--app-font-size, 17px) + 5px);
+  --subheading-font-size: calc(var(--app-font-size, 17px) + 1px);
+  --reading-font-size: calc(var(--app-font-size, 17px) - 1px);
 }
 
 body.dark {

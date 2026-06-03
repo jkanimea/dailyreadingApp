@@ -5,39 +5,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EncounterDaily.API.Services;
 
-public class BibleSeedService : IHostedService
+public class BibleSeedService : IHostedService, IBibleSeedService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<BibleSeedService> _logger;
 
-    private static readonly HttpClient _http = new();
+    private static readonly HttpClient _http = new()
+    {
+        Timeout = TimeSpan.FromMinutes(5)
+    };
 
     private static readonly Dictionary<string, string> TranslationUrls = new()
     {
-        ["KJV"] = "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_kjv.json",
-        ["ASV"] = "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_asv.json",
-        ["WEB"] = "https://raw.githubusercontent.com/thiagobodruk/bible/master/json/en_web.json"
-    };
-
-    private static readonly Dictionary<string, string> AbbrevToName = new()
-    {
-        ["gn"] = "Genesis", ["ex"] = "Exodus", ["lv"] = "Leviticus", ["nm"] = "Numbers",
-        ["dt"] = "Deuteronomy", ["js"] = "Joshua", ["jud"] = "Judges", ["rt"] = "Ruth",
-        ["1sm"] = "1 Samuel", ["2sm"] = "2 Samuel", ["1kgs"] = "1 Kings", ["2kgs"] = "2 Kings",
-        ["1ch"] = "1 Chronicles", ["2ch"] = "2 Chronicles", ["ezr"] = "Ezra", ["ne"] = "Nehemiah",
-        ["et"] = "Esther", ["job"] = "Job", ["ps"] = "Psalms", ["prv"] = "Proverbs",
-        ["ec"] = "Ecclesiastes", ["so"] = "Song of Solomon", ["is"] = "Isaiah", ["jr"] = "Jeremiah",
-        ["lm"] = "Lamentations", ["ez"] = "Ezekiel", ["dn"] = "Daniel", ["ho"] = "Hosea",
-        ["jl"] = "Joel", ["am"] = "Amos", ["ob"] = "Obadiah", ["jn"] = "Jonah",
-        ["mi"] = "Micah", ["na"] = "Nahum", ["hk"] = "Habakkuk", ["zp"] = "Zephaniah",
-        ["hg"] = "Haggai", ["zc"] = "Zechariah", ["ml"] = "Malachi",
-        ["mt"] = "Matthew", ["mk"] = "Mark", ["lk"] = "Luke", ["jo"] = "John",
-        ["act"] = "Acts", ["rm"] = "Romans", ["1co"] = "1 Corinthians", ["2co"] = "2 Corinthians",
-        ["gl"] = "Galatians", ["eph"] = "Ephesians", ["ph"] = "Philippians", ["cl"] = "Colossians",
-        ["1ts"] = "1 Thessalonians", ["2ts"] = "2 Thessalonians", ["1tm"] = "1 Timothy",
-        ["2tm"] = "2 Timothy", ["tt"] = "Titus", ["phm"] = "Philemon", ["hb"] = "Hebrews",
-        ["jm"] = "James", ["1pe"] = "1 Peter", ["2pe"] = "2 Peter", ["1jo"] = "1 John",
-        ["2jo"] = "2 John", ["3jo"] = "3 John", ["jd"] = "Jude", ["re"] = "Revelation"
+        ["KJV"] = "https://raw.githubusercontent.com/Amosamevor/Bible-json/main/versions/en/KING%20JAMES%20BIBLE.json",
+        ["ASV"] = "https://raw.githubusercontent.com/Amosamevor/Bible-json/main/versions/en/AMERICAN%20STANDARD%20VERSION.json",
+        ["WEB"] = "https://raw.githubusercontent.com/Amosamevor/Bible-json/main/versions/en/WORLD%20ENGLISH%20BIBLE.json"
     };
 
     public BibleSeedService(IServiceScopeFactory scopeFactory, ILogger<BibleSeedService> logger)
@@ -52,7 +34,18 @@ public class BibleSeedService : IHostedService
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         await context.Database.EnsureCreatedAsync(cancellationToken);
+        await SeedMissingTranslationsCoreAsync(context, cancellationToken);
+    }
 
+    public async Task SeedMissingTranslationsAsync(CancellationToken cancellationToken = default)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await SeedMissingTranslationsCoreAsync(context, cancellationToken);
+    }
+
+    private async Task SeedMissingTranslationsCoreAsync(AppDbContext context, CancellationToken cancellationToken)
+    {
         foreach (var (translation, url) in TranslationUrls)
         {
             bool alreadySeeded = await context.Set<BibleVerse>()
@@ -64,14 +57,29 @@ public class BibleSeedService : IHostedService
                 continue;
             }
 
-            _logger.LogInformation("Downloading {Translation} Bible data...", translation);
+            await SeedWithRetryAsync(context, translation, url, cancellationToken);
+        }
+    }
+
+    private async Task SeedWithRetryAsync(AppDbContext context, string translation, string url, CancellationToken cancellationToken, int maxRetries = 3)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
             try
             {
+                _logger.LogInformation("Downloading {Translation} Bible data (attempt {Attempt}/{MaxRetries})...", translation, attempt, maxRetries);
                 await SeedTranslationAsync(context, translation, url, cancellationToken);
+                return;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to seed {Translation} Bible data.", translation);
+                _logger.LogError(ex, "Failed to seed {Translation} Bible data (attempt {Attempt}/{MaxRetries}).", translation, attempt, maxRetries);
+                if (attempt < maxRetries)
+                {
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                    _logger.LogInformation("Retrying {Translation} in {DelaySeconds}s...", translation, delay.TotalSeconds);
+                    await Task.Delay(delay, cancellationToken);
+                }
             }
         }
     }
@@ -82,51 +90,54 @@ public class BibleSeedService : IHostedService
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement;
 
-        // Load existing books once — shared across all translations
         var existingBooks = await context.Set<BibleBook>()
-            .ToDictionaryAsync(b => b.Abbreviation, cancellationToken);
+            .ToDictionaryAsync(b => b.Name, cancellationToken);
 
         int totalVerses = 0;
-        foreach (var bookEl in root.EnumerateArray())
+        foreach (var bookEntry in root.EnumerateObject())
         {
-            var abbrev = bookEl.GetProperty("abbrev").GetString() ?? "";
-            if (!AbbrevToName.TryGetValue(abbrev, out var bookName))
-            {
-                _logger.LogWarning("Skipping unknown abbreviation: {Abbrev}", abbrev);
-                continue;
-            }
+            var bookName = bookEntry.Name;
+            var chaptersEl = bookEntry.Value;
 
-            // Reuse existing BibleBook or create it
-            if (!existingBooks.TryGetValue(abbrev, out var bookEntity))
+            if (!existingBooks.TryGetValue(bookName, out var bookEntity))
             {
+                short chapterCount = 0;
+                foreach (var ch in chaptersEl.EnumerateObject())
+                {
+                    var chNum = short.Parse(ch.Name);
+                    if (chNum > chapterCount) chapterCount = chNum;
+                }
+
                 bookEntity = new BibleBook
                 {
                     Name = bookName,
-                    Abbreviation = abbrev,
-                    ChapterCount = (short)bookEl.GetProperty("chapters").GetArrayLength()
+                    Abbreviation = bookName,
+                    ChapterCount = chapterCount
                 };
                 context.Set<BibleBook>().Add(bookEntity);
                 await context.SaveChangesAsync(cancellationToken);
-                existingBooks[abbrev] = bookEntity;
+                existingBooks[bookName] = bookEntity;
             }
 
-            var chapters = bookEl.GetProperty("chapters");
             var verses = new List<BibleVerse>();
 
-            for (int ch = 0; ch < chapters.GetArrayLength(); ch++)
+            foreach (var chapterEntry in chaptersEl.EnumerateObject())
             {
-                var chapter = chapters[ch];
-                for (int v = 0; v < chapter.GetArrayLength(); v++)
+                var chapterNum = short.Parse(chapterEntry.Name);
+                var versesEl = chapterEntry.Value;
+
+                foreach (var verseEntry in versesEl.EnumerateObject())
                 {
-                    var text = chapter[v].GetString() ?? "";
+                    var verseNum = short.Parse(verseEntry.Name);
+                    var text = verseEntry.Value.GetString() ?? "";
                     text = System.Text.RegularExpressions.Regex.Replace(text, @"\{[^}]*\}", "");
                     text = System.Text.RegularExpressions.Regex.Replace(text, @"\s+", " ").Trim();
 
                     verses.Add(new BibleVerse
                     {
                         BookId = bookEntity.Id,
-                        Chapter = (short)(ch + 1),
-                        Verse = (short)(v + 1),
+                        Chapter = chapterNum,
+                        Verse = verseNum,
                         Translation = translation,
                         Text = text
                     });

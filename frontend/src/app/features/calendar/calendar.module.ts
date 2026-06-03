@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BaseCalendarPageComponent, CalendarDay } from '../base/base-calendar-page-component';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { SharedModule } from '../../shared/shared.module';
@@ -173,7 +173,7 @@ class CalendarPage extends BaseCalendarPageComponent {
     }
 
     this.readingService.getByMonth(this.seriesId, month)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(readings => {
         if (readings) {
           for (const r of readings) {

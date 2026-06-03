@@ -33,6 +33,30 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         }
 
         [Fact]
+        public async Task GetProgress_ShouldReturnOk_WhenFound()
+        {
+            var dto = new ProgressDto { ReadingId = 1, Notes = "Existing note", IsCompleted = true };
+            _mockService.Setup(s => s.GetUserReadingProgressAsync(1, 1)).ReturnsAsync(dto);
+
+            var result = await _controller.GetProgress(1);
+
+            var ok = result.Result as OkObjectResult;
+            ok.Should().NotBeNull();
+            ok!.StatusCode.Should().Be(200);
+            (ok.Value as ProgressDto)!.Notes.Should().Be("Existing note");
+        }
+
+        [Fact]
+        public async Task GetProgress_ShouldReturnNotFound_WhenNoProgress()
+        {
+            _mockService.Setup(s => s.GetUserReadingProgressAsync(1, 999)).ReturnsAsync((ProgressDto?)null);
+
+            var result = await _controller.GetProgress(999);
+
+            result.Result.Should().BeOfType<NotFoundObjectResult>();
+        }
+
+        [Fact]
         public async Task SaveNotes_ShouldReturnOk_WhenValid()
         {
             var dto = new ProgressDto { ReadingId = 1, Notes = "Saved note" };

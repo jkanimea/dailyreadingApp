@@ -291,7 +291,7 @@ describe('ReadingDetailPage', () => {
     it('should display reading heading with date and cleaned page range', fakeAsync(() => {
       component.detail = mockDetail;
       fixture.detectChanges();
-      const el: HTMLElement = fixture.nativeElement.querySelector('.reading-heading');
+      const el: HTMLElement = fixture.nativeElement.querySelector('.reading-header-row');
       expect(el.textContent).toContain('May 21');
       expect(el.textContent).toContain('Acts of the Apostles 110-114');
     }));

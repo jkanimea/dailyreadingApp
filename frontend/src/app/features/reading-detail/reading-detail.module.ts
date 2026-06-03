@@ -2,7 +2,7 @@ import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component, OnDestroy } from '@angular/core';
+import { Component } from '@angular/core';
 import { SharedModule } from '../../shared/shared.module';
 import { BaseReadingPageComponent } from '../base/base-reading-page-component';
 import { ProgressService } from '../../core/services/progress.service';
@@ -10,7 +10,8 @@ import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService, BibleTranslation } from '../../core/services/preferences.service';
 import { ActivatedRoute } from '@angular/router';
 import { Series } from '../../core/models/series.model';
-import { firstValueFrom, Subscription } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-reading-detail',
@@ -45,39 +46,44 @@ import { firstValueFrom, Subscription } from 'rxjs';
       </div>
 
       <div *ngIf="detail && !loading">
-        <div class="completed-banner" *ngIf="completed">
-          <ion-icon name="checkmark-circle" color="success"></ion-icon> Reading marked complete
-        </div>
-
-        <div [style.font-size]="'var(--app-font-size, 17px)'" class="ion-margin-bottom">
-          <h2 class="reading-heading">{{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}</h2>
-        </div>
-
-        <div class="ion-margin-bottom">
-          <div class="translation-bar">
-            <ion-segment [value]="translation" (ionChange)="onTranslationChange($event)" mode="md">
-              <ion-segment-button value="KJV">KJV</ion-segment-button>
-              <ion-segment-button value="ASV">ASV</ion-segment-button>
-              <ion-segment-button value="WEB">WEB</ion-segment-button>
-            </ion-segment>
+        <div class="reading-header-row ion-margin-bottom">
+          <div class="date-section">
+            {{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}
           </div>
-          <ng-container *ngIf="bibleSections.length > 0; else plainBible">
+          <ion-badge *ngIf="completed" color="success" class="completed-badge">
+            <ion-icon name="checkmark-circle"></ion-icon> Done
+          </ion-badge>
+          <ion-select *ngIf="detail.bibleReading" [value]="translation" (ionChange)="onTranslationChange($event)" interface="popover" class="version-select">
+            <ion-select-option value="KJV">KJV</ion-select-option>
+            <ion-select-option value="ASV">ASV</ion-select-option>
+            <ion-select-option value="WEB">WEB</ion-select-option>
+          </ion-select>
+        </div>
+
+        <div class="ion-margin-bottom" *ngIf="detail.bibleReading">
+          <ng-container *ngIf="bibleSections.length > 0; else noBibleSections">
             <ng-container *ngFor="let section of bibleSections">
               <h3 class="bible-section-title">{{ section.title }}</h3>
               <p class="bible-text">{{ section.verses.join('\n\n') }}</p>
             </ng-container>
           </ng-container>
-          <ng-template #plainBible>
+          <ng-template #noBibleSections>
             <p *ngIf="detail.fullTextBible" class="bible-text">{{ detail.fullTextBible }}</p>
+            <p *ngIf="!detail.fullTextBible" class="empty-bible-text">
+              Bible text not available for {{ translation }}.
+              <ion-button fill="clear" size="small" (click)="onSeedBible()" [disabled]="seeding">
+                {{ seeding ? 'Downloading...' : 'Download ' + translation + ' data' }}
+              </ion-button>
+            </p>
           </ng-template>
         </div>
 
-        <div [style.font-size]="'var(--app-font-size, 17px)'">
+        <div [style.font-size]="'var(--reading-font-size, 15px)'">
           <p><span *ngFor="let seg of getParagraphSegments(detail.fullTextPrimary)" class="egw-text"><span *ngIf="seg.isRef" class="para-ref">{{ seg.text }}</span><span *ngIf="!seg.isRef">{{ seg.text }}</span></span></p>
         </div>
 
-        <div *ngIf="detail.fullTextSecondary" [style.font-size]="'var(--app-font-size, 17px)'" class="ion-margin-top">
-          <h2>Companion: {{ detail.secondaryBookPageRange }}</h2>
+        <div *ngIf="detail.fullTextSecondary" [style.font-size]="'var(--reading-font-size, 15px)'" class="ion-margin-top">
+          <h2 class="companion-heading">Companion: {{ detail.secondaryBookPageRange }}</h2>
           <p><span *ngFor="let seg of getParagraphSegments(detail.fullTextSecondary)" class="egw-text"><span *ngIf="seg.isRef" class="para-ref">{{ seg.text }}</span><span *ngIf="!seg.isRef">{{ seg.text }}</span></span></p>
         </div>
 
@@ -126,7 +132,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
   standalone: false,
   styles: [`
     .bible-section-title {
-      font-size: 20px;
+      font-size: var(--subheading-font-size, 18px);
       font-weight: 700;
       margin: 16px 0 8px;
       color: var(--ion-text-color);
@@ -134,7 +140,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
     .bible-text {
       font-style: italic;
       color: var(--bible-text-color, var(--ion-color-medium));
-      font-size: 15px;
+      font-size: var(--reading-font-size, 15px);
       line-height: 1.6;
       padding: 12px;
       background: var(--bible-text-bg, var(--ion-color-light));
@@ -143,11 +149,6 @@ import { firstValueFrom, Subscription } from 'rxjs';
     }
     .egw-text {
       line-height: 1.8;
-    }
-    .reading-heading {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 8px 0;
     }
     .para-ref {
       display: inline-block;
@@ -162,17 +163,41 @@ import { firstValueFrom, Subscription } from 'rxjs';
       vertical-align: super;
       line-height: 1.4;
     }
-    .completed-banner {
+    .reading-header-row {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: var(--ion-color-success-tint, #e8f5e9);
-      color: var(--ion-color-success-shade, #2e7d32);
-      padding: 10px 16px;
-      border-radius: 8px;
+      flex-wrap: nowrap;
+    }
+    .date-section {
+      flex: 0 0 40%;
+      min-width: 0;
+      font-size: var(--subheading-font-size, 18px);
       font-weight: 600;
-      font-size: 15px;
-      margin-bottom: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .completed-badge {
+      flex: 0 0 30%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: calc(var(--subheading-font-size, 18px) - 2px);
+      padding: 4px 6px;
+      white-space: nowrap;
+    }
+    .version-select {
+      flex: 0 0 30%;
+      max-width: 30%;
+      font-size: var(--subheading-font-size, 18px);
+      font-weight: 600;
+      --padding-top: 2px;
+      --padding-bottom: 2px;
+      --padding-start: 8px;
+      --padding-end: 4px;
+      min-height: 28px;
     }
     .complete-checkbox {
       border-top: 1px solid var(--ion-color-light-shade);
@@ -210,6 +235,17 @@ import { firstValueFrom, Subscription } from 'rxjs';
       align-items: center;
       gap: 4px;
     }
+    .empty-bible-text {
+      font-style: italic;
+      color: var(--ion-color-medium);
+      text-align: center;
+      padding: 24px;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
     .translation-bar {
       margin-bottom: 10px;
       ion-segment {
@@ -226,7 +262,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
     }
   `]
 })
-export class ReadingDetailPage extends BaseReadingPageComponent implements OnDestroy {
+export class ReadingDetailPage extends BaseReadingPageComponent {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private seriesService = inject(SeriesService);
@@ -236,19 +272,18 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   private progressService = inject(ProgressService);
 
   seriesList: Series[] = [];
-  private routeSub?: Subscription;
   completed = false;
   notes = '';
   showNotes = false;
   notesSaved = false;
   summarizing = false;
   translation: BibleTranslation = 'KJV';
+  seeding = false;
   private notesDebounce?: ReturnType<typeof setTimeout>;
 
-  override ngOnDestroy(): void {
-    this.routeSub?.unsubscribe();
-    clearTimeout(this.notesDebounce);
-    super.ngOnDestroy();
+  constructor() {
+    super();
+    this.destroyRef.onDestroy(() => clearTimeout(this.notesDebounce));
   }
 
   async toggleComplete(event: CustomEvent): Promise<void> {
@@ -453,10 +488,22 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     }
   }
 
+  async onSeedBible(): Promise<void> {
+    this.seeding = true;
+    try {
+      await firstValueFrom(this.readingService.seedBible());
+      if (this.detail?.id) {
+        await this.loadDetail(this.detail.id, this.translation);
+      }
+    } catch {
+    } finally {
+      this.seeding = false;
+    }
+  }
+
   protected async load(): Promise<void> {
     this.translation = this.prefs.getTranslation();
-    this.routeSub?.unsubscribe();
-    this.routeSub = this.route.paramMap.subscribe(async params => {
+    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(async params => {
       const id = Number(params.get('id'));
       if (id) {
         await this.loadDetail(id, this.translation);

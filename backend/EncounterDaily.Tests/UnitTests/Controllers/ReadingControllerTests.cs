@@ -1,4 +1,5 @@
 using EncounterDaily.API.Controllers;
+using EncounterDaily.API.Services;
 using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
@@ -17,7 +18,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public ReadingControllerTests()
         {
             _mockService = new Mock<IReadingService>();
-            _controller = new ReadingController(_mockService.Object, Mock.Of<ILogger<ReadingController>>());
+            _controller = new ReadingController(_mockService.Object, Mock.Of<IBibleSeedService>(), Mock.Of<ILogger<ReadingController>>());
         }
 
         [Fact]

@@ -197,12 +197,12 @@ export class LoginPage implements OnDestroy {
   private async initGoogle(): Promise<void> {
     if (this.googleInitialized) return;
     try {
-      if (!(window as any).google?.accounts?.id) {
+      if (!window.google?.accounts?.id) {
         await this.loadScript('https://accounts.google.com/gsi/client');
       }
-      (window as any).google.accounts.id.initialize({
+      window.google!.accounts.id.initialize({
         client_id: '126956037492-0v2i92mj4q0ulko5u5io1bd5do619liu.apps.googleusercontent.com',
-        callback: (response: any) => {
+        callback: (response: GoogleCredentialResponse) => {
           if (response?.credential) {
             this.googleCredResolve?.(response.credential);
           } else {
@@ -220,7 +220,7 @@ export class LoginPage implements OnDestroy {
       // and gBtn.click() runs synchronously within the user-gesture context.
       const container = this.gBtnHost?.nativeElement;
       if (container) {
-        (window as any).google.accounts.id.renderButton(container, {
+        window.google!.accounts.id.renderButton(container, {
           type: 'standard', size: 'large', theme: 'outline',
           text: 'sign_in_with', shape: 'rectangular'
         });
@@ -232,10 +232,10 @@ export class LoginPage implements OnDestroy {
   private async initFacebook(): Promise<void> {
     if (this.facebookInitialized) return;
     try {
-      if (!(window as any).FB) {
+      if (!window.FB) {
         await new Promise<void>((resolve, reject) => {
-          (window as any).fbAsyncInit = () => {
-            (window as any).FB.init({ appId: '1510105297476514', version: 'v18.0' });
+          window.fbAsyncInit = () => {
+            window.FB!.init({ appId: '1510105297476514', version: 'v18.0' });
             resolve();
           };
           this.loadScript('https://connect.facebook.net/en_US/sdk.js').catch(reject);
@@ -263,7 +263,7 @@ export class LoginPage implements OnDestroy {
     this.error = undefined;
     try {
       if (!this.googleInitialized) await this.initGoogle();
-      if (!(window as any).google?.accounts?.id) {
+      if (!window.google?.accounts?.id) {
         throw new Error('Google Sign-In unavailable. Please refresh and try again.');
       }
 
@@ -307,8 +307,8 @@ export class LoginPage implements OnDestroy {
         await this.authService.storeTokens(res);
         this.router.navigate(['/series']);
       }
-    } catch (e: any) {
-      this.error = e?.message || 'Google sign-in failed.';
+    } catch (e) {
+      this.error = e instanceof Error ? e.message : 'Google sign-in failed.';
     } finally {
       this.loading = false;
     }
@@ -319,7 +319,7 @@ export class LoginPage implements OnDestroy {
     this.error = undefined;
     try {
       if (!this.facebookInitialized) await this.initFacebook();
-      const { FB } = window as any;
+      const { FB } = window;
       if (!FB) {
         throw new Error('Facebook Sign-In unavailable. Please refresh and try again.');
       }
@@ -327,7 +327,7 @@ export class LoginPage implements OnDestroy {
       // FB.login() must be called within a user-gesture handler — SDK is pre-loaded
       // so this runs synchronously within the button click event.
       const accessToken = await new Promise<string>((resolve, reject) => {
-        FB.login((response: any) => {
+        FB.login((response: FacebookLoginResponse) => {
           if (response?.authResponse?.accessToken) {
             resolve(response.authResponse.accessToken);
           } else {
@@ -341,8 +341,8 @@ export class LoginPage implements OnDestroy {
         await this.authService.storeTokens(res);
         this.router.navigate(['/series']);
       }
-    } catch (e: any) {
-      this.error = e?.message || 'Facebook sign-in failed.';
+    } catch (e) {
+      this.error = e instanceof Error ? e.message : 'Facebook sign-in failed.';
     } finally {
       this.loading = false;
     }

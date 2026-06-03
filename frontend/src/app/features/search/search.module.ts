@@ -9,6 +9,7 @@ import { PreferencesService } from '../../core/services/preferences.service';
 import { SearchResultDto } from '../../core/models/search-result.model';
 import { PagedResult } from '../../core/models/paged-result.model';
 import { firstValueFrom, Subject, debounceTime, distinctUntilChanged } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SharedModule } from '../../shared/shared.module';
 
 @Component({
@@ -108,7 +109,8 @@ class SearchPage {
   constructor() {
     this.searchSubject.pipe(
       debounceTime(400),
-      distinctUntilChanged()
+      distinctUntilChanged(),
+      takeUntilDestroyed()
     ).subscribe(q => this.performSearch(q));
   }
 

@@ -173,7 +173,9 @@ builder.Services.AddHttpClient("DeepSeek", client =>
     client.BaseAddress = new Uri("https://api.deepseek.com");
     client.Timeout = TimeSpan.FromSeconds(30);
 });
-builder.Services.AddHostedService<BibleSeedService>();
+builder.Services.AddSingleton<BibleSeedService>();
+builder.Services.AddSingleton<IBibleSeedService>(sp => sp.GetRequiredService<BibleSeedService>());
+builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<BibleSeedService>());
 builder.Services.AddHostedService<LogCleanupService>();
 
 var app = builder.Build();

@@ -33,4 +33,8 @@ export class ReadingService {
   getSummary(readingId: number): Observable<ReadingSummary> {
     return this.api.get<ReadingSummary>(`/reading/${readingId}/summary`);
   }
+
+  seedBible(): Observable<{ message: string }> {
+    return this.api.post<{ message: string }>('/reading/seed-bible');
+  }
 }

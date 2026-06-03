@@ -1,68 +1,63 @@
-import { Component, OnDestroy, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/services/auth.service';
 import { UserDto } from '../../../core/models/user.model';
 
 @Component({
   selector: 'app-avatar-btn',
   template: `
-    <ion-button (click)="navigate()" [title]="initials || 'Account'">
-      <span slot="icon-only" class="avatar-wrap">
-        <img *ngIf="photoUrl" [src]="photoUrl" class="avatar-img" alt="Profile">
-        <span *ngIf="!photoUrl && initials" class="avatar-initials">{{ initials }}</span>
-        <ion-icon *ngIf="!photoUrl && !initials" name="person-circle-outline"></ion-icon>
-      </span>
+    <ion-button (click)="navigate()" [title]="initials || 'Account'" class="avatar-btn">
+      <img *ngIf="photoUrl" [src]="photoUrl" slot="icon-only" class="avatar-img" alt="Profile">
+      <span *ngIf="!photoUrl && initials" slot="icon-only" class="avatar-initials">{{ initials }}</span>
+      <ion-icon *ngIf="!photoUrl && !initials" slot="icon-only" name="person-circle-outline"></ion-icon>
     </ion-button>
   `,
   styles: [`
-    .avatar-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
+    .avatar-btn {
+      --padding-start: 0;
+      --padding-end: 0;
       height: 32px;
+      width: 32px;
     }
     .avatar-img {
-      width: 30px;
-      height: 30px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       object-fit: cover;
     }
     .avatar-initials {
-      width: 30px;
-      height: 30px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       background: var(--ion-color-primary);
       color: var(--ion-color-primary-contrast);
       font-size: 11px;
       font-weight: 700;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      letter-spacing: 0.5px;
+    }
+    .avatar-btn::part(native) {
+      min-width: 32px;
+      min-height: 32px;
+      padding: 0;
     }
   `],
   standalone: false
 })
-export class AvatarButtonComponent implements OnDestroy {
+export class AvatarButtonComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
 
   initials = '';
   photoUrl = '';
 
-  private sub: Subscription;
-
   constructor() {
-    this.sub = this.auth.user$.subscribe((user: UserDto | null) => {
+    this.auth.user$.pipe(takeUntilDestroyed()).subscribe((user: UserDto | null) => {
       this.photoUrl = user?.photoUrl ?? '';
       this.initials = user ? this.getInitials(user.displayName) : '';
     });
-  }
-
-  ngOnDestroy(): void {
-    this.sub.unsubscribe();
   }
 
   navigate(): void {

@@ -1,3 +1,4 @@
+using EncounterDaily.API.Services;
 using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
@@ -8,11 +9,13 @@ namespace EncounterDaily.API.Controllers
     public class ReadingController : BaseController<DailyReading>
     {
         private readonly IReadingService _readingService;
+        private readonly IBibleSeedService _bibleSeedService;
 
-        public ReadingController(IReadingService readingService, ILogger<ReadingController> logger)
+        public ReadingController(IReadingService readingService, IBibleSeedService bibleSeedService, ILogger<ReadingController> logger)
             : base(readingService, logger)
         {
             _readingService = readingService;
+            _bibleSeedService = bibleSeedService;
         }
 
         [HttpGet("debug/bible-status")]
@@ -95,6 +98,13 @@ namespace EncounterDaily.API.Controllers
         {
             var items = await _readingService.SearchByTextAsync(seriesId, searchTerm);
             return Ok(items);
+        }
+
+        [HttpPost("seed-bible")]
+        public async Task<ActionResult> SeedBible()
+        {
+            await _bibleSeedService.SeedMissingTranslationsAsync();
+            return Ok(new { message = "Bible seed completed" });
         }
     }
 }

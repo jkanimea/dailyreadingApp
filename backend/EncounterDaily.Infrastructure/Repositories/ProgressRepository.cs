@@ -19,10 +19,10 @@ namespace EncounterDaily.Infrastructure.Repositories
         public async Task<int> GetStreakAsync(int userId, int seriesId)
         {
             var completedReadings = await _dbSet
-                .Where(p => p.UserId == userId && p.SeriesId == seriesId && p.IsCompleted)
-                .OrderByDescending(p => p.CompletedAt)
+                .Where(p => p.UserId == userId && p.SeriesId == seriesId && p.IsCompleted && p.CompletedAt != null)
                 .Select(p => p.CompletedAt!.Value.Date)
                 .Distinct()
+                .OrderByDescending(d => d)
                 .ToListAsync();
 
             if (!completedReadings.Any()) return 0;
