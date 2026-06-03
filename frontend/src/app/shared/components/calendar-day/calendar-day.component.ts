@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 
 export interface CalendarDayData {
   day: number;
@@ -10,6 +10,7 @@ export interface CalendarDayData {
 
 @Component({
   selector: 'app-calendar-day',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       class="calendar-day"
@@ -19,7 +20,9 @@ export interface CalendarDayData {
       (click)="daySelected.emit(day)"
     >
       <span class="day-number">{{ day?.day }}</span>
-      <span *ngIf="day?.isCompleted" class="check-mark">✓</span>
+      @if (day?.isCompleted) {
+        <span class="check-mark">✓</span>
+      }
     </div>
   `,
   styles: [`

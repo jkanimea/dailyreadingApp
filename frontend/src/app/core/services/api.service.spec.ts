@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { ApiService } from './api.service';
 import { HttpParams } from '@angular/common/http';
+import { ApiError } from '../errors/api-error';
 
 describe('ApiService', () => {
   let service: ApiService;
@@ -56,5 +57,44 @@ describe('ApiService', () => {
     expect(req.request.params.get('q')).toBe('faith');
     expect(req.request.params.get('page')).toBe('1');
     req.flush([]);
+  });
+
+  describe('error handling', () => {
+    it('should map 404 HttpErrorResponse to ApiError', (done) => {
+      service.get('/not-found').subscribe({
+        error: (err) => {
+          expect(err).toBeInstanceOf(ApiError);
+          expect((err as ApiError).statusCode).toBe(404);
+          done();
+        }
+      });
+      const req = httpMock.expectOne('/api/v1/not-found');
+      req.flush({ message: 'Not Found' }, { status: 404, statusText: 'Not Found' });
+    });
+
+    it('should map 500 HttpErrorResponse to ApiError with server message', (done) => {
+      service.post('/fail', {}).subscribe({
+        error: (err) => {
+          expect(err).toBeInstanceOf(ApiError);
+          expect((err as ApiError).statusCode).toBe(500);
+          expect((err as ApiError).message).toBe('Internal server error');
+          done();
+        }
+      });
+      const req = httpMock.expectOne('/api/v1/fail');
+      req.flush({ message: 'Internal server error' }, { status: 500, statusText: 'Server Error' });
+    });
+
+    it('should map DELETE 403 to ApiError', (done) => {
+      service.delete('/protected').subscribe({
+        error: (err) => {
+          expect(err).toBeInstanceOf(ApiError);
+          expect((err as ApiError).statusCode).toBe(403);
+          done();
+        }
+      });
+      const req = httpMock.expectOne('/api/v1/protected');
+      req.flush({ message: 'Forbidden' }, { status: 403, statusText: 'Forbidden' });
+    });
   });
 });

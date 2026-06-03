@@ -2,7 +2,7 @@ import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { SharedModule } from '../../shared/shared.module';
 import { BaseReadingPageComponent } from '../base/base-reading-page-component';
 import { ProgressService } from '../../core/services/progress.service';
@@ -10,8 +10,7 @@ import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService, BibleTranslation } from '../../core/services/preferences.service';
 import { ActivatedRoute } from '@angular/router';
 import { Series } from '../../core/models/series.model';
-import { firstValueFrom } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { firstValueFrom, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-reading-detail',
@@ -37,96 +36,146 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     </ion-header>
 
     <ion-content class="ion-padding">
-      <div *ngIf="loading" class="ion-text-center">
-        <ion-spinner></ion-spinner>
-      </div>
-
-      <div *ngIf="error" class="ion-text-center">
-        <p class="error-message">{{ error }}</p>
-      </div>
-
-      <div *ngIf="detail && !loading">
-        <div class="reading-header-row ion-margin-bottom">
-          <div class="date-section">
-            {{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}
-          </div>
-          <ion-badge *ngIf="completed" color="success" class="completed-badge">
-            <ion-icon name="checkmark-circle"></ion-icon> Done
-          </ion-badge>
-          <ion-select *ngIf="detail.bibleReading" [value]="translation" (ionChange)="onTranslationChange($event)" interface="popover" class="version-select">
-            <ion-select-option value="KJV">KJV</ion-select-option>
-            <ion-select-option value="ASV">ASV</ion-select-option>
-            <ion-select-option value="WEB">WEB</ion-select-option>
-          </ion-select>
+      @if (loading) {
+        <div class="ion-text-center">
+          <ion-spinner></ion-spinner>
         </div>
+      }
 
-        <div class="ion-margin-bottom" *ngIf="detail.bibleReading">
-          <ng-container *ngIf="bibleSections.length > 0; else noBibleSections">
-            <ng-container *ngFor="let section of bibleSections">
-              <h3 class="bible-section-title">{{ section.title }}</h3>
-              <p class="bible-text">{{ section.verses.join('\n\n') }}</p>
-            </ng-container>
-          </ng-container>
-          <ng-template #noBibleSections>
-            <p *ngIf="detail.fullTextBible" class="bible-text">{{ detail.fullTextBible }}</p>
-            <p *ngIf="!detail.fullTextBible" class="empty-bible-text">
-              Bible text not available for {{ translation }}.
-              <ion-button fill="clear" size="small" (click)="onSeedBible()" [disabled]="seeding">
-                {{ seeding ? 'Downloading...' : 'Download ' + translation + ' data' }}
-              </ion-button>
-            </p>
-          </ng-template>
+      @if (error) {
+        <div class="ion-text-center">
+          <p class="error-message">{{ error }}</p>
         </div>
+      }
 
-        <div [style.font-size]="'var(--reading-font-size, 15px)'">
-          <p><span *ngFor="let seg of getParagraphSegments(detail.fullTextPrimary)" class="egw-text"><span *ngIf="seg.isRef" class="para-ref">{{ seg.text }}</span><span *ngIf="!seg.isRef">{{ seg.text }}</span></span></p>
-        </div>
-
-        <div *ngIf="detail.fullTextSecondary" [style.font-size]="'var(--reading-font-size, 15px)'" class="ion-margin-top">
-          <h2 class="companion-heading">Companion: {{ detail.secondaryBookPageRange }}</h2>
-          <p><span *ngFor="let seg of getParagraphSegments(detail.fullTextSecondary)" class="egw-text"><span *ngIf="seg.isRef" class="para-ref">{{ seg.text }}</span><span *ngIf="!seg.isRef">{{ seg.text }}</span></span></p>
-        </div>
-
-        <div class="ion-margin-top ion-padding-top complete-checkbox">
-          <ion-checkbox [checked]="completed" (ionChange)="toggleComplete($event)">
-            I have read this passage
-          </ion-checkbox>
-        </div>
-
-        <div class="ion-margin-top journal-section" *ngIf="completed || notes">
-          <ion-item lines="none" button (click)="showNotes = !showNotes">
-            <ion-icon [name]="showNotes ? 'chevron-up-outline' : 'chevron-down-outline'" slot="start"></ion-icon>
-            <ion-label>My Journal Notes</ion-label>
-            <ion-note slot="end" *ngIf="notes && !showNotes">Has notes</ion-note>
-          </ion-item>
-
-          <div *ngIf="showNotes" class="notes-editor">
-            <ion-textarea
-              [value]="notes"
-              (ionInput)="onNotesChange($event)"
-              placeholder="Write your thoughts, key points, or reflections from today's reading..."
-              [autoGrow]="true"
-              rows="4"
-              [counter]="true"
-              [maxlength]="2000"
-              class="journal-textarea">
-            </ion-textarea>
-            <div class="notes-status">
-              <ion-note [color]="notesSaved ? 'success' : 'medium'">
-                <ion-icon [name]="notesSaved ? 'checkmark-circle' : 'time-outline'"></ion-icon>
-                {{ notesSaved ? 'Saved' : 'Unsaved' }}
-              </ion-note>
-              <div class="summarize-actions" *ngIf="notes">
-                <ion-button fill="clear" size="small" [disabled]="summarizing" (click)="onSummarize()">
-                  <ion-icon slot="start" name="bulb-outline"></ion-icon>
-                  {{ summarizing ? 'Summarizing...' : 'AI Summarize' }}
-                </ion-button>
-                <ion-spinner *ngIf="summarizing" name="dots" size="small"></ion-spinner>
-              </div>
+      @if (detail && !loading) {
+        <div>
+          <div class="reading-header-row ion-margin-bottom">
+            <div class="date-section">
+              {{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}
             </div>
+            @if (completed) {
+              <ion-badge color="success" class="completed-badge">
+                <ion-icon name="checkmark-circle"></ion-icon> Done
+              </ion-badge>
+            }
+            @if (detail.bibleReading) {
+              <ion-select [value]="translation" (ionChange)="onTranslationChange($event)" interface="popover" class="version-select">
+                <ion-select-option value="KJV">KJV</ion-select-option>
+                <ion-select-option value="ASV">ASV</ion-select-option>
+                <ion-select-option value="WEB">WEB</ion-select-option>
+              </ion-select>
+            }
           </div>
+
+          @if (detail.bibleReading) {
+            <div class="ion-margin-bottom">
+              @if (bibleSections.length > 0) {
+                @for (section of bibleSections; track section.title) {
+                  <h3 class="bible-section-title">{{ section.title }}</h3>
+                  <p class="bible-text">{{ section.verses.join('\n\n') }}</p>
+                }
+              } @else {
+                @if (detail.fullTextBible) {
+                  <p class="bible-text">{{ detail.fullTextBible }}</p>
+                } @else {
+                  <p class="empty-bible-text">
+                    Bible text not available for {{ translation }}.
+                    <ion-button fill="clear" size="small" (click)="onSeedBible()" [disabled]="seeding">
+                      {{ seeding ? 'Downloading...' : 'Download ' + translation + ' data' }}
+                    </ion-button>
+                  </p>
+                }
+              }
+            </div>
+          }
+
+          <div [style.font-size]="'var(--reading-font-size, 15px)'">
+            <p>
+              @for (seg of getParagraphSegments(detail.fullTextPrimary); track $index) {
+                <span class="egw-text">
+                  @if (seg.isRef) {
+                    <span class="para-ref">{{ seg.text }}</span>
+                  } @else {
+                    <span>{{ seg.text }}</span>
+                  }
+                </span>
+              }
+            </p>
+          </div>
+
+          @defer {
+            @if (detail.fullTextSecondary) {
+              <div [style.font-size]="'var(--reading-font-size, 15px)'" class="ion-margin-top">
+                <h2 class="companion-heading">Companion: {{ detail.secondaryBookPageRange }}</h2>
+                <p>
+                  @for (seg of getParagraphSegments(detail.fullTextSecondary); track $index) {
+                    <span class="egw-text">
+                      @if (seg.isRef) {
+                        <span class="para-ref">{{ seg.text }}</span>
+                      } @else {
+                        <span>{{ seg.text }}</span>
+                      }
+                    </span>
+                  }
+                </p>
+              </div>
+            }
+          } @placeholder {
+            <ion-skeleton-text animated style="width:100%;height:60px"></ion-skeleton-text>
+          }
+
+          <div class="ion-margin-top ion-padding-top complete-checkbox">
+            <ion-checkbox [checked]="completed" (ionChange)="toggleComplete($event)">
+              I have read this passage
+            </ion-checkbox>
+          </div>
+
+          @if (completed || notes) {
+            <div class="ion-margin-top journal-section">
+              <ion-item lines="none" button (click)="showNotes = !showNotes">
+                <ion-icon [name]="showNotes ? 'chevron-up-outline' : 'chevron-down-outline'" slot="start"></ion-icon>
+                <ion-label>My Journal Notes</ion-label>
+                @if (notes && !showNotes) {
+                  <ion-note slot="end">Has notes</ion-note>
+                }
+              </ion-item>
+
+              @if (showNotes) {
+                <div class="notes-editor">
+                  <ion-textarea
+                    [value]="notes"
+                    (ionInput)="onNotesChange($event)"
+                    placeholder="Write your thoughts, key points, or reflections from today's reading..."
+                    [autoGrow]="true"
+                    rows="4"
+                    [counter]="true"
+                    [maxlength]="2000"
+                    class="journal-textarea">
+                  </ion-textarea>
+                  <div class="notes-status">
+                    <ion-note [color]="notesSaved ? 'success' : 'medium'">
+                      <ion-icon [name]="notesSaved ? 'checkmark-circle' : 'time-outline'"></ion-icon>
+                      {{ notesSaved ? 'Saved' : 'Unsaved' }}
+                    </ion-note>
+                    @if (notes) {
+                      <div class="summarize-actions">
+                        <ion-button fill="clear" size="small" [disabled]="summarizing" (click)="onSummarize()">
+                          <ion-icon slot="start" name="bulb-outline"></ion-icon>
+                          {{ summarizing ? 'Summarizing...' : 'AI Summarize' }}
+                        </ion-button>
+                        @if (summarizing) {
+                          <ion-spinner name="dots" size="small"></ion-spinner>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
         </div>
-      </div>
+      }
     </ion-content>
   `,
   standalone: false,
@@ -262,7 +311,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     }
   `]
 })
-export class ReadingDetailPage extends BaseReadingPageComponent {
+export class ReadingDetailPage extends BaseReadingPageComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private seriesService = inject(SeriesService);
@@ -272,6 +321,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent {
   private progressService = inject(ProgressService);
 
   seriesList: Series[] = [];
+  private routeSub?: Subscription;
   completed = false;
   notes = '';
   showNotes = false;
@@ -281,9 +331,10 @@ export class ReadingDetailPage extends BaseReadingPageComponent {
   seeding = false;
   private notesDebounce?: ReturnType<typeof setTimeout>;
 
-  constructor() {
-    super();
-    this.destroyRef.onDestroy(() => clearTimeout(this.notesDebounce));
+  override ngOnDestroy(): void {
+    this.routeSub?.unsubscribe();
+    clearTimeout(this.notesDebounce);
+    super.ngOnDestroy();
   }
 
   async toggleComplete(event: CustomEvent): Promise<void> {
@@ -503,7 +554,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent {
 
   protected async load(): Promise<void> {
     this.translation = this.prefs.getTranslation();
-    this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(async params => {
+    this.routeSub?.unsubscribe();
+    this.routeSub = this.route.paramMap.subscribe(async params => {
       const id = Number(params.get('id'));
       if (id) {
         await this.loadDetail(id, this.translation);

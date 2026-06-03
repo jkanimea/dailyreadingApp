@@ -1,7 +1,8 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-markdown-viewer',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="markdown-content" [innerHTML]="content"></div>
   `,

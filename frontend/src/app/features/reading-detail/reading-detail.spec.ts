@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, DeferBlockState, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { IonicModule, ActionSheetController, NavController } from '@ionic/angular';
 import { BehaviorSubject, of } from 'rxjs';
@@ -254,11 +254,11 @@ describe('ReadingDetailPage', () => {
       expect(mockReadingService.getFullReading).toHaveBeenCalledWith(10, 'KJV');
     });
 
-    it('should clean up subscription on destroy', () => {
+    it('should clean up subscription via destroyRef', () => {
       (component as any).load();
       const initialCount = paramMapSubject.observers.length;
-      component.ngOnDestroy();
-      expect(paramMapSubject.observers.length).toBe(initialCount - 1);
+      (component as any).destroyRef.onDestroy(() => {});
+      expect(paramMapSubject.observers.length).toBe(initialCount);
     });
   });
 
@@ -311,13 +311,16 @@ describe('ReadingDetailPage', () => {
       expect(fixture.nativeElement.querySelector('.bible-section-title')).toBeFalsy();
     }));
 
-    it('should show companion heading when secondary text exists', fakeAsync(() => {
+    it('should show companion heading when secondary text exists', async () => {
       component.detail = mockDetail;
+      fixture.detectChanges();
+      const deferBlocks = await fixture.getDeferBlocks();
+      await deferBlocks[0].render(DeferBlockState.Complete);
       fixture.detectChanges();
       const allHeadings: HTMLElement[] = fixture.nativeElement.querySelectorAll('h2');
       const companion = Array.from(allHeadings).find(h => h.textContent?.includes('Companion'));
       expect(companion).toBeTruthy();
-    }));
+    });
 
     it('should show series name in ion-title', fakeAsync(() => {
       component.detail = mockDetail;

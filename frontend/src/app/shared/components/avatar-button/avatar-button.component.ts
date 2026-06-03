@@ -8,9 +8,13 @@ import { UserDto } from '../../../core/models/user.model';
   selector: 'app-avatar-btn',
   template: `
     <ion-button (click)="navigate()" [title]="initials || 'Account'" class="avatar-btn">
-      <img *ngIf="photoUrl" [src]="photoUrl" slot="icon-only" class="avatar-img" alt="Profile">
-      <span *ngIf="!photoUrl && initials" slot="icon-only" class="avatar-initials">{{ initials }}</span>
-      <ion-icon *ngIf="!photoUrl && !initials" slot="icon-only" name="person-circle-outline"></ion-icon>
+      @if (photoUrl) {
+        <img [src]="photoUrl" slot="icon-only" class="avatar-img" alt="Profile">
+      } @else if (initials) {
+        <span slot="icon-only" class="avatar-initials">{{ initials }}</span>
+      } @else {
+        <ion-icon slot="icon-only" name="person-circle-outline"></ion-icon>
+      }
     </ion-button>
   `,
   styles: [`

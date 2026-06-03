@@ -1,12 +1,15 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 
 @Component({
   selector: 'app-progress-bar',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="progress-container">
       <div class="progress-fill" [style.width.%]="percentage"></div>
     </div>
-    <p *ngIf="showLabel" class="progress-label">{{ percentage }}% complete</p>
+    @if (showLabel) {
+      <p class="progress-label">{{ percentage }}% complete</p>
+    }
   `,
   styles: [`
     .progress-container { width: 100%; height: 8px; background: var(--ion-color-light); border-radius: 4px; overflow: hidden; }

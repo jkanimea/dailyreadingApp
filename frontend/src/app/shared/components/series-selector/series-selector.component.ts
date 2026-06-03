@@ -1,17 +1,25 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { IonicModule } from '@ionic/angular';
 import { Series } from '../../../core/models/series.model';
 
 @Component({
   selector: 'app-series-selector',
+  standalone: true,
+  imports: [IonicModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ion-list *ngIf="series.length > 0">
-      <ion-radio-group [value]="selectedId" (ionChange)="seriesSelected.emit($event.detail.value)">
-        <ion-item *ngFor="let s of series">
-          <ion-label>{{ s.name }}</ion-label>
-          <ion-radio [value]="s.id"></ion-radio>
-        </ion-item>
-      </ion-radio-group>
-    </ion-list>
+    @if (series.length > 0) {
+      <ion-list>
+        <ion-radio-group [value]="selectedId" (ionChange)="seriesSelected.emit($event.detail.value)">
+          @for (s of series; track s.id) {
+            <ion-item>
+              <ion-label>{{ s.name }}</ion-label>
+              <ion-radio [value]="s.id"></ion-radio>
+            </ion-item>
+          }
+        </ion-radio-group>
+      </ion-list>
+    }
   `
 })
 export class SeriesSelectorComponent {

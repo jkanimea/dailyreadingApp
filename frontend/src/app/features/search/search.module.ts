@@ -1,8 +1,7 @@
-import { NgModule, inject } from '@angular/core';
+import { NgModule, Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SearchService } from '../../core/services/search.service';
 import { PreferencesService } from '../../core/services/preferences.service';
@@ -13,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SharedModule } from '../../shared/shared.module';
 
 @Component({
+  selector: 'app-search',
   template: `
     <ion-header>
       <ion-toolbar>
@@ -41,45 +41,61 @@ import { SharedModule } from '../../shared/shared.module';
         (ionClear)="onClear()"
       ></ion-searchbar>
 
-      <div *ngIf="loading" class="ion-text-center ion-padding">
-        <ion-spinner></ion-spinner>
-      </div>
+      @if (loading()) {
+        <div class="ion-text-center ion-padding">
+          <ion-spinner></ion-spinner>
+        </div>
+      }
 
-      <div *ngIf="error" class="ion-text-center">
-        <p class="error-message">{{ error }}</p>
-      </div>
+      @if (error()) {
+        <div class="ion-text-center">
+          <p class="error-message">{{ error() }}</p>
+        </div>
+      }
 
-      <div *ngIf="!loading && query.length > 0 && query.length < 2" class="ion-text-center ion-padding">
-        <p class="hint-text">Enter at least 2 characters to search.</p>
-      </div>
+      @if (!loading() && query.length > 0 && query.length < 2) {
+        <div class="ion-text-center ion-padding">
+          <p class="hint-text">Enter at least 2 characters to search.</p>
+        </div>
+      }
 
-      <div *ngIf="!loading && query.length >= 2 && results.length === 0 && !error" class="ion-text-center ion-padding">
-        <p>No results found.</p>
-      </div>
+      @if (!loading() && query.length >= 2 && results().length === 0 && !error()) {
+        <div class="ion-text-center ion-padding">
+          <p>No results found.</p>
+        </div>
+      }
 
-      <ion-list *ngIf="results.length > 0">
-        <ion-card *ngFor="let r of results" button (click)="goToReading(r.id)" class="result-card">
-          <ion-card-header>
-            <ion-card-subtitle>{{ r.seriesName }} — {{ formatDate(r.month, r.day) }}</ion-card-subtitle>
-            <ion-card-title>{{ r.bibleReading }}</ion-card-title>
-          </ion-card-header>
-          <ion-card-content *ngIf="r.fullTextPrimary">
-            <p class="preview-text">{{ r.fullTextPrimary | slice:0:200 }}...</p>
-          </ion-card-content>
-        </ion-card>
-      </ion-list>
+      @if (results().length > 0) {
+        <ion-list>
+          @for (r of results(); track r.id) {
+            <ion-card button (click)="goToReading(r.id)" class="result-card">
+              <ion-card-header>
+                <ion-card-subtitle>{{ r.seriesName }} — {{ formatDate(r.month, r.day) }}</ion-card-subtitle>
+                <ion-card-title>{{ r.bibleReading }}</ion-card-title>
+              </ion-card-header>
+              @if (r.fullTextPrimary) {
+                <ion-card-content>
+                  <p class="preview-text">{{ r.fullTextPrimary | slice:0:200 }}...</p>
+                </ion-card-content>
+              }
+            </ion-card>
+          }
+        </ion-list>
+      }
 
-      <ion-row *ngIf="totalPages > 1" class="ion-justify-content-center ion-padding">
-        <ion-col size="auto">
-          <ion-button fill="clear" [disabled]="page <= 1" (click)="goToPage(page - 1)">
-            <ion-icon name="chevron-back"></ion-icon>
-          </ion-button>
-          <span class="page-info">Page {{ page }} of {{ totalPages }}</span>
-          <ion-button fill="clear" [disabled]="page >= totalPages" (click)="goToPage(page + 1)">
-            <ion-icon name="chevron-forward"></ion-icon>
-          </ion-button>
-        </ion-col>
-      </ion-row>
+      @if (totalPages() > 1) {
+        <ion-row class="ion-justify-content-center ion-padding">
+          <ion-col size="auto">
+            <ion-button fill="clear" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">
+              <ion-icon name="chevron-back"></ion-icon>
+            </ion-button>
+            <span class="page-info">Page {{ page() }} of {{ totalPages() }}</span>
+            <ion-button fill="clear" [disabled]="page() >= totalPages()" (click)="goToPage(page() + 1)">
+              <ion-icon name="chevron-forward"></ion-icon>
+            </ion-button>
+          </ion-col>
+        </ion-row>
+      }
     </ion-content>
   `,
   standalone: false,
@@ -98,12 +114,12 @@ class SearchPage {
   private actionSheetCtrl = inject(ActionSheetController);
 
   query = '';
-  results: SearchResultDto[] = [];
-  loading = false;
-  error?: string;
-  page = 1;
+  readonly results = signal<SearchResultDto[]>([]);
+  readonly loading = signal(false);
+  readonly error = signal<string | undefined>(undefined);
+  readonly page = signal(1);
+  readonly totalPages = signal(0);
   pageSize = 20;
-  totalPages = 0;
   private searchSubject = new Subject<string>();
 
   constructor() {
@@ -135,41 +151,41 @@ class SearchPage {
   onQueryChange(event: CustomEvent): void {
     const val = (event.detail.value ?? '').trim();
     this.query = val;
-    this.page = 1;
+    this.page.set(1);
     if (val.length >= 2) {
       this.searchSubject.next(val);
     } else {
-      this.results = [];
-      this.totalPages = 0;
+      this.results.set([]);
+      this.totalPages.set(0);
     }
   }
 
   onClear(): void {
     this.query = '';
-    this.results = [];
-    this.totalPages = 0;
-    this.error = undefined;
+    this.results.set([]);
+    this.totalPages.set(0);
+    this.error.set(undefined);
   }
 
   private async performSearch(q: string): Promise<void> {
-    this.loading = true;
-    this.error = undefined;
+    this.loading.set(true);
+    this.error.set(undefined);
     try {
       const seriesId = this.prefs.getSeriesId();
       const result: PagedResult<SearchResultDto> = await firstValueFrom(
-        this.searchService.search(q, seriesId, this.page, this.pageSize)
+        this.searchService.search(q, seriesId, this.page(), this.pageSize)
       );
-      this.results = result.items;
-      this.totalPages = result.totalPages;
+      this.results.set(result.items);
+      this.totalPages.set(result.totalPages);
     } catch {
-      this.error = 'Search failed. Make sure the API is running.';
+      this.error.set('Search failed. Make sure the API is running.');
     } finally {
-      this.loading = false;
+      this.loading.set(false);
     }
   }
 
   goToPage(p: number): void {
-    this.page = p;
+    this.page.set(p);
     this.performSearch(this.query);
   }
 

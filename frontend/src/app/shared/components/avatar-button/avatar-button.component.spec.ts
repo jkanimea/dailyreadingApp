@@ -106,9 +106,4 @@ describe('AvatarButtonComponent', () => {
     expect(component.photoUrl).toBe('https://cdn.example.com/carol.png');
   });
 
-  it('should unsubscribe on destroy', () => {
-    const spy = jest.spyOn(component['sub'], 'unsubscribe');
-    component.ngOnDestroy();
-    expect(spy).toHaveBeenCalled();
-  });
 });

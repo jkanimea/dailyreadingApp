@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { IonicModule } from '@ionic/angular';
 import { ReadingSummary } from '../../../core/models/reading.model';
 
@@ -6,15 +6,18 @@ import { ReadingSummary } from '../../../core/models/reading.model';
   selector: 'app-reading-summary',
   standalone: true,
   imports: [IonicModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ion-card *ngIf="summary?.summaryPoints">
-      <ion-card-header>
-        <ion-card-title>Summary</ion-card-title>
-      </ion-card-header>
-      <ion-card-content>
-        <p>{{ summary?.summaryPoints }}</p>
-      </ion-card-content>
-    </ion-card>
+    @if (summary?.summaryPoints) {
+      <ion-card>
+        <ion-card-header>
+          <ion-card-title>Summary</ion-card-title>
+        </ion-card-header>
+        <ion-card-content>
+          <p>{{ summary?.summaryPoints }}</p>
+        </ion-card-content>
+      </ion-card>
+    }
   `
 })
 export class ReadingSummaryComponent {

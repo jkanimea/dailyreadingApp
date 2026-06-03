@@ -155,11 +155,11 @@ describe('ReadingDetailPage — notes', () => {
     expect(component.notesSaved).toBe(false);
   });
 
-  it('should clear debounce timer on ngOnDestroy', fakeAsync(() => {
+  it('debounce timer is cleared on component destroy', fakeAsync(() => {
     mockProgressService.saveNotes.mockReturnValue(of({} as any));
 
     component.onNotesChange({ detail: { value: 'Will be cancelled' } } as any);
-    component.ngOnDestroy();
+    fixture.destroy();
     tick(1500);
 
     expect(mockProgressService.saveNotes).not.toHaveBeenCalled();

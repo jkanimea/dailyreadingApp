@@ -19,3 +19,9 @@ export interface TokenResponse {
   expiresIn: number;
   user: UserDto;
 }
+
+export function isTokenResponse(value: unknown): value is TokenResponse {
+  return typeof value === 'object' && value !== null
+    && typeof (value as TokenResponse).accessToken === 'string'
+    && typeof (value as TokenResponse).refreshToken === 'string';
+}
