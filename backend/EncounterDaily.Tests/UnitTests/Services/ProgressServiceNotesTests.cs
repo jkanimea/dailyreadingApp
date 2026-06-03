@@ -71,7 +71,8 @@ namespace EncounterDaily.Tests.UnitTests.Services
 
             var result = await _service.SaveNotesAsync(userId: 1, readingId: 1, notes: "Updated note");
 
-            result.Notes.Should().Be("Updated note");
+            result.Should().NotBeNull();
+            result!.Notes.Should().Be("Updated note");
             result.IsCompleted.Should().BeTrue();
             _mockProgressRepo.Verify(r => r.AddAsync(It.IsAny<UserProgress>()), Times.Never);
             _mockUow.Verify(u => u.CompleteAsync(), Times.Once);

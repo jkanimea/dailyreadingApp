@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'io.ionic.starter',
-  appName: 'C:\\ionic-temp\\encounter-daily',
+  appId: 'com.dailyreading.app',
+  appName: 'Daily Reading',
   webDir: 'www'
 };
 

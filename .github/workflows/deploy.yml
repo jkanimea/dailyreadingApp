@@ -7,16 +7,18 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
       - name: Build .NET API
-        run: dotnet publish backend/ -c Release -o publish/api
+        run: dotnet publish backend/EncounterDaily.API/EncounterDaily.API.csproj -c Release -o publish/api
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
       - name: Build Angular app
         run: |
           cd frontend
