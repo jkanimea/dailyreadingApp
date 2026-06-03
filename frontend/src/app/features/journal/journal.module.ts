@@ -1,8 +1,7 @@
-import { NgModule, inject } from '@angular/core';
+import { NgModule, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component } from '@angular/core';
 import { SharedModule } from '../../shared/shared.module';
 import { ProgressService } from '../../core/services/progress.service';
 import { PreferencesService } from '../../core/services/preferences.service';
@@ -10,6 +9,7 @@ import { JournalEntryDto } from '../../core/models/journal-entry.model';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
+  selector: 'app-journal',
   template: `
     <ion-header class="print-hide">
       <ion-toolbar>
@@ -42,13 +42,9 @@ import { firstValueFrom } from 'rxjs';
 
       <div *ngIf="!loading && !error && entries.length > 0">
         <div class="action-buttons print-hide">
-          <ion-button fill="outline" (click)="selectAllEntries()">
-            <ion-icon name="checkbox-outline" slot="start"></ion-icon>
-            All
-          </ion-button>
-          <ion-button fill="outline" (click)="deselectAllEntries()">
-            <ion-icon name="square-outline" slot="start"></ion-icon>
-            None
+          <ion-button fill="outline" (click)="toggleSelectAll()">
+            <ion-icon [name]="allSelected ? 'checkbox-outline' : 'square-outline'" slot="start"></ion-icon>
+            {{ allSelected ? 'Deselect All' : 'Select All' }}
           </ion-button>
           <ion-button fill="outline" (click)="printJournal()">
             <ion-icon name="print-outline" slot="start"></ion-icon>
@@ -194,6 +190,7 @@ class JournalPage {
   loading = false;
   error?: string;
   allExpanded = false;
+  allSelected = true;
   canShare = !!navigator.share;
   summarizingStates = new Map<number, boolean>();
   expandedEntries = new Set<number>();
@@ -237,15 +234,27 @@ class JournalPage {
     }
   }
 
+  toggleSelectAll(): void {
+    if (this.allSelected) {
+      this.selectedEntryIds.clear();
+      this.selectedCount = 0;
+      this.allSelected = false;
+    } else {
+      this.selectAllEntries();
+    }
+  }
+
   selectAllEntries(): void {
     this.selectedEntryIds.clear();
     this.entries.forEach(e => this.selectedEntryIds.add(e.readingId));
     this.selectedCount = this.selectedEntryIds.size;
+    this.allSelected = true;
   }
 
   deselectAllEntries(): void {
     this.selectedEntryIds.clear();
     this.selectedCount = 0;
+    this.allSelected = false;
   }
 
   isSelected(readingId: number): boolean {
