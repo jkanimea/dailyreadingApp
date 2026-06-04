@@ -250,7 +250,7 @@ export class LoginPage implements OnDestroy {
     this.error = undefined;
     try {
       await this.authService.guestLogin();
-      this.router.navigate(['/series']);
+      this.router.navigate(['/today']);
     } catch {
       this.error = 'Failed to start guest session.';
     } finally {
@@ -305,7 +305,7 @@ export class LoginPage implements OnDestroy {
       const res = await firstValueFrom(this.authService.login('google', credential));
       if (res) {
         await this.authService.storeTokens(res);
-        this.router.navigate(['/series']);
+        this.router.navigate(['/today']);
       }
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Google sign-in failed.';
@@ -339,7 +339,7 @@ export class LoginPage implements OnDestroy {
       const res = await firstValueFrom(this.authService.login('facebook', accessToken));
       if (res) {
         await this.authService.storeTokens(res);
-        this.router.navigate(['/series']);
+        this.router.navigate(['/today']);
       }
     } catch (e) {
       this.error = e instanceof Error ? e.message : 'Facebook sign-in failed.';
