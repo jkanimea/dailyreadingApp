@@ -287,8 +287,7 @@ class JournalPage {
     const text = this.buildShareText(selected);
     await navigator.share({
       title: `My Reading Journal — ${this.seriesName}`,
-      text,
-      url: window.location.href
+      text
     });
   }
 
