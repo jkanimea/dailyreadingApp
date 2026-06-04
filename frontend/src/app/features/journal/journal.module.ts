@@ -50,6 +50,10 @@ import { firstValueFrom } from 'rxjs';
             <ion-icon name="print-outline" slot="start"></ion-icon>
             Print
           </ion-button>
+          <ion-button fill="outline" (click)="emailJournal()" [disabled]="selectedCount === 0">
+            <ion-icon name="mail-outline" slot="start"></ion-icon>
+            Email{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
+          </ion-button>
           <ion-button fill="outline" (click)="shareJournal()" *ngIf="canShare" [disabled]="selectedCount === 0">
             <ion-icon name="share-outline" slot="start"></ion-icon>
             Share{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
@@ -277,6 +281,14 @@ class JournalPage {
     }
     window.addEventListener('afterprint', () => { this.allExpanded = false; }, { once: true });
     setTimeout(() => window.print(), 100);
+  }
+
+  emailJournal(): void {
+    const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
+    if (selected.length === 0) return;
+    const subject = encodeURIComponent(`My Reading Journal — ${this.seriesName}`);
+    const body = encodeURIComponent(this.buildShareText(selected));
+    window.open(`mailto:?subject=${subject}&body=${body}`, '_self');
   }
 
   async shareJournal(): Promise<void> {
