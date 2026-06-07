@@ -188,6 +188,7 @@ using (var scope = app.Services.CreateScope())
     await dbContext.Database.EnsureCreatedAsync();
     await EnsureSchemaAsync(dbContext);
     await SeedRolesAsync(dbContext);
+    await SeedDevUserAsync(dbContext);
 }
 
 if (app.Environment.IsDevelopment())
@@ -283,4 +284,33 @@ static async Task SeedRolesAsync(AppDbContext context)
         }
     }
     await context.SaveChangesAsync();
+}
+
+static async Task SeedDevUserAsync(AppDbContext context)
+{
+    if (!context.Users.Any(u => u.Id == 1))
+    {
+        var user = new User
+        {
+            Email = "dev@encounterdaily.local",
+            DisplayName = "Dev User",
+            Provider = "dev",
+            ProviderId = "dev-user",
+            SelectedSeriesId = 1,
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
+        var userRole = context.Roles.FirstOrDefault(r => r.Name == "User");
+        if (userRole != null)
+        {
+            context.UserRoles.Add(new UserRole
+            {
+                UserId = user.Id,
+                RoleId = userRole.Id
+            });
+            await context.SaveChangesAsync();
+        }
+    }
 }

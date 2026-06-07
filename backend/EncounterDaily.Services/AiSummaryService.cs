@@ -60,6 +60,11 @@ namespace EncounterDaily.Services
                 _logger.LogError(ex, "DeepSeek API call failed");
                 throw new InvalidOperationException("AI summarization failed. Please try again.");
             }
+            catch (OperationCanceledException ex)
+            {
+                _logger.LogError(ex, "DeepSeek API call timed out");
+                throw new InvalidOperationException("AI summarization timed out. Please try again.");
+            }
         }
 
         private class DeepSeekRequest

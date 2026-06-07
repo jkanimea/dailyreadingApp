@@ -140,6 +140,11 @@ namespace EncounterDaily.API.Controllers
                 _logger.LogWarning("Summarize failed: {Message}", ex.Message);
                 return BadRequest(new { message = ex.Message });
             }
+            catch (ArgumentException ex)
+            {
+                _logger.LogWarning("Summarize invalid: {Message}", ex.Message);
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
