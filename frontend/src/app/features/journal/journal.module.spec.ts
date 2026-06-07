@@ -1,3 +1,4 @@
+import { fakeAsync, tick } from '@angular/core/testing';
 import { JournalEntryDto } from '../../core/models/journal-entry.model';
 
 const mockEntries: JournalEntryDto[] = [
@@ -79,35 +80,13 @@ describe('JournalPage', () => {
         }
         this.selectedCount = this.selectedEntryIds.size;
       },
-      escapeHtml(text: string) {
-        return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-      },
       printJournal() {
-        const selected = this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId));
-        if (selected.length === 0) return;
-
-        const lines: string[] = [];
-        lines.push(`<h1>My Reading Journal</h1>`);
-        lines.push(`<div class="subtitle">${this.seriesName} &mdash; ${selected.length} entries</div>`);
-
-        for (const entry of selected) {
-          const date = `${this.getMonthName(entry.month)} ${entry.day}`;
-          lines.push(`<div class="entry">`);
-          lines.push(`<div class="entry-title">${date} &mdash; ${this.escapeHtml(entry.bibleReading)}</div>`);
-          lines.push(`<div class="entry-ref">${this.escapeHtml(entry.primaryBookPageRange)}${entry.secondaryBookPageRange ? ' &mdash; ' + this.escapeHtml(entry.secondaryBookPageRange) : ''}</div>`);
-          if (entry.notes) {
-            lines.push(`<div class="entry-notes">${this.escapeHtml(entry.notes)}</div>`);
-          }
-          lines.push(`</div>`);
+        this.allExpanded = true;
+        if (this.selectedCount > 0) {
+          this.expandedEntries = new Set(this.selectedEntryIds);
         }
-
-        const printWindow = window.open('', '_blank') as any;
-        if (printWindow) {
-          printWindow.document.write(lines.join('\n'));
-          printWindow.document.close();
-          printWindow.focus();
-          printWindow.print();
-        }
+        window.addEventListener('afterprint', () => { this.allExpanded = false; this.expandedEntries.clear(); }, { once: true });
+        setTimeout(() => window.print(), 0);
       },
       shareJournal() {
         if (!navigator.share) return;
@@ -300,80 +279,56 @@ describe('JournalPage', () => {
 
   // ─── Print ────────────────────────────────────────────────────────────
 
-  it('printJournal should open print window with all selected entries', () => {
-    component.ionViewWillEnter();
-    const mockPrintWin = { document: { write: jest.fn(), close: jest.fn() }, focus: jest.fn(), print: jest.fn() };
-    jest.spyOn(window, 'open').mockReturnValue(mockPrintWin as any);
+  it('printJournal should expand all entries and call window.print', fakeAsync(() => {
+    const printSpy = jest.spyOn(window, 'print').mockImplementation(() => {});
+    component.allExpanded = false;
 
     component.printJournal();
+    tick(0);
 
-    expect(window.open).toHaveBeenCalledWith('', '_blank');
-    expect(mockPrintWin.document.write).toHaveBeenCalled();
-    expect(mockPrintWin.document.close).toHaveBeenCalled();
-    expect(mockPrintWin.print).toHaveBeenCalled();
-  });
+    expect(component.allExpanded).toBe(true);
+    expect(printSpy).toHaveBeenCalled();
 
-  it('printJournal should print only selected entries, not deselected ones', () => {
+    window.dispatchEvent(new Event('afterprint'));
+  }));
+
+  it('printJournal should add expandedEntries from selected IDs when selectedCount > 0', () => {
     component.ionViewWillEnter();
     component.deselectAllEntries();
     component.toggleSelected(1);
-    const mockPrintWin = { document: { write: jest.fn(), close: jest.fn() }, focus: jest.fn(), print: jest.fn() };
-    jest.spyOn(window, 'open').mockReturnValue(mockPrintWin as any);
+    component.toggleSelected(3);
+    jest.spyOn(window, 'print').mockImplementation(() => {});
 
     component.printJournal();
 
-    const html: string = mockPrintWin.document.write.mock.calls[0][0];
-    expect(html).toContain('January 5');
-    expect(html).toContain('Mark 1:1');
-    expect(html).toContain('Great insight');
-    expect(html).not.toContain('January 10');
-    expect(html).not.toContain('February 1');
+    expect(component.expandedEntries.has(1)).toBe(true);
+    expect(component.expandedEntries.has(2)).toBe(false);
+    expect(component.expandedEntries.has(3)).toBe(true);
+    expect(component.allExpanded).toBe(true);
+
+    window.dispatchEvent(new Event('afterprint'));
   });
 
-  it('printJournal should include notes, title, and page range in HTML', () => {
+  it('toggleEntry should work after print preview closes (allExpanded resets on afterprint)', fakeAsync(() => {
+    jest.spyOn(window, 'print').mockImplementation(() => {});
     component.ionViewWillEnter();
-    const mockPrintWin = { document: { write: jest.fn(), close: jest.fn() }, focus: jest.fn(), print: jest.fn() };
-    jest.spyOn(window, 'open').mockReturnValue(mockPrintWin as any);
 
     component.printJournal();
+    tick(0);
+    expect(component.allExpanded).toBe(true);
 
-    const html: string = mockPrintWin.document.write.mock.calls[0][0];
-    expect(html).toContain('My Reading Journal');
-    expect(html).toContain('Christ The Way');
-    expect(html).toContain('DA 1-5');
-    expect(html).toContain('DA 6-10');
-    expect(html).toContain('DA 11-15');
-    expect(html).toContain('Great insight');
-    expect(html).toContain('Notes without completion');
-  });
+    // Dispatch twice to clear any stale listeners from prior tests
+    window.dispatchEvent(new Event('afterprint'));
 
-  it('printJournal should escape HTML in entry content', () => {
-    component.ionViewWillEnter();
-    const mockPrintWin = { document: { write: jest.fn(), close: jest.fn() }, focus: jest.fn(), print: jest.fn() };
-    jest.spyOn(window, 'open').mockReturnValue(mockPrintWin as any);
+    expect(component.allExpanded).toBe(false);
+    expect(component.isExpanded(1)).toBe(false);
 
-    // Use a separate entry without mutating shared mock data
-    component.entries[0] = { ...component.entries[0], notes: 'Text with <script>alert("xss")</script>', bibleReading: 'John <3' };
-    component.selectAllEntries();
+    component.toggleEntry(1);
+    expect(component.isExpanded(1)).toBe(true);
 
-    component.printJournal();
-
-    const html: string = mockPrintWin.document.write.mock.calls[0][0];
-    expect(html).toContain('&lt;script&gt;');
-    expect(html).toContain('John &lt;3');
-    expect(html).not.toContain('<script>');
-  });
-
-  it('printJournal should do nothing if no entries selected', () => {
-    component.ionViewWillEnter();
-    component.deselectAllEntries();
-    const openSpy = jest.spyOn(window, 'open');
-    openSpy.mockClear();
-
-    component.printJournal();
-
-    expect(openSpy).not.toHaveBeenCalled();
-  });
+    component.toggleEntry(1);
+    expect(component.isExpanded(1)).toBe(false);
+  }));
 
   // ─── Share ────────────────────────────────────────────────────────────
 

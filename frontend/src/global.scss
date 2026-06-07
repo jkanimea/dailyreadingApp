@@ -354,11 +354,13 @@ ion-toggle {
   ion-content {
     --padding-top: 0;
     --padding-bottom: 0;
+    height: auto !important;
   }
   ion-content::part(scroll) {
     height: auto !important;
     overflow: visible !important;
     max-height: none !important;
+    contain: none !important;
   }
 }
 
