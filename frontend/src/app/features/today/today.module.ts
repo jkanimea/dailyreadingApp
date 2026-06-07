@@ -75,13 +75,12 @@ interface BibleSection {
             <div class="section-card">
               <div class="section-header" (click)="bibleExpanded = !bibleExpanded">
                 <ion-icon [name]="bibleExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
-                <span class="section-header-title">Bible Reading</span>
+                <span class="section-header-title">{{ detail.bibleReading }}</span>
               </div>
               @if (bibleExpanded) {
                 <div class="section-body">
                   @if (bibleSections.length > 0) {
                     @for (section of bibleSections; track section.title) {
-                      <h3 class="bible-section-title">{{ section.title }}</h3>
                       <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
                     }
                   } @else {
@@ -230,7 +229,7 @@ interface BibleSection {
       gap: 8px;
     }
     .meta-date {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
       color: var(--ion-text-color);
     }
@@ -253,15 +252,6 @@ interface BibleSection {
       padding: 16px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.04);
       border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
-    }
-    .bible-section-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--ion-color-primary);
-      margin: 16px 0 8px;
-    }
-    .bible-section-title:first-child {
-      margin-top: 0;
     }
     .bible-text {
       font-style: italic;
@@ -302,6 +292,7 @@ interface BibleSection {
     .section-body {
       margin-top: 12px;
     }
+    .section-header-title,
     .egw-heading {
       font-size: 18px;
       font-weight: 700;

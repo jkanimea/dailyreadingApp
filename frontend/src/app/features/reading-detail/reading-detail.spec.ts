@@ -289,12 +289,11 @@ describe('ReadingDetailPage', () => {
   });
 
   describe('template rendering', () => {
-    it('should display reading heading with date and cleaned page range', fakeAsync(() => {
+    it('should display reading heading with date', fakeAsync(() => {
       component.detail = mockDetail;
       fixture.detectChanges();
       const el: HTMLElement = fixture.nativeElement.querySelector('.meta-primary');
       expect(el.textContent).toContain('May 21');
-      expect(el.textContent).toContain('Acts of the Apostles 110-114');
     }));
 
     it('should display bible text when fullTextBible exists', fakeAsync(() => {
@@ -309,7 +308,7 @@ describe('ReadingDetailPage', () => {
       component.detail = { ...mockDetail, fullTextBible: '' };
       fixture.detectChanges();
       const headers: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-header-title'));
-      const bibleHeader = headers.find((h: HTMLElement) => h.textContent?.includes('Bible Reading'));
+      const bibleHeader = headers.find((h: HTMLElement) => h.textContent?.includes('Acts 13:3'));
       expect(bibleHeader).toBeTruthy();
       expect(fixture.nativeElement.querySelector('.bible-section-title')).toBeFalsy();
     }));
@@ -332,16 +331,21 @@ describe('ReadingDetailPage', () => {
       expect(el.textContent).toContain('Christ The Church');
     }));
 
-    it('should render bible section headings as h3 elements', fakeAsync(() => {
+    it('should render bible text directly without duplicate section headings', fakeAsync(() => {
       component.detail = {
         ...mockDetail,
         fullTextBible: 'Matthew 9:18-31\n\n18 While he spake\n\nMark 5:21-43\n\n21 And when Jesus'
       };
       fixture.detectChanges();
-      const titles = fixture.nativeElement.querySelectorAll('.bible-section-title');
-      expect(titles.length).toBe(2);
-      expect(titles[0].textContent).toBe('Matthew 9:18-31');
-      expect(titles[1].textContent).toBe('Mark 5:21-43');
+      const sectionCards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-card'));
+      const bibleCard = sectionCards.find((c: HTMLElement) =>
+        c.querySelector('.section-header-title')?.textContent?.includes('Acts 13:3')
+      );
+      const texts = bibleCard?.querySelectorAll('.bible-text') ?? [];
+      expect(texts.length).toBe(2);
+      expect(texts[0].textContent).toContain('18 While he spake');
+      expect(texts[1].textContent).toContain('21 And when Jesus');
+      expect(bibleCard?.querySelector('.bible-section-title')).toBeFalsy();
     }));
 
     it('should render a .bible-text per section', fakeAsync(() => {
@@ -352,7 +356,7 @@ describe('ReadingDetailPage', () => {
       fixture.detectChanges();
       const sectionCards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-card'));
       const bibleCard = sectionCards.find((c: HTMLElement) =>
-        c.querySelector('.section-header-title')?.textContent?.includes('Bible Reading')
+        c.querySelector('.section-header-title')?.textContent?.includes('Acts 13:3')
       );
       const texts = bibleCard?.querySelectorAll('.bible-text') ?? [];
       expect(texts.length).toBe(2);
@@ -394,7 +398,7 @@ describe('ReadingDetailPage', () => {
         component.detail = mockDetail;
         fixture.detectChanges();
         const headers = getSectionHeaders(fixture.nativeElement);
-        const bibleHeader = headers.find(h => h.textContent?.includes('Bible Reading'));
+        const bibleHeader = headers.find(h => h.textContent?.includes('Acts 13:3'));
         expect(bibleHeader).toBeTruthy();
         expect(bibleHeader!.querySelector('.section-chevron')).toBeTruthy();
       }));
@@ -444,7 +448,7 @@ describe('ReadingDetailPage', () => {
         fixture.detectChanges();
         const sectionCards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-card'));
         const bibleCard = sectionCards.find((c: HTMLElement) =>
-          c.querySelector('.section-header-title')?.textContent?.includes('Bible Reading')
+          c.querySelector('.section-header-title')?.textContent?.includes('Acts 13:3')
         );
         expect(bibleCard?.querySelector('.section-body')).toBeFalsy();
       }));
@@ -453,7 +457,7 @@ describe('ReadingDetailPage', () => {
         component.detail = mockDetail;
         fixture.detectChanges();
         const headers = getSectionHeaders(fixture.nativeElement);
-        const bibleHeader = headers.find(h => h.textContent?.includes('Bible Reading'))!;
+        const bibleHeader = headers.find(h => h.textContent?.includes('Acts 13:3'))!;
         expect(component.bibleExpanded).toBe(true);
         bibleHeader.click();
         expect(component.bibleExpanded).toBe(false);
@@ -533,6 +537,59 @@ describe('ReadingDetailPage', () => {
         component.egwExpanded = false;
         expect(component.egwExpanded).toBe(false);
       });
+    });
+
+    describe('scroll-to-reveal checkbox', () => {
+      it('should start with readingSeen false', () => {
+        expect(component.readingSeen).toBe(false);
+      });
+
+      it('should hide complete-section when readingSeen is false', fakeAsync(() => {
+        component.detail = mockDetail;
+        component.readingSeen = false;
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.complete-section')).toBeFalsy();
+      }));
+
+      it('should show complete-section when readingSeen is true', fakeAsync(() => {
+        component.detail = mockDetail;
+        component.readingSeen = true;
+        fixture.detectChanges();
+        expect(fixture.nativeElement.querySelector('.complete-section')).toBeTruthy();
+      }));
+
+      function setContentMock(overrides: { scrollTop: number; scrollHeight: number; clientHeight: number }): void {
+        component.content = {
+          getScrollElement: () => Promise.resolve(overrides as any)
+        };
+      }
+
+      it('should set readingSeen when scrolled past 85%', async () => {
+        component.detail = mockDetail;
+        setContentMock({ scrollTop: 850, scrollHeight: 1000, clientHeight: 200 });
+        await component.onReadingScroll({} as CustomEvent);
+        expect(component.readingSeen).toBe(true);
+      });
+
+      it('should not set readingSeen when scrolled less than 85%', async () => {
+        component.detail = mockDetail;
+        setContentMock({ scrollTop: 300, scrollHeight: 1000, clientHeight: 200 });
+        await component.onReadingScroll({} as CustomEvent);
+        expect(component.readingSeen).toBe(false);
+      });
+
+      it('should not set readingSeen when scrollTop is 0 (content collapse, not user scroll)', async () => {
+        component.detail = mockDetail;
+        setContentMock({ scrollTop: 0, scrollHeight: 500, clientHeight: 200 });
+        await component.onReadingScroll({} as CustomEvent);
+        expect(component.readingSeen).toBe(false);
+      });
+
+      it('should reset readingSeen to false when navigating to new reading', fakeAsync(() => {
+        component.readingSeen = true;
+        (component as any).load();
+        expect(component.readingSeen).toBe(false);
+      }));
     });
   });
 });

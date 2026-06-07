@@ -1,8 +1,7 @@
-import { NgModule, inject } from '@angular/core';
+import { NgModule, Component, OnDestroy, inject, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component, OnDestroy } from '@angular/core';
 import { SharedModule } from '../../shared/shared.module';
 import { BaseReadingPageComponent } from '../base/base-reading-page-component';
 import { ProgressService } from '../../core/services/progress.service';
@@ -32,7 +31,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
+    <ion-content #pageContent class="ion-padding" [scrollEvents]="true" (ionScroll)="onReadingScroll($event)">
       @if (loading) {
         <div class="skeleton-container">
           <div class="skeleton-shimmer loading-line" style="width: 60%; height: 16px;"></div>
@@ -57,8 +56,6 @@ import { firstValueFrom, Subscription } from 'rxjs';
           <div class="reading-meta">
             <div class="meta-primary">
               <span class="meta-date">{{ formatDate(detail.month, detail.day) }}</span>
-              <span class="meta-dash">—</span>
-              <span class="meta-range">{{ cleanPageRange(detail.primaryBookPageRange) }}</span>
             </div>
             <div class="meta-actions">
               @if (completed) {
@@ -74,13 +71,12 @@ import { firstValueFrom, Subscription } from 'rxjs';
             <div class="section-card">
               <div class="section-header" (click)="bibleExpanded = !bibleExpanded">
                 <ion-icon [name]="bibleExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
-                <span class="section-header-title">Bible Reading</span>
+                <span class="section-header-title">{{ detail.bibleReading }}</span>
               </div>
               @if (bibleExpanded) {
                 <div class="section-body">
                   @if (bibleSections.length > 0) {
                     @for (section of bibleSections; track section.title) {
-                      <h3 class="bible-section-title">{{ section.title }}</h3>
                       <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
                     }
                   } @else {
@@ -151,11 +147,13 @@ import { firstValueFrom, Subscription } from 'rxjs';
           }
 
           <!-- Complete checkbox -->
-          <div class="complete-section">
-            <ion-checkbox [checked]="completed" (ionChange)="toggleComplete($event)" labelPlacement="start">
-              I have read this passage
-            </ion-checkbox>
-          </div>
+          @if (readingSeen) {
+            <div class="complete-section">
+              <ion-checkbox [checked]="completed" (ionChange)="toggleComplete($event)" labelPlacement="start">
+                I have read this passage
+              </ion-checkbox>
+            </div>
+          }
 
           <!-- Journal section -->
           @if (completed || notes) {
@@ -220,7 +218,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
       gap: 8px;
     }
     .meta-primary {
-      font-size: 16px;
+      font-size: 18px;
       font-weight: 600;
       color: var(--ion-text-color);
       line-height: 1.4;
@@ -228,15 +226,6 @@ import { firstValueFrom, Subscription } from 'rxjs';
     .meta-date {
       font-weight: 700;
       color: var(--ion-color-primary);
-    }
-    .meta-dash {
-      color: var(--ion-color-step-400, #999);
-      margin: 0 4px;
-    }
-    .meta-range {
-      font-weight: 500;
-      color: var(--ion-color-medium);
-      font-size: 14px;
     }
     .meta-actions {
       display: flex;
@@ -257,14 +246,6 @@ import { firstValueFrom, Subscription } from 'rxjs';
       padding: 16px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.04);
       border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
-    }
-    .bible-section-title {
-      font-size: 15px;
-      font-weight: 700;
-      margin: 0 0 10px;
-      color: var(--ion-color-primary);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
     .bible-text {
       font-style: italic;
@@ -290,6 +271,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
     .section-body {
       margin-top: 12px;
     }
+    .section-header-title,
     .egw-heading {
       font-size: 18px;
       font-weight: 700;
@@ -439,6 +421,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   egwExpanded = true;
   secondaryExpanded = true;
   private notesDebounce?: ReturnType<typeof setTimeout>;
+  readingSeen = false;
+  @ViewChild('pageContent', { static: false }) content?: any;
 
   override ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
@@ -459,6 +443,30 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     } catch {
       this.completed = !checked;
     }
+  }
+
+  private async notifyContentFit(): Promise<void> {
+    if (this.readingSeen || !this.content) return;
+    try {
+      const el = await this.content.getScrollElement();
+      if (el && el.scrollHeight <= el.clientHeight + 2) {
+        this.readingSeen = true;
+      }
+    } catch {}
+  }
+
+  onReadingScroll(_event: CustomEvent): void {
+    if (this.readingSeen || !this.detail || !this.content) return;
+    this.content.getScrollElement().then((scrollEl: HTMLElement) => {
+      if (this.readingSeen || !scrollEl) return;
+      const scrollTop = scrollEl.scrollTop;
+      const scrollHeight = scrollEl.scrollHeight;
+      const clientHeight = scrollEl.clientHeight;
+      const maxScroll = scrollHeight - clientHeight;
+      if (scrollTop > 0 && maxScroll > 0 && scrollTop / maxScroll >= 0.85) {
+        this.readingSeen = true;
+      }
+    }).catch(() => {});
   }
 
   paraRefRegex = /\[(\d+)\.(\d+)\]/g;
@@ -643,8 +651,10 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     this.routeSub = this.route.paramMap.subscribe(async params => {
       const id = Number(params.get('id'));
       if (id) {
+        this.readingSeen = false;
         await this.loadDetail(id, this.translation);
         await this.checkCompleted(id);
+        setTimeout(() => this.notifyContentFit(), 50);
       }
     });
   }
