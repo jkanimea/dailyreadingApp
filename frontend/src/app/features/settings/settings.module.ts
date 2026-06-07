@@ -1,14 +1,12 @@
 import { NgModule, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
-import { RouterModule, Routes } from '@angular/router';
+import { Router, RouterModule, Routes } from '@angular/router';
 import { Component, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { firstValueFrom } from 'rxjs';
 import { PreferencesService, ThemeMode, FontSize, BibleTranslation } from '../../core/services/preferences.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { SeriesService } from '../../core/services/series.service';
-import { Series } from '../../core/models/series.model';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-settings',
@@ -28,12 +26,9 @@ import { Series } from '../../core/models/series.model';
       <div class="settings-section">
         <div class="section-label">Reading</div>
         <ion-list lines="full">
-          <ion-item>
-            <ion-icon name="book-outline" slot="start" class="item-icon"></ion-icon>
-            <ion-label>Series</ion-label>
-            <ion-select [value]="selectedSeriesId" (ionChange)="onSeriesChange($event)" interface="action-sheet">
-              <ion-select-option *ngFor="let s of allSeries" [value]="s.id">{{ s.name }}</ion-select-option>
-            </ion-select>
+          <ion-item button (click)="switchSeries()" detail="true">
+            <ion-icon name="swap-horizontal-outline" slot="start" class="item-icon"></ion-icon>
+            <ion-label>Switch Series</ion-label>
           </ion-item>
           <ion-item>
             <ion-icon name="book-outline" slot="start" class="item-icon"></ion-icon>
@@ -145,7 +140,7 @@ import { Series } from '../../core/models/series.model';
 class SettingsPage implements OnInit {
   private prefs = inject(PreferencesService);
   private notifications = inject(NotificationService);
-  private seriesService = inject(SeriesService);
+  private router = inject(Router);
   private destroyRef = inject(DestroyRef);
 
   currentTheme: ThemeMode = 'system';
@@ -154,27 +149,14 @@ class SettingsPage implements OnInit {
   reminderEnabled = false;
   reminderTime = '07:00';
 
-  allSeries: Series[] = [];
-  selectedSeriesId = 1;
-
   ngOnInit(): void {
     this.prefs.theme$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(t => this.currentTheme = t);
     this.prefs.fontSize$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(s => this.currentFontSize = s);
     this.prefs.translation$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(t => this.translation = t);
-    this.prefs.seriesId$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(id => {
-      this.selectedSeriesId = id;
-    });
-    this.loadSeries();
   }
 
-  private async loadSeries(): Promise<void> {
-    this.allSeries = await firstValueFrom(this.seriesService.getAll());
-  }
-
-  async onSeriesChange(event: CustomEvent): Promise<void> {
-    const id = event.detail.value as number;
-    if (id === this.selectedSeriesId) return;
-    await this.prefs.setSeriesId(id);
+  switchSeries(): void {
+    this.router.navigate(['/series']);
   }
 
   onThemeChange(event: CustomEvent): void {
