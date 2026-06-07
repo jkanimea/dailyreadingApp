@@ -25,7 +25,12 @@ interface BibleSection {
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>Today's Reading</ion-title>
+        <ion-title>
+          <div class="header-title">
+            <ion-icon name="sunny-outline" class="header-icon"></ion-icon>
+            <span>Today</span>
+          </div>
+        </ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
@@ -213,6 +218,8 @@ interface BibleSection {
   `,
   standalone: false,
   styles: [`
+    .header-title { display: flex; align-items: center; gap: 8px; }
+    .header-icon { font-size: 18px; flex-shrink: 0; }
     .reading-content {
       display: flex;
       flex-direction: column;
