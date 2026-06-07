@@ -1,4 +1,4 @@
-import { NgModule, Component, inject, ChangeDetectorRef } from '@angular/core';
+import { NgModule, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -218,12 +218,7 @@ import { firstValueFrom } from 'rxjs';
       border-top: 1px solid var(--ion-color-step-100, #eee);
     }
     @media print {
-      ion-header, ion-footer, .print-hide { display: none !important; }
-      ion-content { --padding-top: 0; --padding-bottom: 0; height: auto; --overflow: visible; }
-      ion-content::part(scroll) { height: auto; overflow: visible; }
-      .journal-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 8px; }
-      .journal-card-header { padding: 8px 12px; }
-      .journal-card-body-content { padding: 4px 12px 8px; }
+      .print-hide { display: none !important; }
     }
   `]
 })
@@ -232,7 +227,7 @@ class JournalPage {
   private progressService = inject(ProgressService);
   private prefs = inject(PreferencesService);
   private alertCtrl = inject(AlertController);
-  private cdr = inject(ChangeDetectorRef);
+
 
   entries: JournalEntryDto[] = [];
   seriesName = '';
@@ -321,16 +316,48 @@ class JournalPage {
   }
 
   printJournal(): void {
-    this.allExpanded = true;
-    if (this.selectedCount > 0) {
-      this.expandedEntries = new Set(this.selectedEntryIds);
+    const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
+    if (selected.length === 0) return;
+
+    const lines: string[] = [`<!DOCTYPE html><html><head><meta charset="utf-8"><title>My Reading Journal — ${this.seriesName}</title>
+<style>
+  body { font-family: Georgia, 'Times New Roman', serif; font-size: 13pt; line-height: 1.6; color: #222; padding: 0.6in 0.5in; max-width: 7in; margin: 0 auto; }
+  h1 { font-size: 18pt; font-weight: 700; margin: 0 0 4px; }
+  .subtitle { font-size: 10pt; color: #666; margin-bottom: 24px; border-bottom: 1px solid #ccc; padding-bottom: 12px; }
+  .entry { margin-bottom: 20px; page-break-inside: avoid; }
+  .entry-title { font-size: 13pt; font-weight: 700; color: #111; }
+  .entry-ref { font-size: 11pt; color: #2a5db0; }
+  .entry-notes { margin-top: 6px; font-size: 12pt; white-space: pre-wrap; color: #333; padding: 8px 12px; background: #f5f5f5; border-radius: 6px; }
+  @media print { body { padding: 0; } }
+</style></head><body>`];
+
+    lines.push(`<h1>My Reading Journal</h1>`);
+    lines.push(`<div class="subtitle">${this.seriesName} &mdash; ${selected.length} entr${selected.length === 1 ? 'y' : 'ies'}</div>`);
+
+    for (const entry of selected) {
+      const date = `${this.getMonthName(entry.month)} ${entry.day}`;
+      lines.push(`<div class="entry">`);
+      lines.push(`<div class="entry-title">${date} &mdash; ${this.escapeHtml(entry.bibleReading)}</div>`);
+      lines.push(`<div class="entry-ref">${this.escapeHtml(entry.primaryBookPageRange)}${entry.secondaryBookPageRange ? ' &mdash; ' + this.escapeHtml(entry.secondaryBookPageRange) : ''}</div>`);
+      if (entry.notes) {
+        lines.push(`<div class="entry-notes">${this.escapeHtml(entry.notes)}</div>`);
+      }
+      lines.push(`</div>`);
     }
-    this.cdr.detectChanges();
-    window.addEventListener('afterprint', () => {
-      this.allExpanded = false;
-      this.cdr.detectChanges();
-    }, { once: true });
-    setTimeout(() => window.print(), 0);
+
+    lines.push(`</body></html>`);
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(lines.join('\n'));
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }
+  }
+
+  private escapeHtml(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   async shareJournal(): Promise<void> {
