@@ -15,6 +15,23 @@ namespace EncounterDaily.Services
             _unitOfWork = unitOfWork;
         }
 
+        public async Task SaveServerLogAsync(string level, string source, string message, string? exception = null, int? userId = null, string? userEmail = null, string? ipAddress = null)
+        {
+            var log = new AppLog
+            {
+                Level = NormalizeLevel(level),
+                Message = message,
+                Source = source,
+                Exception = exception,
+                UserId = userId,
+                UserEmail = userEmail,
+                IpAddress = ipAddress,
+                Origin = "server"
+            };
+            await _unitOfWork.AppLogs.AddAsync(log);
+            await _unitOfWork.CompleteAsync();
+        }
+
         public async Task SaveClientLogsAsync(
             IEnumerable<ClientLogEntry> entries,
             int? userId,

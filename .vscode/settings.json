@@ -1,3 +1,16 @@
 {
-  "typescript.tsdk": "frontend/node_modules/typescript/lib"
+  "typescript.tsdk": "frontend/node_modules/typescript/lib",
+  "dbclient.connections": [
+    {
+      "name": "EncounterDaily - Local",
+      "dialect": "SQLServer",
+      "host": "127.0.0.1",
+      "port": 1433,
+      "database": "EncounterDaily",
+      "username": "devuser",
+      "password": "DevUser123!",
+      "authenticationType": "server",
+      "useSSL": false
+    }
+  ]
 }

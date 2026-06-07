@@ -22,6 +22,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
     .WriteTo.Console()
+    .WriteTo.Debug()
     .WriteTo.File("logs/encounterdaily-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
     .CreateLogger();
 

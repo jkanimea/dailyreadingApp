@@ -94,6 +94,63 @@ namespace EncounterDaily.Tests.UnitTests.Services
         }
 
         [Fact]
+        public async Task SaveServerLogAsync_SavesLogWithServerOrigin()
+        {
+            var captured = new List<AppLog>();
+            _mockLogRepo.Setup(r => r.AddAsync(It.IsAny<AppLog>()))
+                .Callback<AppLog>(l => captured.Add(l))
+                .ReturnsAsync((AppLog l) => l);
+            _mockUoW.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
+
+            await _service.SaveServerLogAsync("error", "TestService", "Something broke", "Stack trace", 1, "a@b.com", "::1");
+
+            captured.Should().HaveCount(1);
+            captured[0].Level.Should().Be("error");
+            captured[0].Source.Should().Be("TestService");
+            captured[0].Message.Should().Be("Something broke");
+            captured[0].Exception.Should().Be("Stack trace");
+            captured[0].UserId.Should().Be(1);
+            captured[0].UserEmail.Should().Be("a@b.com");
+            captured[0].IpAddress.Should().Be("::1");
+            captured[0].Origin.Should().Be("server");
+        }
+
+        [Fact]
+        public async Task SaveServerLogAsync_NormalizesLogLevels()
+        {
+            var captured = new List<AppLog>();
+            _mockLogRepo.Setup(r => r.AddAsync(It.IsAny<AppLog>()))
+                .Callback<AppLog>(l => captured.Add(l))
+                .ReturnsAsync((AppLog l) => l);
+            _mockUoW.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
+
+            await _service.SaveServerLogAsync("WARNING", "Test", "warn");
+            await _service.SaveServerLogAsync("DEBUG", "Test", "debug");
+            await _service.SaveServerLogAsync("unknown", "Test", "fallback");
+
+            captured[0].Level.Should().Be("warn");
+            captured[1].Level.Should().Be("debug");
+            captured[2].Level.Should().Be("info");
+        }
+
+        [Fact]
+        public async Task SaveServerLogAsync_DefaultsOptionalParamsToNull()
+        {
+            var captured = new List<AppLog>();
+            _mockLogRepo.Setup(r => r.AddAsync(It.IsAny<AppLog>()))
+                .Callback<AppLog>(l => captured.Add(l))
+                .ReturnsAsync((AppLog l) => l);
+            _mockUoW.Setup(u => u.CompleteAsync()).ReturnsAsync(1);
+
+            await _service.SaveServerLogAsync("info", "Test", "simple message");
+
+            captured[0].UserId.Should().BeNull();
+            captured[0].UserEmail.Should().BeNull();
+            captured[0].IpAddress.Should().BeNull();
+            captured[0].Origin.Should().Be("server");
+        }
+
+        [Fact]
         public async Task DeleteOldLogsAsync_CallsRepositoryWithSixMonthCutoff()
         {
             _mockLogRepo.Setup(r => r.DeleteOlderThanAsync(It.IsAny<DateTime>()))
