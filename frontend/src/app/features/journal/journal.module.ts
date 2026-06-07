@@ -1,4 +1,4 @@
-import { NgModule, Component, inject } from '@angular/core';
+import { NgModule, Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -219,7 +219,8 @@ import { firstValueFrom } from 'rxjs';
     }
     @media print {
       ion-header, ion-footer, .print-hide { display: none !important; }
-      ion-content { --padding-top: 0; --padding-bottom: 0; }
+      ion-content { --padding-top: 0; --padding-bottom: 0; height: auto; --overflow: visible; }
+      ion-content::part(scroll) { height: auto; overflow: visible; }
       .journal-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 8px; }
       .journal-card-header { padding: 8px 12px; }
       .journal-card-body-content { padding: 4px 12px 8px; }
@@ -231,6 +232,7 @@ class JournalPage {
   private progressService = inject(ProgressService);
   private prefs = inject(PreferencesService);
   private alertCtrl = inject(AlertController);
+  private cdr = inject(ChangeDetectorRef);
 
   entries: JournalEntryDto[] = [];
   seriesName = '';
@@ -323,8 +325,12 @@ class JournalPage {
     if (this.selectedCount > 0) {
       this.expandedEntries = new Set(this.selectedEntryIds);
     }
-    window.addEventListener('afterprint', () => { this.allExpanded = false; }, { once: true });
-    setTimeout(() => window.print(), 100);
+    this.cdr.detectChanges();
+    window.addEventListener('afterprint', () => {
+      this.allExpanded = false;
+      this.cdr.detectChanges();
+    }, { once: true });
+    setTimeout(() => window.print(), 0);
   }
 
   async shareJournal(): Promise<void> {

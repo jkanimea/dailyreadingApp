@@ -1,6 +1,6 @@
 import { NgModule, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -196,12 +196,6 @@ interface BibleSection {
                         @if (summarizing) {
                           <ion-spinner name="crescent" class="ai-spinner"></ion-spinner>
                         }
-                        @if (summary) {
-                          <div class="summary-text">
-                            <p>{{ summary }}</p>
-                            <ion-button fill="clear" size="small" (click)="summary = undefined">Dismiss</ion-button>
-                          </div>
-                        }
                       </div>
                     }
                   </div>
@@ -385,19 +379,6 @@ interface BibleSection {
       width: 16px;
       height: 16px;
     }
-    .summary-text {
-      width: 100%;
-      margin-top: 8px;
-      padding: 12px;
-      border-radius: 10px;
-      background: var(--ion-color-step-50, #f8f8f8);
-      font-size: 14px;
-      line-height: 1.6;
-      color: var(--ion-text-color);
-    }
-    .summary-text p {
-      margin: 0 0 8px;
-    }
     .error-state {
       display: flex;
       flex-direction: column;
@@ -416,11 +397,12 @@ interface BibleSection {
     }
   `]
 })
-class TodayPage {
+export class TodayPage {
   private router = inject(Router);
   private readingService = inject(ReadingService);
   private progressService = inject(ProgressService);
   private prefs = inject(PreferencesService);
+  private alertCtrl = inject(AlertController);
   private destroyRef = inject(DestroyRef);
 
   loading = false;
@@ -432,7 +414,6 @@ class TodayPage {
   }
   error?: string;
   detail?: ReadingDetail;
-  summary?: string;
   translation: BibleTranslation = 'KJV';
   completed = false;
   notes = '';
@@ -536,12 +517,36 @@ class TodayPage {
     if (!this.notes) return;
     this.summarizing = true;
     try {
-      const res = await firstValueFrom(this.progressService.summarizeNotes(this.readingId, this.notes));
-      this.summary = res.summary;
+      const result = await firstValueFrom(this.progressService.summarizeNotes(this.readingId, this.notes));
+      const alert = await this.alertCtrl.create({
+        header: 'AI Summary',
+        message: result.summary,
+        buttons: [
+          { text: 'Dismiss', role: 'cancel' },
+          { text: 'Replace Notes', handler: () => this.replaceNotesWithSummary(result.summary) }
+        ]
+      });
+      await alert.present();
     } catch {
-      this.summary = 'Failed to generate summary. Please try again.';
+      const alert = await this.alertCtrl.create({
+        header: 'Error',
+        message: 'Failed to summarize notes. Please try again.',
+        buttons: ['OK']
+      });
+      await alert.present();
     } finally {
       this.summarizing = false;
+    }
+  }
+
+  private async replaceNotesWithSummary(summary: string): Promise<void> {
+    this.notes = summary;
+    this.notesSaved = false;
+    try {
+      await firstValueFrom(this.progressService.saveNotes(this.readingId, summary));
+      this.notesSaved = true;
+    } catch {
+      this.notesSaved = false;
     }
   }
 
