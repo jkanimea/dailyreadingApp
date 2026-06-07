@@ -347,6 +347,21 @@ ion-toggle {
   --handle-spacing: 3px;
 }
 
+@media print {
+  ion-tab-bar {
+    display: none !important;
+  }
+  ion-content {
+    --padding-top: 0;
+    --padding-bottom: 0;
+  }
+  ion-content::part(scroll) {
+    height: auto !important;
+    overflow: visible !important;
+    max-height: none !important;
+  }
+}
+
 ion-spinner {
   --color: var(--ion-color-primary);
 }
