@@ -1,40 +1,14 @@
-/*
- * App Global CSS
- * ----------------------------------------------------------------------------
- * Put style rules here that you want to apply globally. These styles are for
- * the entire app and not just one component. Additionally, this file can be
- * used as an entry point to import other CSS/Sass files to be included in the
- * output CSS.
- * For more information on global stylesheets, visit the documentation:
- * https://ionicframework.com/docs/layout/global-stylesheets
- */
-
-/* Core CSS required for Ionic components to work properly */
 @import "@ionic/angular/css/core.css";
-
-/* Basic CSS for apps built with Ionic */
 @import "@ionic/angular/css/normalize.css";
 @import "@ionic/angular/css/structure.css";
 @import "@ionic/angular/css/typography.css";
 @import "@ionic/angular/css/display.css";
-
-/* Optional CSS utils that can be commented out */
 @import "@ionic/angular/css/padding.css";
 @import "@ionic/angular/css/float-elements.css";
 @import "@ionic/angular/css/text-alignment.css";
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
-
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
- */
-
-/* @import "@ionic/angular/css/palettes/dark.always.css"; */
 @import "@ionic/angular/css/palettes/dark.class.css";
-/* @import "@ionic/angular/css/palettes/dark.system.css"; */
 
 :root {
   --app-font-size: 17px;
@@ -47,18 +21,21 @@
 body.dark {
   --ion-background-color: #121212;
   --ion-text-color: #ffffff;
-
-  /* Bible verse block: black background with white text so it stands out in dark mode */
   --bible-text-bg: #000000;
   --bible-text-color: #ffffff;
+  --card-bg: #1e1e1e;
+  --surface-bg: #1a1a1a;
 }
 
 body.light {
   --ion-background-color: #ffffff;
   --ion-text-color: #000000;
+  --bible-text-bg: #f8f8f8;
+  --bible-text-color: #555;
+  --card-bg: #ffffff;
+  --surface-bg: #f5f5f5;
 }
 
-/* Action sheet: force white text + icons in dark mode, black in light mode */
 body.dark ion-action-sheet {
   --color: #ffffff;
   --button-color: #ffffff;
@@ -73,12 +50,9 @@ body.light ion-action-sheet {
   --button-background: #ffffff;
 }
 
-/* Alert/Select dialog: force correct colors in dark/light mode.
-   CSS custom properties (--var) pierce shadow DOM; !important handles light DOM overrides. */
 body.dark ion-alert {
   --background: #1e1e1e;
   --color: #ffffff;
-  /* Override primary color inside the alert so selected radio label inherits white */
   --ion-color-primary: #ffffff;
   --ion-color-primary-rgb: 255, 255, 255;
   --ion-color-primary-contrast: #1e1e1e;
@@ -86,7 +60,6 @@ body.dark ion-alert {
   --ion-color-primary-tint: #ffffff;
 }
 
-/* Fallback for any light-DOM label elements inside the alert */
 body.dark .alert-radio-label,
 body.dark .alert-checkbox-label,
 body.dark .alert-title,
@@ -123,8 +96,59 @@ body.light .alert-button {
   color: #000000 !important;
 }
 
+.animate-fade-in {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-check {
+  animation: checkPop 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-stagger > * {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-stagger > *:nth-child(1) { animation-delay: 0s; }
+.animate-stagger > *:nth-child(2) { animation-delay: 0.05s; }
+.animate-stagger > *:nth-child(3) { animation-delay: 0.1s; }
+.animate-stagger > *:nth-child(4) { animation-delay: 0.15s; }
+.animate-stagger > *:nth-child(5) { animation-delay: 0.2s; }
+.animate-stagger > *:nth-child(6) { animation-delay: 0.25s; }
+.animate-stagger > *:nth-child(7) { animation-delay: 0.3s; }
+.animate-stagger > *:nth-child(8) { animation-delay: 0.35s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes checkPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .premium-card {
-  background: rgba(var(--ion-color-step-100-rgb, 255, 255, 255), 0.7);
+  background: var(--ion-color-step-50-rgb) rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(16px) saturate(120%);
   -webkit-backdrop-filter: blur(16px) saturate(120%);
   border: 1px solid rgba(var(--ion-color-step-300-rgb, 200, 200, 200), 0.2);
@@ -153,67 +177,11 @@ body.light .alert-button {
   transform: scale(0.96);
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes checkPop {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.3);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.animate-fade-in {
-  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.animate-check {
-  animation: checkPop 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.animate-stagger > * {
-  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.animate-stagger > *:nth-child(1) { animation-delay: 0s; }
-.animate-stagger > *:nth-child(2) { animation-delay: 0.05s; }
-.animate-stagger > *:nth-child(3) { animation-delay: 0.1s; }
-.animate-stagger > *:nth-child(4) { animation-delay: 0.15s; }
-.animate-stagger > *:nth-child(5) { animation-delay: 0.2s; }
-.animate-stagger > *:nth-child(6) { animation-delay: 0.25s; }
-.animate-stagger > *:nth-child(7) { animation-delay: 0.3s; }
-.animate-stagger > *:nth-child(8) { animation-delay: 0.35s; }
-
 .skeleton-shimmer {
   background: linear-gradient(90deg,
     var(--ion-color-step-50, #f0f0f0) 25%,
     var(--ion-color-step-100, #e0e0e0) 50%,
-    var(--ion-color-step-50, #f0f0f0) 75%
-  );
+    var(--ion-color-step-50, #f0f0f0) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
@@ -225,4 +193,250 @@ ion-segment-button::part(indicator-background) {
 
 ion-tab-button.tab-selected::part(native) {
   transition: color 0.2s ease;
+}
+
+ion-header ion-toolbar {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  --min-height: 52px;
+}
+
+ion-content {
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+}
+
+ion-card {
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin: 0 0 14px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+ion-card:active {
+  transform: scale(0.99);
+}
+
+ion-card-header {
+  padding: 16px 16px 8px;
+}
+
+ion-card-content {
+  padding: 8px 16px 16px;
+}
+
+ion-card-title {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+ion-card-subtitle {
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+ion-item {
+  --min-height: 48px;
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+}
+
+ion-list {
+  background: transparent;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+ion-list ion-item:last-child {
+  --border-width: 0;
+}
+
+ion-searchbar {
+  --border-radius: 12px;
+  --box-shadow: none;
+  padding: 0 0 12px;
+}
+
+.bible-text {
+  font-style: italic;
+  color: var(--bible-text-color, var(--ion-color-medium));
+  font-size: var(--reading-font-size, 15px);
+  line-height: 1.7;
+  padding: 14px 16px;
+  background: var(--bible-text-bg, var(--ion-color-light));
+  border-radius: 12px;
+  white-space: pre-line;
+  border-left: 3px solid var(--ion-color-primary);
+}
+
+ion-badge {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+ion-button {
+  --border-radius: 10px;
+  font-weight: 600;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  min-height: 44px;
+}
+
+ion-button.button-small {
+  min-height: 32px;
+  font-size: 13px;
+}
+
+ion-checkbox {
+  --size: 22px;
+  --border-radius: 6px;
+  --checkmark-width: 3px;
+}
+
+ion-toggle {
+  --handle-width: 22px;
+  --handle-height: 22px;
+  --handle-spacing: 3px;
+}
+
+ion-spinner {
+  --color: var(--ion-color-primary);
+}
+
+ion-toast {
+  --border-radius: 12px;
+  --box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+ion-refresher {
+  --color: var(--ion-color-primary);
+}
+
+ion-back-button {
+  --icon-font-size: 22px;
+  --min-width: 40px;
+}
+
+ion-back-button::part(text) {
+  display: none;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  gap: 8px;
+}
+
+.empty-state ion-icon {
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.empty-state .empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ion-text-color);
+  margin: 0;
+}
+
+.empty-state .empty-subtitle {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 24px;
+  gap: 8px;
+}
+
+.error-state ion-icon {
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.error-state p {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+  margin: 0;
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+.skeleton-block {
+  background: linear-gradient(90deg,
+    var(--ion-color-step-50, #f0f0f0) 25%,
+    var(--ion-color-step-100, #e0e0e0) 50%,
+    var(--ion-color-step-50, #f0f0f0) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.page-header-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ion-text-color);
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ion-color-medium);
+  margin-bottom: 8px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--ion-color-medium);
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ion-text-color);
+}
+
+.progress-track {
+  width: 100%;
+  height: 8px;
+  background: var(--ion-color-step-100, #e0e0e0);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ion-color-primary), var(--ion-color-primary-tint, #6b9fff));
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }

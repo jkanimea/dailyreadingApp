@@ -1,6 +1,6 @@
 import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, ActionSheetController } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnInit } from '@angular/core';
 import { SeriesService } from '../../core/services/series.service';
@@ -18,9 +18,6 @@ import { SharedModule } from '../../shared/shared.module';
         </ion-buttons>
         <ion-title>Select a Series</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="openFeatures()">
-            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
-          </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
@@ -29,43 +26,110 @@ import { SharedModule } from '../../shared/shared.module';
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
-      <div *ngIf="loading" class="ion-text-center ion-padding">
-        <ion-spinner></ion-spinner>
-      </div>
+    <ion-content>
+      @if (loading) {
+        <div style="padding: 8px;">
+          <div class="skeleton-shimmer" style="width:100%;height:120px;border-radius:14px;margin-bottom:16px;"></div>
+          <div class="skeleton-shimmer" style="width:100%;height:120px;border-radius:14px;"></div>
+        </div>
+      }
 
-      <div *ngIf="error" class="ion-text-center">
-        <p class="error-message">{{ error }}</p>
-      </div>
+      @if (error) {
+        <div class="error-state">
+          <ion-icon name="cloud-offline-outline" size="large" color="medium"></ion-icon>
+          <p>{{ error }}</p>
+        </div>
+      }
 
-      <ion-list *ngIf="!loading && series.length > 0">
-        <ion-card *ngFor="let s of series" button (click)="onSelect(s)" class="series-card">
-          <ion-card-header>
-            <ion-card-title>{{ s.name }}</ion-card-title>
-            <ion-card-subtitle *ngIf="s.primaryBook">Based on {{ s.primaryBook.title }}</ion-card-subtitle>
-          </ion-card-header>
-          <ion-card-content>
-            <p>{{ s.description }}</p>
-          </ion-card-content>
-        </ion-card>
-      </ion-list>
+      @if (!loading && series.length > 0) {
+        <div style="padding: 4px 0;">
+          <p class="section-label" style="padding-left: 4px;">Choose a series to read</p>
+          @for (s of series; track s.id) {
+            <div class="series-card" (click)="onSelect(s)">
+              <div class="series-card-icon">
+                <ion-icon name="book-outline"></ion-icon>
+              </div>
+              <div class="series-card-body">
+                <h3>{{ s.name }}</h3>
+                @if (s.primaryBook) {
+                  <p class="series-book">Based on {{ s.primaryBook.title }}</p>
+                }
+                @if (s.description) {
+                  <p class="series-desc">{{ s.description }}</p>
+                }
+              </div>
+              <ion-icon name="chevron-forward" class="series-chevron"></ion-icon>
+            </div>
+          }
+        </div>
+      }
     </ion-content>
   `,
   standalone: false,
   styles: [`
     .series-card {
-      margin-bottom: 16px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      background: var(--card-bg, var(--ion-background-color));
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
-    .error-message { color: var(--ion-color-danger); }
+    .series-card:active {
+      transform: scale(0.99);
+    }
+    .series-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-primary-shade));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .series-card-icon ion-icon {
+      font-size: 24px;
+      color: #fff;
+    }
+    .series-card-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .series-card-body h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 2px;
+      color: var(--ion-text-color);
+    }
+    .series-book {
+      font-size: 13px;
+      color: var(--ion-color-primary);
+      margin: 0 0 4px;
+      font-weight: 500;
+    }
+    .series-desc {
+      font-size: 13px;
+      color: var(--ion-color-medium);
+      margin: 0;
+      line-height: 1.4;
+    }
+    .series-chevron {
+      font-size: 18px;
+      color: var(--ion-color-step-400, #bbb);
+      flex-shrink: 0;
+    }
   `]
 })
 class SeriesPage implements OnInit {
   private router = inject(Router);
   private seriesService = inject(SeriesService);
   private prefs = inject(PreferencesService);
-  private actionSheetCtrl = inject(ActionSheetController);
 
   series: Series[] = [];
   loading = false;
@@ -85,21 +149,6 @@ class SeriesPage implements OnInit {
     } finally {
       this.loading = false;
     }
-  }
-
-  async openFeatures(): Promise<void> {
-    const sheet = await this.actionSheetCtrl.create({
-      header: 'Features',
-      buttons: [
-        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
-        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
-        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
-        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
-        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
-        { text: 'Cancel', role: 'cancel' }
-      ]
-    });
-    await sheet.present();
   }
 
   goToSettings(): void {

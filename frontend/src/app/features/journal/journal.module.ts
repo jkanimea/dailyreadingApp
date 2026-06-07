@@ -13,9 +13,6 @@ import { firstValueFrom } from 'rxjs';
   template: `
     <ion-header class="print-hide">
       <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/today" text=""></ion-back-button>
-        </ion-buttons>
         <ion-title>My Reading Journal — {{ seriesName }}</ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="goToSettings()">
@@ -26,21 +23,35 @@ import { firstValueFrom } from 'rxjs';
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
-      <div *ngIf="loading" class="ion-text-center ion-padding">
-        <ion-spinner></ion-spinner>
-      </div>
+    <ion-content>
+      @if (loading) {
+        <div style="padding: 8px;">
+          <div class="skeleton-shimmer" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></div>
+          <div class="skeleton-shimmer" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></div>
+          <div class="skeleton-shimmer" style="width:100%;height:140px;border-radius:14px;"></div>
+        </div>
+      }
 
-      <div *ngIf="error" class="ion-text-center">
-        <p class="error-message">{{ error }}</p>
-        <ion-button fill="outline" (click)="loadJournal()">Retry</ion-button>
-      </div>
+      @if (error) {
+        <div class="error-state">
+          <ion-icon name="cloud-offline-outline" size="large" color="medium"></ion-icon>
+          <p>{{ error }}</p>
+          <ion-button fill="outline" size="small" (click)="loadJournal()" class="ion-margin-top">
+            <ion-icon slot="start" name="refresh-outline"></ion-icon>
+            Retry
+          </ion-button>
+        </div>
+      }
 
-      <div *ngIf="!loading && !error && entries.length === 0" class="ion-text-center ion-padding">
-        <p>No journal entries yet. Start by marking readings as complete and adding your thoughts.</p>
-      </div>
+      @if (!loading && !error && entries.length === 0) {
+        <div class="empty-state">
+          <ion-icon name="journal-outline" size="large" color="medium"></ion-icon>
+          <p class="empty-title">No journal entries</p>
+          <p class="empty-subtitle">Start by marking readings as complete and adding your thoughts.</p>
+        </div>
+      }
 
-      <div *ngIf="!loading && !error && entries.length > 0">
+      @if (!loading && !error && entries.length > 0) {
         <div class="action-buttons print-hide">
           <ion-button fill="outline" (click)="toggleSelectAll()">
             <ion-icon [name]="allSelected ? 'checkbox-outline' : 'square-outline'" slot="start"></ion-icon>
@@ -50,49 +61,62 @@ import { firstValueFrom } from 'rxjs';
             <ion-icon name="print-outline" slot="start"></ion-icon>
             Print
           </ion-button>
-          <ion-button fill="outline" (click)="shareJournal()" *ngIf="canShare" [disabled]="selectedCount === 0">
-            <ion-icon name="share-outline" slot="start"></ion-icon>
-            Share{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
-          </ion-button>
+          @if (canShare) {
+            <ion-button fill="outline" (click)="shareJournal()" [disabled]="selectedCount === 0">
+              <ion-icon name="share-outline" slot="start"></ion-icon>
+              Share{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
+            </ion-button>
+          }
         </div>
 
         <div class="subheader">
           Daily Reading — Series {{ seriesId }} — {{ seriesName }}
         </div>
 
-        <div *ngFor="let entry of entries" class="journal-entry" [class.print-hide]="!isSelected(entry.readingId)">
-          <ion-card>
-            <div class="journal-entry-header" (click)="toggleEntry(entry.readingId)">
+        @for (entry of entries; track entry.readingId) {
+          <div class="journal-card" [class.print-hide]="!isSelected(entry.readingId)">
+            <div class="journal-card-header" (click)="toggleEntry(entry.readingId)">
               <ion-checkbox (click)="$event.stopPropagation()" (ionChange)="toggleSelected(entry.readingId)" [checked]="isSelected(entry.readingId)" class="entry-checkbox"></ion-checkbox>
-              <div class="header-body">
-                <div class="title-row">
-                  <ion-card-title>{{ getMonthName(entry.month) }} {{ entry.day }}</ion-card-title>
-                  <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'" class="completion-badge print-hide">
+              <div class="journal-card-body">
+                <div class="journal-title-row">
+                  <span class="journal-date">{{ getMonthName(entry.month) }} {{ entry.day }}</span>
+                  <ion-badge [color]="entry.isCompleted ? 'success' : 'medium'" class="journal-badge print-hide">
                     {{ entry.isCompleted ? 'Completed' : 'Not Completed' }}
                   </ion-badge>
                 </div>
-                <ion-card-subtitle>{{ entry.bibleReading }} — {{ entry.primaryBookPageRange }}</ion-card-subtitle>
+                <span class="journal-subtitle">{{ entry.bibleReading }} — {{ entry.primaryBookPageRange }}</span>
               </div>
-              <ion-icon [name]="isExpanded(entry.readingId) ? 'chevron-up' : 'chevron-down'" class="entry-chevron"></ion-icon>
+              <ion-icon [name]="isExpanded(entry.readingId) ? 'chevron-up' : 'chevron-down'" class="journal-chevron"></ion-icon>
             </div>
 
-            <ion-card-content *ngIf="isExpanded(entry.readingId)">
-              <div *ngIf="entry.secondaryBookPageRange" class="secondary-range">
-                {{ entry.secondaryBookPageRange }}
+            @if (isExpanded(entry.readingId)) {
+              <div class="journal-card-body-content">
+                @if (entry.secondaryBookPageRange) {
+                  <div class="journal-secondary">
+                    {{ entry.secondaryBookPageRange }}
+                  </div>
+                }
+                @if (entry.notes) {
+                  <div class="journal-notes">{{ entry.notes }}</div>
+                } @else {
+                  <div class="journal-no-notes">No notes written</div>
+                }
+                @if (entry.notes) {
+                  <div class="journal-actions print-hide">
+                    <ion-button fill="clear" size="small" [disabled]="summarizingStates.get(entry.readingId)" (click)="onSummarize(entry.readingId, entry.notes!)">
+                      <ion-icon slot="start" name="bulb-outline"></ion-icon>
+                      {{ summarizingStates.get(entry.readingId) ? 'Summarizing...' : 'AI Summarize' }}
+                    </ion-button>
+                    @if (summarizingStates.get(entry.readingId)) {
+                      <ion-spinner name="dots" size="small"></ion-spinner>
+                    }
+                  </div>
+                }
               </div>
-              <div *ngIf="entry.notes" class="notes-content">{{ entry.notes }}</div>
-              <div *ngIf="!entry.notes" class="no-notes">No notes written</div>
-              <div *ngIf="entry.notes" class="summarize-actions print-hide">
-                <ion-button fill="clear" size="small" [disabled]="summarizingStates.get(entry.readingId)" (click)="onSummarize(entry.readingId, entry.notes!)">
-                  <ion-icon slot="start" name="bulb-outline"></ion-icon>
-                  {{ summarizingStates.get(entry.readingId) ? 'Summarizing...' : 'AI Summarize' }}
-                </ion-button>
-                <ion-spinner *ngIf="summarizingStates.get(entry.readingId)" name="dots" size="small"></ion-spinner>
-              </div>
-            </ion-card-content>
-          </ion-card>
-        </div>
-      </div>
+            }
+          </div>
+        }
+      }
     </ion-content>
   `,
   standalone: false,
@@ -109,10 +133,15 @@ import { firstValueFrom } from 'rxjs';
       gap: 8px;
       margin-bottom: 16px;
     }
-    .journal-entry {
-      margin-bottom: 16px;
+    .journal-card {
+      background: var(--card-bg, var(--ion-background-color));
+      border-radius: 14px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
     }
-    .journal-entry-header {
+    .journal-card-header {
       display: flex;
       align-items: flex-start;
       gap: 12px;
@@ -123,58 +152,73 @@ import { firstValueFrom } from 'rxjs';
       margin-top: 2px;
       --size: 20px;
     }
-    .header-body {
+    .journal-card-body {
       flex: 1;
       min-width: 0;
     }
-    .header-body ion-card-title {
-      --color: var(--ion-text-color);
-    }
-    .entry-chevron {
-      font-size: 20px;
-      color: var(--ion-color-medium);
-      margin-top: 4px;
-      flex-shrink: 0;
-    }
-    .title-row {
+    .journal-title-row {
       display: flex;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
+      margin-bottom: 2px;
     }
-    .completion-badge {
-      font-size: 11px;
+    .journal-date {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ion-text-color);
     }
-    .secondary-range {
-      font-size: 14px;
+    .journal-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .journal-subtitle {
+      font-size: 13px;
+      color: var(--ion-color-medium);
+      display: block;
+    }
+    .journal-chevron {
+      font-size: 20px;
+      color: var(--ion-color-step-400, #bbb);
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .journal-card-body-content {
+      padding: 0 16px 16px;
+    }
+    .journal-secondary {
+      font-size: 13px;
       color: var(--ion-color-medium);
       margin-bottom: 8px;
       font-style: italic;
     }
-    .notes-content {
+    .journal-notes {
       white-space: pre-wrap;
-      line-height: 1.6;
+      line-height: 1.7;
       font-size: 15px;
+      color: var(--ion-text-color);
     }
-    .no-notes {
+    .journal-no-notes {
       color: var(--ion-color-medium);
       font-style: italic;
       font-size: 14px;
+      padding: 4px 0;
     }
-    .summarize-actions {
+    .journal-actions {
       display: flex;
       align-items: center;
       gap: 8px;
       margin-top: 12px;
       padding-top: 12px;
-      border-top: 1px solid var(--ion-color-light);
+      border-top: 1px solid var(--ion-color-step-100, #eee);
     }
     @media print {
       ion-header, ion-footer, .print-hide { display: none !important; }
       ion-content { --padding-top: 0; --padding-bottom: 0; }
-      .journal-entry { break-inside: avoid; page-break-inside: avoid; margin-bottom: 8px; }
-      .journal-entry-header { padding: 8px 12px; }
-      ion-card-content { --padding-top: 4px; --padding-bottom: 8px; --padding-start: 12px; --padding-end: 12px; }
+      .journal-card { break-inside: avoid; page-break-inside: avoid; margin-bottom: 8px; }
+      .journal-card-header { padding: 8px 12px; }
+      .journal-card-body-content { padding: 4px 12px 8px; }
     }
   `]
 })

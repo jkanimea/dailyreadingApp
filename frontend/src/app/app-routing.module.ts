@@ -14,18 +14,8 @@ const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
-    path: 'today',
-    loadChildren: () => import('./features/today/today.module').then(m => m.TodayModule),
-    canActivate: [AuthGuard]
-  },
-  {
     path: 'reading/:id',
     loadChildren: () => import('./features/reading-detail/reading-detail.module').then(m => m.ReadingDetailModule),
-    canActivate: [AuthGuard]
-  },
-  {
-    path: 'calendar',
-    loadChildren: () => import('./features/calendar/calendar.module').then(m => m.CalendarModule),
     canActivate: [AuthGuard]
   },
   {
@@ -49,11 +39,6 @@ const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
-    path: 'journal',
-    loadChildren: () => import('./features/journal/journal.module').then(m => m.JournalModule),
-    canActivate: [AuthGuard]
-  },
-  {
     path: 'account',
     loadChildren: () => import('./features/account/account.module').then(m => m.AccountModule),
     canActivate: [AuthGuard]
@@ -63,8 +48,16 @@ const routes: Routes = [
     loadChildren: () => import('./features/admin/admin.module').then(m => m.AdminModule),
     canActivate: [AdminGuard]
   },
-  { path: '', redirectTo: '/today', pathMatch: 'full' },
-  { path: '**', redirectTo: '/today' }
+  {
+    path: 'tabs',
+    loadChildren: () => import('./features/tabs/tabs.module').then(m => m.TabsModule),
+    canActivate: [AuthGuard]
+  },
+  { path: 'today', redirectTo: '/tabs/today', pathMatch: 'full' },
+  { path: 'calendar', redirectTo: '/tabs/calendar', pathMatch: 'full' },
+  { path: 'journal', redirectTo: '/tabs/journal', pathMatch: 'full' },
+  { path: '', redirectTo: '/tabs/today', pathMatch: 'full' },
+  { path: '**', redirectTo: '/tabs/today' }
 ];
 
 @NgModule({

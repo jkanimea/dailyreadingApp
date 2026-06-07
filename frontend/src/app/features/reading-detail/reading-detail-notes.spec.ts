@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { IonicModule, ActionSheetController, AlertController, NavController } from '@ionic/angular';
+import { IonicModule, AlertController, NavController } from '@ionic/angular';
 import { BehaviorSubject, of, throwError, firstValueFrom } from 'rxjs';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
@@ -18,7 +18,6 @@ describe('ReadingDetailPage — notes', () => {
   let mockSeriesService: any;
   let mockPrefs: any;
   let mockRouter: any;
-  let mockActionSheet: any;
   let mockAlertCtrl: any;
   let paramMapSubject: BehaviorSubject<any>;
 
@@ -73,12 +72,6 @@ describe('ReadingDetailPage — notes', () => {
       navigate: jest.fn().mockResolvedValue(true)
     };
 
-    mockActionSheet = {
-      create: jest.fn().mockResolvedValue({
-        present: jest.fn().mockResolvedValue(undefined)
-      })
-    };
-
     mockAlertCtrl = {
       create: jest.fn().mockResolvedValue({
         present: jest.fn().mockResolvedValue(undefined)
@@ -94,7 +87,6 @@ describe('ReadingDetailPage — notes', () => {
         { provide: SeriesService, useValue: mockSeriesService },
         { provide: PreferencesService, useValue: mockPrefs },
         { provide: Router, useValue: mockRouter },
-        { provide: ActionSheetController, useValue: mockActionSheet },
         { provide: AlertController, useValue: mockAlertCtrl },
         { provide: NavController, useValue: { navigateRoot: jest.fn(), push: jest.fn(), back: jest.fn() } },
         { provide: ActivatedRoute, useValue: { paramMap: paramMapSubject } },
@@ -170,7 +162,7 @@ describe('ReadingDetailPage — notes', () => {
       component.notes = 'Some notes';
       component.showNotes = true;
       fixture.detectChanges();
-      const btn: HTMLElement = fixture.nativeElement.querySelector('.summarize-actions ion-button');
+      const btn: HTMLElement = fixture.nativeElement.querySelector('.notes-ai ion-button');
       expect(btn).toBeTruthy();
     });
 
@@ -178,7 +170,7 @@ describe('ReadingDetailPage — notes', () => {
       component.showNotes = true;
       component.notes = '';
       fixture.detectChanges();
-      const el = fixture.nativeElement.querySelector('.summarize-actions');
+      const el = fixture.nativeElement.querySelector('.notes-ai');
       expect(el).toBeFalsy();
     });
 

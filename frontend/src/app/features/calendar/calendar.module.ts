@@ -1,6 +1,6 @@
 import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, ActionSheetController } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -13,14 +13,8 @@ import { SharedModule } from '../../shared/shared.module';
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/today" text=""></ion-back-button>
-        </ion-buttons>
-        <ion-title><ion-icon name="calendar-outline"></ion-icon> Calendar</ion-title>
+        <ion-title>Calendar</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="openFeatures()">
-            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
-          </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
@@ -44,9 +38,11 @@ import { SharedModule } from '../../shared/shared.module';
         <span *ngFor="let name of dayNames">{{ name }}</span>
       </div>
 
-      <div *ngIf="loading" class="ion-text-center ion-padding">
-        <ion-spinner></ion-spinner>
-      </div>
+      @if (loading) {
+        <div style="padding: 16px 8px;">
+          <div class="skeleton-shimmer" style="width:100%;height:300px;border-radius:16px;"></div>
+        </div>
+      }
 
       <div class="calendar-grid" *ngIf="!loading">
         <div *ngFor="let day of days"
@@ -66,21 +62,28 @@ import { SharedModule } from '../../shared/shared.module';
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 4px;
+      padding: 8px 4px 4px;
+    }
+    .month-header ion-title {
+      font-size: 17px;
+      font-weight: 700;
+      padding: 0;
     }
     .day-names {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       text-align: center;
-      font-weight: 600;
-      font-size: 12px;
+      font-weight: 700;
+      font-size: 11px;
       color: var(--ion-color-medium);
-      padding: 4px 0;
+      padding: 8px 4px 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .calendar-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 2px;
+      gap: 4px;
       padding: 4px;
     }
     .calendar-cell {
@@ -88,20 +91,28 @@ import { SharedModule } from '../../shared/shared.module';
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 14px;
+      font-weight: 500;
       cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .calendar-cell:not(.empty):active {
+      transform: scale(0.92);
     }
     .calendar-cell.today {
       background: var(--ion-color-primary);
       color: var(--ion-color-primary-contrast);
       font-weight: 700;
+      box-shadow: 0 2px 8px rgba(var(--ion-color-primary-rgb), 0.3);
     }
     .calendar-cell.completed {
-      background: var(--ion-color-success-tint, #d4edda);
+      background: rgba(var(--ion-color-success-rgb, 45, 211, 111), 0.15);
+      color: var(--ion-text-color);
+      font-weight: 600;
     }
     .calendar-cell.bookmarked {
-      border: 2px solid var(--ion-color-warning);
+      box-shadow: 0 0 0 2px var(--ion-color-warning);
     }
     .calendar-cell.empty {
       pointer-events: none;
@@ -112,7 +123,6 @@ import { SharedModule } from '../../shared/shared.module';
 class CalendarPage extends BaseCalendarPageComponent {
   private router = inject(Router);
   private prefs = inject(PreferencesService);
-  private actionSheetCtrl = inject(ActionSheetController);
 
   dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   private seriesId = 1;
@@ -120,20 +130,6 @@ class CalendarPage extends BaseCalendarPageComponent {
   override ionViewWillEnter(): void {
     this.seriesId = this.prefs.getSeriesId();
     super.ionViewWillEnter();
-  }
-
-  async openFeatures(): Promise<void> {
-    const sheet = await this.actionSheetCtrl.create({
-      header: 'Features',
-      buttons: [
-        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
-        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
-        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
-        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
-        { text: 'Cancel', role: 'cancel' }
-      ]
-    });
-    await sheet.present();
   }
 
   goToSettings(): void {

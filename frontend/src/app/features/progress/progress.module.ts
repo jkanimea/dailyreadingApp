@@ -1,6 +1,6 @@
 import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, ActionSheetController } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { SeriesService } from '../../core/services/series.service';
@@ -21,13 +21,10 @@ interface SeriesStats {
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/today" text=""></ion-back-button>
+          <ion-back-button defaultHref="/tabs/more" text=""></ion-back-button>
         </ion-buttons>
         <ion-title>Progress</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="openFeatures()">
-            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
-          </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
@@ -37,77 +34,118 @@ interface SeriesStats {
     </ion-header>
 
     <ion-content class="ion-padding">
-      <div *ngIf="loading" class="ion-text-center ion-padding">
-        <ion-spinner></ion-spinner>
-      </div>
+      @if (loading) {
+        <div style="padding: 8px 0;">
+          <div class="skeleton-shimmer" style="width:100%;height:160px;border-radius:14px;margin-bottom:16px;"></div>
+          <div class="skeleton-shimmer" style="width:100%;height:160px;border-radius:14px;"></div>
+        </div>
+      }
 
-      <div *ngIf="error" class="ion-text-center">
-        <p class="error-message">{{ error }}</p>
-      </div>
+      @if (error) {
+        <div class="error-state">
+          <ion-icon name="cloud-offline-outline" size="large" color="medium"></ion-icon>
+          <p>{{ error }}</p>
+        </div>
+      }
 
-      <div *ngIf="!loading && stats.length === 0 && !error" class="ion-text-center ion-padding">
-        <p>No progress data available.</p>
-      </div>
+      @if (!loading && stats.length === 0 && !error) {
+        <div class="empty-state">
+          <ion-icon name="analytics-outline" size="large" color="medium"></ion-icon>
+          <p class="empty-title">No progress data</p>
+          <p class="empty-subtitle">Start reading to track your progress across series.</p>
+        </div>
+      }
 
-      <ion-card *ngFor="let s of stats" class="stat-card">
-        <ion-card-header>
-          <ion-card-title>{{ s.series.name }}</ion-card-title>
-        </ion-card-header>
-        <ion-card-content>
-          <div class="stat-row">
-            <span class="stat-label">Day</span>
-            <span class="stat-value">{{ s.completedCount }}</span>
+      @for (s of stats; track s.series.id) {
+        <div class="stats-card">
+          <div class="stats-card-header">
+            <div class="stats-icon">
+              <ion-icon name="book-outline"></ion-icon>
+            </div>
+            <div class="stats-info">
+              <h3>{{ s.series.name }}</h3>
+              <p>{{ s.series.primaryBook?.title }}</p>
+            </div>
           </div>
-          <div class="stat-row">
-            <span class="stat-label">Completed</span>
-            <span class="stat-value">{{ displayPercentage(s) }}%</span>
+          <div class="stats-body">
+            <div class="stat-row">
+              <span class="stat-label">Day</span>
+              <span class="stat-value">{{ s.completedCount }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Completed</span>
+              <span class="stat-value">{{ displayPercentage(s) }}%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" [style.width.%]="s.percentage"></div>
+            </div>
+            <div class="stat-row" style="margin-top: 10px;">
+              <span class="stat-label">Current Streak</span>
+              <span class="stat-value">{{ s.streak }} day{{ s.streak !== 1 ? 's' : '' }}</span>
+            </div>
           </div>
-          <div class="progress-track">
-            <div class="progress-fill" [style.width.%]="s.percentage"></div>
-          </div>
-          <div class="stat-row ion-margin-top">
-            <span class="stat-label">Current Streak</span>
-            <span class="stat-value">{{ s.streak }} day{{ s.streak !== 1 ? 's' : '' }}</span>
-          </div>
-        </ion-card-content>
-      </ion-card>
+        </div>
+      }
     </ion-content>
   `,
   standalone: false,
   styles: [`
-    .stat-card { margin-bottom: 16px; border-radius: 12px; }
-    .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
-    .stat-label { font-size: 14px; color: var(--ion-color-medium); }
-    .stat-value { font-size: 16px; font-weight: 600; }
-    .progress-track { width: 100%; height: 10px; background: var(--ion-color-light); border-radius: 5px; overflow: hidden; margin-top: 8px; }
-    .progress-fill { height: 100%; background: var(--ion-color-primary); border-radius: 5px; transition: width 0.5s; }
-    .error-message { color: var(--ion-color-danger); }
+    .stats-card {
+      background: var(--card-bg, var(--ion-background-color));
+      border-radius: 14px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
+    }
+    .stats-card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 16px 0;
+    }
+    .stats-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-primary-shade));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .stats-icon ion-icon {
+      font-size: 22px;
+      color: #fff;
+    }
+    .stats-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .stats-info h3 {
+      font-size: 16px;
+      font-weight: 700;
+      margin: 0 0 2px;
+      color: var(--ion-text-color);
+    }
+    .stats-info p {
+      font-size: 13px;
+      color: var(--ion-color-medium);
+      margin: 0;
+    }
+    .stats-body {
+      padding: 14px 16px 16px;
+    }
   `]
 })
 class ProgressPage {
   private router = inject(Router);
   private seriesService = inject(SeriesService);
   private progressService = inject(ProgressService);
-  private actionSheetCtrl = inject(ActionSheetController);
 
   stats: SeriesStats[] = [];
   loading = false;
   error?: string;
-
-  async openFeatures(): Promise<void> {
-    const sheet = await this.actionSheetCtrl.create({
-      header: 'Features',
-      buttons: [
-        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
-        { text: 'Progress', icon: 'trending-up-outline', handler: () => {} },
-        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
-        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
-        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
-        { text: 'Cancel', role: 'cancel' }
-      ]
-    });
-    await sheet.present();
-  }
 
   goToSettings(): void {
     this.router.navigate(['/settings']);

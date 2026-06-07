@@ -1,6 +1,6 @@
 import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, ActionSheetController } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { ReadingService } from '../../core/services/reading.service';
@@ -11,14 +11,8 @@ import { SharedModule } from '../../shared/shared.module';
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-back-button defaultHref="/series" text=""></ion-back-button>
-        </ion-buttons>
         <ion-title>Today's Reading</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="openFeatures()">
-            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
-          </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
@@ -27,25 +21,76 @@ import { SharedModule } from '../../shared/shared.module';
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
-      <div *ngIf="loading" class="ion-text-center">
-        <ion-spinner></ion-spinner>
-        <p>Loading today's reading...</p>
+      <div *ngIf="loading" class="ion-text-center" style="margin-top: 48px;">
+        <div class="skeleton-title shimmer"></div>
+        <div class="skeleton-line shimmer" style="width: 70%; margin-top: 16px;"></div>
+        <div class="skeleton-line shimmer" style="width: 50%; margin-top: 8px;"></div>
       </div>
-      <div *ngIf="error" class="ion-text-center">
-        <p class="error-message">{{ error }}</p>
+      <div *ngIf="error" class="empty-state">
+        <ion-icon name="cloud-offline-outline" size="large" color="medium"></ion-icon>
+        <p class="empty-title">Unable to load reading</p>
+        <p class="empty-text">{{ error }}</p>
+        <ion-button fill="outline" (click)="loadToday()" class="ion-margin-top">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon>
+          Retry
+        </ion-button>
       </div>
     </ion-content>
   `,
   standalone: false,
   styles: [`
-    .error-message { color: var(--ion-color-danger); }
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-top: 64px;
+      text-align: center;
+      gap: 8px;
+    }
+    .empty-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--ion-text-color);
+      margin: 12px 0 4px;
+    }
+    .empty-text {
+      font-size: 14px;
+      color: var(--ion-color-medium);
+      margin: 0;
+      max-width: 260px;
+      line-height: 1.5;
+    }
+    .skeleton-title {
+      width: 200px;
+      height: 24px;
+      margin: 0 auto;
+      border-radius: 6px;
+    }
+    .skeleton-line {
+      height: 16px;
+      margin-left: auto;
+      margin-right: auto;
+      border-radius: 4px;
+    }
+    .shimmer {
+      background: linear-gradient(90deg,
+        var(--ion-color-step-50, #f0f0f0) 25%,
+        var(--ion-color-step-100, #e0e0e0) 50%,
+        var(--ion-color-step-50, #f0f0f0) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
   `]
 })
 class TodayPage {
   private router = inject(Router);
   private readingService = inject(ReadingService);
   private prefs = inject(PreferencesService);
-  private actionSheetCtrl = inject(ActionSheetController);
 
   loading = false;
   error?: string;
@@ -54,26 +99,11 @@ class TodayPage {
     this.loadToday();
   }
 
-  async openFeatures(): Promise<void> {
-    const sheet = await this.actionSheetCtrl.create({
-      header: 'Features',
-      buttons: [
-        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
-        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
-        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
-        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
-        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
-        { text: 'Cancel', role: 'cancel' }
-      ]
-    });
-    await sheet.present();
-  }
-
   goToSettings(): void {
     this.router.navigate(['/settings']);
   }
 
-  private async loadToday(): Promise<void> {
+  async loadToday(): Promise<void> {
     if (this.loading) return;
     this.loading = true;
     this.error = undefined;

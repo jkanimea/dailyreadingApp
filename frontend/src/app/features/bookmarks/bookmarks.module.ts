@@ -1,6 +1,6 @@
 import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule, ActionSheetController } from '@ionic/angular';
+import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { BookmarkService } from '../../core/services/bookmark.service';
@@ -17,9 +17,6 @@ import { SharedModule } from '../../shared/shared.module';
         </ion-buttons>
         <ion-title>Bookmarks</ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="openFeatures()">
-            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
-          </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
@@ -28,69 +25,117 @@ import { SharedModule } from '../../shared/shared.module';
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
-      <div *ngIf="loading" class="ion-text-center ion-padding">
-        <ion-spinner></ion-spinner>
-      </div>
+    <ion-content>
+      @if (loading) {
+        <div style="padding: 8px;">
+          <div class="skeleton-shimmer" style="width:100%;height:72px;border-radius:12px;margin-bottom:12px;"></div>
+          <div class="skeleton-shimmer" style="width:100%;height:72px;border-radius:12px;margin-bottom:12px;"></div>
+          <div class="skeleton-shimmer" style="width:100%;height:72px;border-radius:12px;"></div>
+        </div>
+      }
 
-      <div *ngIf="error" class="ion-text-center">
-        <p class="error-message">{{ error }}</p>
-      </div>
+      @if (error) {
+        <div class="error-state">
+          <ion-icon name="cloud-offline-outline" size="large" color="medium"></ion-icon>
+          <p>{{ error }}</p>
+        </div>
+      }
 
-      <div *ngIf="!loading && bookmarks.length === 0 && !error" class="ion-text-center ion-padding empty-state">
-        <ion-icon name="bookmark-outline" size="large" color="medium"></ion-icon>
-        <p>No bookmarks yet.</p>
-        <p class="hint-text">Bookmark readings from the reading detail page.</p>
-      </div>
+      @if (!loading && bookmarks.length === 0 && !error) {
+        <div class="empty-state">
+          <ion-icon name="bookmark-outline" size="large" color="medium"></ion-icon>
+          <p class="empty-title">No bookmarks yet</p>
+          <p class="empty-subtitle">Bookmark readings from the reading detail page to find them here.</p>
+        </div>
+      }
 
-      <ion-list *ngIf="bookmarks.length > 0">
-        <ion-item-sliding *ngFor="let b of bookmarks">
-          <ion-item button (click)="goToReading(b.readingId)">
-            <ion-label>
-              <h2>{{ b.bibleReading }}</h2>
-              <p>{{ formatDate(b.month, b.day) }}</p>
-            </ion-label>
-            <ion-icon slot="end" name="bookmark" color="warning"></ion-icon>
-          </ion-item>
-          <ion-item-options side="end">
-            <ion-item-option color="danger" (click)="removeBookmark(b)">
-              <ion-icon slot="icon-only" name="trash"></ion-icon>
-            </ion-item-option>
-          </ion-item-options>
-        </ion-item-sliding>
-      </ion-list>
+      @if (bookmarks.length > 0) {
+        <div class="bookmarks-list">
+          @for (b of bookmarks; track b.readingId) {
+            <div class="bookmark-card" (click)="goToReading(b.readingId)">
+              <div class="bookmark-body">
+                <h3 class="bookmark-title">{{ b.bibleReading }}</h3>
+                <p class="bookmark-date">{{ formatDate(b.month, b.day) }}</p>
+              </div>
+              <div class="bookmark-actions">
+                <ion-icon name="bookmark" color="warning"></ion-icon>
+                <button class="delete-btn" (click)="$event.stopPropagation(); removeBookmark(b)">
+                  <ion-icon name="trash-outline" color="medium"></ion-icon>
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
     </ion-content>
   `,
   standalone: false,
   styles: [`
-    .empty-state { margin-top: 40px; }
-    .empty-state ion-icon { margin-bottom: 16px; }
-    .hint-text { font-size: 14px; color: var(--ion-color-medium); margin-top: 8px; }
-    .error-message { color: var(--ion-color-danger); }
+    .bookmarks-list {
+      padding: 4px 0;
+    }
+    .bookmark-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      background: var(--card-bg, var(--ion-background-color));
+      border-radius: 14px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .bookmark-card:active {
+      transform: scale(0.99);
+    }
+    .bookmark-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .bookmark-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 2px;
+      color: var(--ion-text-color);
+    }
+    .bookmark-date {
+      font-size: 13px;
+      color: var(--ion-color-medium);
+      margin: 0;
+    }
+    .bookmark-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .bookmark-actions ion-icon {
+      font-size: 20px;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    .delete-btn:hover {
+      opacity: 1;
+    }
   `]
 })
 class BookmarksPage {
   private router = inject(Router);
   private bookmarkService = inject(BookmarkService);
-  private actionSheetCtrl = inject(ActionSheetController);
 
   bookmarks: BookmarkDto[] = [];
   loading = false;
   error?: string;
-
-  async openFeatures(): Promise<void> {
-    const sheet = await this.actionSheetCtrl.create({
-      header: 'Features',
-      buttons: [
-        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
-        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
-        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
-        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
-        { text: 'Cancel', role: 'cancel' }
-      ]
-    });
-    await sheet.present();
-  }
 
   goToSettings(): void {
     this.router.navigate(['/settings']);

@@ -18,15 +18,12 @@ import { firstValueFrom, Subscription } from 'rxjs';
     <ion-header>
       <ion-toolbar>
         <ion-buttons slot="start">
-          <ion-back-button defaultHref="/today" text=""></ion-back-button>
+          <ion-back-button defaultHref="/tabs/today" text=""></ion-back-button>
         </ion-buttons>
         <ion-title>
-          {{ detail?.seriesName ?? 'Reading' }} - Series {{ detail?.seriesId }}
+          {{ detail?.seriesName ?? 'Reading' }}
         </ion-title>
         <ion-buttons slot="end">
-          <ion-button (click)="openFeatures()">
-            <ion-icon slot="icon-only" name="grid-outline"></ion-icon>
-          </ion-button>
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
@@ -37,61 +34,74 @@ import { firstValueFrom, Subscription } from 'rxjs';
 
     <ion-content class="ion-padding">
       @if (loading) {
-        <div class="ion-text-center">
-          <ion-spinner></ion-spinner>
+        <div class="skeleton-container">
+          <div class="skeleton-shimmer loading-line" style="width: 60%; height: 16px;"></div>
+          <div class="skeleton-shimmer loading-line" style="width: 40%; height: 14px; margin-top: 8px;"></div>
+          <div class="skeleton-shimmer loading-block" style="margin-top: 20px; height: 120px;"></div>
+          <div class="skeleton-shimmer loading-line" style="width: 90%; height: 14px; margin-top: 16px;"></div>
+          <div class="skeleton-shimmer loading-line" style="width: 75%; height: 14px; margin-top: 8px;"></div>
+          <div class="skeleton-shimmer loading-line" style="width: 85%; height: 14px; margin-top: 8px;"></div>
         </div>
       }
 
       @if (error) {
-        <div class="ion-text-center">
-          <p class="error-message">{{ error }}</p>
+        <div class="error-state">
+          <ion-icon name="cloud-offline-outline" size="large" color="medium"></ion-icon>
+          <p>{{ error }}</p>
         </div>
       }
 
       @if (detail && !loading) {
-        <div>
-          <div class="reading-header-row ion-margin-bottom">
-            <div class="date-section">
-              {{ formatDate(detail.month, detail.day) }} — {{ cleanPageRange(detail.primaryBookPageRange) }}
+        <div class="reading-content">
+          <!-- Header info row -->
+          <div class="reading-meta">
+            <div class="meta-primary">
+              <span class="meta-date">{{ formatDate(detail.month, detail.day) }}</span>
+              <span class="meta-dash">—</span>
+              <span class="meta-range">{{ cleanPageRange(detail.primaryBookPageRange) }}</span>
             </div>
-            @if (completed) {
-              <ion-badge color="success" class="completed-badge">
-                <ion-icon name="checkmark-circle"></ion-icon> Done
-              </ion-badge>
-            }
-            @if (detail.bibleReading) {
-              <ion-select [value]="translation" (ionChange)="onTranslationChange($event)" interface="popover" class="version-select">
-                <ion-select-option value="KJV">KJV</ion-select-option>
-                <ion-select-option value="ASV">ASV</ion-select-option>
-                <ion-select-option value="WEB">WEB</ion-select-option>
-              </ion-select>
-            }
+            <div class="meta-actions">
+              @if (completed) {
+                <ion-badge color="success" class="completed-badge">
+                  <ion-icon name="checkmark-circle"></ion-icon> Done
+                </ion-badge>
+              }
+              @if (detail.bibleReading) {
+                <ion-select [value]="translation" (ionChange)="onTranslationChange($event)" interface="popover" class="version-select">
+                  <ion-select-option value="KJV">KJV</ion-select-option>
+                  <ion-select-option value="ASV">ASV</ion-select-option>
+                  <ion-select-option value="WEB">WEB</ion-select-option>
+                </ion-select>
+              }
+            </div>
           </div>
 
+          <!-- Bible reading section -->
           @if (detail.bibleReading) {
-            <div class="ion-margin-bottom">
+            <div class="section-card">
               @if (bibleSections.length > 0) {
                 @for (section of bibleSections; track section.title) {
                   <h3 class="bible-section-title">{{ section.title }}</h3>
-                  <p class="bible-text">{{ section.verses.join('\n\n') }}</p>
+                  <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
                 }
               } @else {
                 @if (detail.fullTextBible) {
-                  <p class="bible-text">{{ detail.fullTextBible }}</p>
+                  <div class="bible-text">{{ detail.fullTextBible }}</div>
                 } @else {
-                  <p class="empty-bible-text">
-                    Bible text not available for {{ translation }}.
-                    <ion-button fill="clear" size="small" (click)="onSeedBible()" [disabled]="seeding">
+                  <div class="empty-bible-text">
+                    <p>Bible text not available for {{ translation }}.</p>
+                    <ion-button fill="outline" size="small" (click)="onSeedBible()" [disabled]="seeding">
                       {{ seeding ? 'Downloading...' : 'Download ' + translation + ' data' }}
                     </ion-button>
-                  </p>
+                  </div>
                 }
               }
             </div>
           }
 
-          <div [style.font-size]="'var(--reading-font-size, 15px)'">
-            <p>
+          <!-- Primary reading text -->
+          <div class="section-card reading-card">
+            <div class="reading-text">
               @for (seg of getParagraphSegments(detail.fullTextPrimary); track $index) {
                 <span class="egw-text">
                   @if (seg.isRef) {
@@ -101,14 +111,15 @@ import { firstValueFrom, Subscription } from 'rxjs';
                   }
                 </span>
               }
-            </p>
+            </div>
           </div>
 
+          <!-- Secondary reading text -->
           @defer {
             @if (detail.fullTextSecondary) {
-              <div [style.font-size]="'var(--reading-font-size, 15px)'" class="ion-margin-top">
+              <div class="section-card reading-card">
                 <h2 class="companion-heading">Companion: {{ detail.secondaryBookPageRange }}</h2>
-                <p>
+                <div class="reading-text">
                   @for (seg of getParagraphSegments(detail.fullTextSecondary); track $index) {
                     <span class="egw-text">
                       @if (seg.isRef) {
@@ -118,31 +129,33 @@ import { firstValueFrom, Subscription } from 'rxjs';
                       }
                     </span>
                   }
-                </p>
+                </div>
               </div>
             }
           } @placeholder {
-            <ion-skeleton-text animated style="width:100%;height:60px"></ion-skeleton-text>
+            <div class="skeleton-shimmer" style="width:100%;height:60px;border-radius:12px;"></div>
           }
 
-          <div class="ion-margin-top ion-padding-top complete-checkbox">
-            <ion-checkbox [checked]="completed" (ionChange)="toggleComplete($event)">
+          <!-- Complete checkbox -->
+          <div class="complete-section">
+            <ion-checkbox [checked]="completed" (ionChange)="toggleComplete($event)" labelPlacement="start">
               I have read this passage
             </ion-checkbox>
           </div>
 
+          <!-- Journal section -->
           @if (completed || notes) {
-            <div class="ion-margin-top journal-section">
-              <ion-item lines="none" button (click)="showNotes = !showNotes">
-                <ion-icon [name]="showNotes ? 'chevron-up-outline' : 'chevron-down-outline'" slot="start"></ion-icon>
-                <ion-label>My Journal Notes</ion-label>
+            <div class="journal-section">
+              <button class="journal-toggle" (click)="showNotes = !showNotes">
+                <ion-icon [name]="showNotes ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+                <span>My Journal Notes</span>
                 @if (notes && !showNotes) {
                   <ion-note slot="end">Has notes</ion-note>
                 }
-              </ion-item>
+              </button>
 
               @if (showNotes) {
-                <div class="notes-editor">
+                <div class="notes-body">
                   <ion-textarea
                     [value]="notes"
                     (ionInput)="onNotesChange($event)"
@@ -153,13 +166,13 @@ import { firstValueFrom, Subscription } from 'rxjs';
                     [maxlength]="2000"
                     class="journal-textarea">
                   </ion-textarea>
-                  <div class="notes-status">
-                    <ion-note [color]="notesSaved ? 'success' : 'medium'">
+                  <div class="notes-footer">
+                    <div class="notes-save-status">
                       <ion-icon [name]="notesSaved ? 'checkmark-circle' : 'time-outline'"></ion-icon>
-                      {{ notesSaved ? 'Saved' : 'Unsaved' }}
-                    </ion-note>
+                      <span>{{ notesSaved ? 'Saved' : 'Unsaved' }}</span>
+                    </div>
                     @if (notes) {
-                      <div class="summarize-actions">
+                      <div class="notes-ai">
                         <ion-button fill="clear" size="small" [disabled]="summarizing" (click)="onSummarize()">
                           <ion-icon slot="start" name="bulb-outline"></ion-icon>
                           {{ summarizing ? 'Summarizing...' : 'AI Summarize' }}
@@ -180,24 +193,84 @@ import { firstValueFrom, Subscription } from 'rxjs';
   `,
   standalone: false,
   styles: [`
-    .bible-section-title {
-      font-size: var(--subheading-font-size, 18px);
-      font-weight: 700;
-      margin: 16px 0 8px;
+    .reading-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .reading-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .meta-primary {
+      font-size: 16px;
+      font-weight: 600;
       color: var(--ion-text-color);
+      line-height: 1.4;
+    }
+    .meta-date {
+      font-weight: 700;
+      color: var(--ion-color-primary);
+    }
+    .meta-dash {
+      color: var(--ion-color-step-400, #999);
+      margin: 0 4px;
+    }
+    .meta-range {
+      font-weight: 500;
+      color: var(--ion-color-medium);
+      font-size: 14px;
+    }
+    .meta-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .completed-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    .version-select {
+      --padding-top: 2px;
+      --padding-bottom: 2px;
+      --padding-start: 8px;
+      --padding-end: 4px;
+      min-height: 28px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .section-card {
+      background: var(--card-bg, var(--ion-background-color));
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
+    }
+    .bible-section-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 10px;
+      color: var(--ion-color-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .bible-text {
       font-style: italic;
       color: var(--bible-text-color, var(--ion-color-medium));
       font-size: var(--reading-font-size, 15px);
-      line-height: 1.6;
-      padding: 12px;
-      background: var(--bible-text-bg, var(--ion-color-light));
-      border-radius: 8px;
+      line-height: 1.8;
       white-space: pre-line;
+      padding-left: 12px;
+      border-left: 3px solid var(--ion-color-primary);
     }
     .egw-text {
-      line-height: 1.8;
+      line-height: 1.9;
+      font-size: var(--reading-font-size, 15px);
     }
     .para-ref {
       display: inline-block;
@@ -212,102 +285,108 @@ import { firstValueFrom, Subscription } from 'rxjs';
       vertical-align: super;
       line-height: 1.4;
     }
-    .reading-header-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: nowrap;
+    .companion-heading {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: var(--ion-color-step-500, #888);
     }
-    .date-section {
-      flex: 0 0 40%;
-      min-width: 0;
-      font-size: var(--subheading-font-size, 18px);
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .reading-text {
+      line-height: 1.9;
     }
-    .completed-badge {
-      flex: 0 0 30%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      font-size: calc(var(--subheading-font-size, 18px) - 2px);
-      padding: 4px 6px;
-      white-space: nowrap;
+    .complete-section {
+      background: var(--card-bg, var(--ion-background-color));
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
     }
-    .version-select {
-      flex: 0 0 30%;
-      max-width: 30%;
-      font-size: var(--subheading-font-size, 18px);
-      font-weight: 600;
-      --padding-top: 2px;
-      --padding-bottom: 2px;
-      --padding-start: 8px;
-      --padding-end: 4px;
-      min-height: 28px;
-    }
-    .complete-checkbox {
-      border-top: 1px solid var(--ion-color-light-shade);
-      text-align: center;
-    }
-    .complete-checkbox ion-checkbox {
-      --size: 24px;
-      font-size: 16px;
+    .complete-section ion-checkbox {
+      --size: 22px;
+      font-size: 15px;
+      font-weight: 500;
     }
     .journal-section {
-      border-top: 1px solid var(--ion-color-light-shade);
-      margin-top: 16px;
-      padding-top: 8px;
+      background: var(--card-bg, var(--ion-background-color));
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
+    }
+    .journal-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 16px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ion-text-color);
+    }
+    .journal-toggle ion-icon {
+      font-size: 20px;
+      color: var(--ion-color-step-400, #999);
+    }
+    .journal-toggle ion-note {
+      margin-left: auto;
+      font-size: 12px;
+    }
+    .notes-body {
+      padding: 0 16px 16px;
     }
     .journal-textarea {
-      --padding-start: 0;
-      font-style: normal;
+      --padding-start: 12px;
+      --padding-end: 12px;
+      --padding-top: 12px;
+      --padding-bottom: 12px;
       font-size: 15px;
       line-height: 1.6;
-      border: 1px solid var(--ion-color-light-shade);
-      border-radius: 8px;
-      padding: 8px 12px;
-      margin-top: 8px;
+      background: var(--ion-color-step-50, #f8f8f8);
+      border-radius: 10px;
+      margin: 0;
     }
-    .notes-status {
+    .notes-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 4px;
-      margin-top: 4px;
-      font-size: 13px;
+      margin-top: 8px;
     }
-    .summarize-actions {
+    .notes-save-status {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--ion-color-medium);
+    }
+    .notes-save-status ion-icon {
+      font-size: 14px;
+    }
+    .notes-ai {
       display: flex;
       align-items: center;
       gap: 4px;
     }
     .empty-bible-text {
-      font-style: italic;
-      color: var(--ion-color-medium);
       text-align: center;
-      padding: 24px;
+      padding: 16px;
       font-size: 14px;
+      color: var(--ion-color-medium);
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
     }
-    .translation-bar {
-      margin-bottom: 10px;
-      ion-segment {
-        max-width: 220px;
-        --background: var(--ion-color-light);
-      }
-      ion-segment-button {
-        --padding-top: 4px;
-        --padding-bottom: 4px;
-        font-size: 12px;
-        font-weight: 600;
-        min-height: 32px;
-      }
+    .skeleton-container {
+      padding: 8px 0;
+    }
+    .loading-line {
+      border-radius: 6px;
+    }
+    .loading-block {
+      border-radius: 12px;
     }
   `]
 })
@@ -316,8 +395,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   private router = inject(Router);
   private seriesService = inject(SeriesService);
   private prefs = inject(PreferencesService);
-  private actionSheetCtrl = inject(ActionSheetController);
   private alertCtrl = inject(AlertController);
+  private actionSheetCtrl = inject(ActionSheetController);
   private progressService = inject(ProgressService);
 
   seriesList: Series[] = [];
@@ -353,22 +432,6 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   }
 
   paraRefRegex = /\[(\d+)\.(\d+)\]/g;
-
-  async openFeatures(): Promise<void> {
-    const sheet = await this.actionSheetCtrl.create({
-      header: 'Features',
-      buttons: [
-        { text: 'Search', icon: 'search-outline', handler: () => this.router.navigate(['/search']) },
-        { text: 'Progress', icon: 'trending-up-outline', handler: () => this.router.navigate(['/progress']) },
-        { text: 'Bookmarks', icon: 'bookmark-outline', handler: () => this.router.navigate(['/bookmarks']) },
-        { text: 'Calendar', icon: 'calendar-outline', handler: () => this.router.navigate(['/calendar']) },
-        { text: 'Journal', icon: 'journal-outline', handler: () => this.router.navigate(['/journal']) },
-        { text: 'Switch Series', icon: 'swap-horizontal', handler: () => this.switchSeries() },
-        { text: 'Cancel', role: 'cancel' }
-      ]
-    });
-    await sheet.present();
-  }
 
   goToCalendar(): void {
     this.router.navigate(['/calendar']);

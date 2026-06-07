@@ -1,6 +1,6 @@
 import { ComponentFixture, DeferBlockState, TestBed, fakeAsync, flush, tick } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
-import { IonicModule, ActionSheetController, NavController } from '@ionic/angular';
+import { IonicModule, NavController } from '@ionic/angular';
 import { BehaviorSubject, of } from 'rxjs';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
@@ -18,7 +18,6 @@ describe('ReadingDetailPage', () => {
   let mockSeriesService: any;
   let mockPrefs: any;
   let mockRouter: any;
-  let mockActionSheet: any;
   let paramMapSubject: BehaviorSubject<any>;
 
   const mockDetail = {
@@ -70,12 +69,6 @@ describe('ReadingDetailPage', () => {
       navigate: jest.fn().mockResolvedValue(true)
     };
 
-    mockActionSheet = {
-      create: jest.fn().mockResolvedValue({
-        present: jest.fn().mockResolvedValue(undefined)
-      })
-    };
-
     await TestBed.configureTestingModule({
       declarations: [ReadingDetailPage],
       imports: [IonicModule.forRoot(), SharedModule],
@@ -85,7 +78,6 @@ describe('ReadingDetailPage', () => {
         { provide: SeriesService, useValue: mockSeriesService },
         { provide: PreferencesService, useValue: mockPrefs },
         { provide: Router, useValue: mockRouter },
-        { provide: ActionSheetController, useValue: mockActionSheet },
         { provide: NavController, useValue: { navigateRoot: jest.fn(), push: jest.fn(), back: jest.fn() } },
         { provide: ActivatedRoute, useValue: { paramMap: paramMapSubject } },
         { provide: AuthService, useValue: { user$: new BehaviorSubject(null) } }
@@ -291,7 +283,7 @@ describe('ReadingDetailPage', () => {
     it('should display reading heading with date and cleaned page range', fakeAsync(() => {
       component.detail = mockDetail;
       fixture.detectChanges();
-      const el: HTMLElement = fixture.nativeElement.querySelector('.reading-header-row');
+      const el: HTMLElement = fixture.nativeElement.querySelector('.meta-primary');
       expect(el.textContent).toContain('May 21');
       expect(el.textContent).toContain('Acts of the Apostles 110-114');
     }));

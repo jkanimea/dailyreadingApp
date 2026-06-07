@@ -9,7 +9,7 @@ import { environment } from '../../../environments/environment';
 
 @Component({
   template: `
-    <ion-content class="ion-padding login-content">
+    <ion-content class="login-content">
       <div class="login-container">
         <div class="logo-section animate-fade-in">
           <div class="app-icon">
@@ -20,35 +20,38 @@ import { environment } from '../../../environments/environment';
         </div>
 
         <div class="button-section animate-stagger">
-          <ion-button *ngIf="bypassAuth" expand="block" class="guest-btn premium-button" (click)="continueAsGuest()">
+          <ion-button *ngIf="bypassAuth" expand="block" class="guest-btn" (click)="continueAsGuest()" [disabled]="loading">
             <ion-icon slot="start" name="person-outline"></ion-icon>
             Continue as Guest
           </ion-button>
 
-          <ion-button expand="block" class="google-btn premium-button" (click)="loginWithGoogle()" [disabled]="loading">
+          <ion-button expand="block" class="social-btn google-btn" (click)="loginWithGoogle()" [disabled]="loading">
             <ion-icon slot="start" name="logo-google"></ion-icon>
             Sign in with Google
           </ion-button>
 
-          <ion-button expand="block" class="facebook-btn premium-button" (click)="loginWithFacebook()" [disabled]="loading">
+          <ion-button expand="block" class="social-btn facebook-btn" (click)="loginWithFacebook()" [disabled]="loading">
             <ion-icon slot="start" name="logo-facebook"></ion-icon>
             Sign in with Facebook
           </ion-button>
         </div>
 
-        <div *ngIf="loading" class="loading-section">
-          <ion-spinner></ion-spinner>
-          <p>Signing in...</p>
-        </div>
+        @if (loading) {
+          <div class="loading-section">
+            <ion-spinner name="dots"></ion-spinner>
+            <p>Signing in...</p>
+          </div>
+        }
 
-        <div *ngIf="error" class="error-section animate-fade-in">
-          <p class="error-message">{{ error }}</p>
-        </div>
+        @if (error) {
+          <div class="error-section animate-fade-in">
+            <p class="error-message">{{ error }}</p>
+          </div>
+        }
 
         <p class="version-text">v0.1.0</p>
       </div>
 
-      <!-- Off-screen container: Google button pre-rendered here for popup click -->
       <div #gBtnHost class="g-btn-host" aria-hidden="true"></div>
     </ion-content>
   `,
@@ -72,49 +75,56 @@ import { environment } from '../../../environments/environment';
       margin-bottom: 48px;
     }
     .app-icon {
-      width: 80px;
-      height: 80px;
-      border-radius: 20px;
-      background: var(--ion-color-primary);
+      width: 88px;
+      height: 88px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-primary-shade));
       display: flex;
       align-items: center;
       justify-content: center;
-      margin: 0 auto 16px;
-      box-shadow: 0 8px 32px rgba(var(--ion-color-primary-rgb), 0.3);
+      margin: 0 auto 20px;
+      box-shadow: 0 10px 40px rgba(var(--ion-color-primary-rgb), 0.35);
     }
     .app-icon ion-icon {
-      font-size: 40px;
+      font-size: 44px;
       color: var(--ion-color-primary-contrast);
     }
     .app-title {
-      font-size: 28px;
-      font-weight: 700;
-      margin: 0 0 8px;
+      font-size: 30px;
+      font-weight: 800;
+      margin: 0 0 10px;
       color: var(--ion-text-color);
+      letter-spacing: -0.5px;
     }
     .app-subtitle {
       font-size: 15px;
       color: var(--ion-color-medium);
       margin: 0;
-      line-height: 1.5;
+      line-height: 1.6;
     }
     .button-section {
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
     ion-button {
-      --border-radius: 12px;
-      height: 52px;
+      --border-radius: 14px;
+      height: 54px;
       font-size: 16px;
       font-weight: 600;
+      letter-spacing: 0.2px;
+      margin: 0;
     }
     .guest-btn {
-      --background: var(--ion-color-step-100, #e0e0e0);
+      --background: var(--ion-color-step-150, #e8e8e8);
       --color: var(--ion-text-color);
-      --box-shadow: none;
-      margin-bottom: 8px;
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      margin-bottom: 4px;
+      --background-hover: var(--ion-color-step-200, #ddd);
+    }
+    .social-btn {
+      --box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
     .google-btn {
       --background: #ffffff;
@@ -122,12 +132,10 @@ import { environment } from '../../../environments/environment';
       --border-color: #dadce0;
       --border-style: solid;
       --border-width: 1px;
-      --box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
     .facebook-btn {
       --background: #1877f2;
       --color: #ffffff;
-      --box-shadow: 0 1px 3px rgba(0,0,0,0.12);
     }
     .loading-section {
       margin-top: 24px;
@@ -135,7 +143,7 @@ import { environment } from '../../../environments/environment';
       color: var(--ion-color-medium);
     }
     .loading-section p {
-      margin-top: 8px;
+      margin-top: 10px;
       font-size: 14px;
     }
     .error-section {
@@ -151,7 +159,7 @@ import { environment } from '../../../environments/environment';
       position: fixed;
       bottom: 16px;
       font-size: 12px;
-      color: var(--ion-color-step-300, #ccc);
+      color: var(--ion-color-step-400, #bbb);
     }
     .g-btn-host {
       position: fixed;
