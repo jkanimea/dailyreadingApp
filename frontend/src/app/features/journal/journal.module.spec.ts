@@ -34,13 +34,14 @@ describe('JournalPage', () => {
       selectedCount: 0,
       progressService: { getJournal: mockGetJournal },
       prefs: { getSeriesId: mockGetSeriesId },
+      seriesService: { getById: jest.fn().mockReturnValue({ name: 'Christ The Way' }) },
       monthNames: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
       loadJournal() {
         this.loading = true;
         this.error = undefined;
-        const seriesId = this.prefs.getSeriesId();
-        this.entries = this.progressService.getJournal(seriesId);
-        this.seriesName = this.entries.length > 0 ? this.entries[0].seriesName : 'Reading';
+        this.seriesId = this.prefs.getSeriesId();
+        this.entries = this.progressService.getJournal(this.seriesId);
+        this.seriesName = this.seriesService.getById(this.seriesId).name;
         this.selectAllEntries();
         this.loading = false;
       },
@@ -159,6 +160,28 @@ describe('JournalPage', () => {
     expect(component.selectedCount).toBe(1);
     expect(component.isSelected(1)).toBe(false);
     expect(component.isSelected(99)).toBe(true);
+  });
+
+  // ─── Series header ────────────────────────────────────────────────────
+
+  it('should set seriesName from series service after loading', () => {
+    component.ionViewWillEnter();
+
+    expect(component.seriesName).toBe('Christ The Way');
+  });
+
+  it('should set seriesName from series service even when no entries exist', () => {
+    mockGetJournal.mockReturnValue([]);
+
+    component.loadJournal();
+
+    expect(component.seriesName).toBe('Christ The Way');
+  });
+
+  it('should expose seriesId from preferences after loading', () => {
+    component.loadJournal();
+
+    expect(component.seriesId).toBe(2);
   });
 
   // ─── Selection ────────────────────────────────────────────────────────

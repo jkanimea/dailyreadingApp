@@ -493,6 +493,29 @@ describe('ReadingDetailPage', () => {
         expect(egwHeader).toBeFalsy();
       }));
 
+      it('should show "text not yet available" when primaryBookPageRange set but fullTextPrimary is empty', fakeAsync(() => {
+        component.detail = { ...mockDetail, fullTextPrimary: '' };
+        component.egwExpanded = true;
+        fixture.detectChanges();
+        const unavailable = fixture.nativeElement.querySelector('.text-unavailable');
+        expect(unavailable).toBeTruthy();
+        expect(unavailable.textContent).toContain('Text not yet available');
+        // The EGW card's section-body should NOT contain a bible-text div
+        const egwCard = Array.from(fixture.nativeElement.querySelectorAll('.section-card'))
+          .find((c: any) => c.querySelector('.egw-heading')) as HTMLElement | undefined;
+        expect(egwCard?.querySelector('.bible-text')).toBeFalsy();
+      }));
+
+      it('should show EGW bible-text when fullTextPrimary has content', fakeAsync(() => {
+        component.detail = mockDetail;
+        component.egwExpanded = true;
+        fixture.detectChanges();
+        const egwCard = Array.from(fixture.nativeElement.querySelectorAll('.section-card'))
+          .find((c: any) => c.querySelector('.egw-heading')) as HTMLElement | undefined;
+        expect(egwCard?.querySelector('.bible-text')).toBeTruthy();
+        expect(fixture.nativeElement.querySelector('.text-unavailable')).toBeFalsy();
+      }));
+
       it('should hide Companion card when fullTextSecondary is empty', async () => {
         component.detail = { ...mockDetail, fullTextSecondary: undefined as any };
         fixture.detectChanges();

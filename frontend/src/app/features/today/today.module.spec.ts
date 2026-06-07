@@ -143,4 +143,27 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
     expect(component.notes).toBe('Replaced summary');
     expect(mockProgressService.saveNotes).toHaveBeenCalledWith(3, 'Replaced summary');
   });
+
+  it('should show "text not yet available" when primaryBookPageRange set but fullTextPrimary is empty', () => {
+    component.detail = { ...mockDetail, fullTextPrimary: '' };
+    component.egwExpanded = true;
+    fixture.detectChanges();
+    const unavailable = fixture.nativeElement.querySelector('.text-unavailable');
+    expect(unavailable).toBeTruthy();
+    expect(unavailable.textContent).toContain('Text not yet available');
+    // EGW card should not contain a bible-text div
+    const egwCard = Array.from(fixture.nativeElement.querySelectorAll('.section-card'))
+      .find((c: any) => c.querySelector('.egw-heading')) as HTMLElement | undefined;
+    expect(egwCard?.querySelector('.bible-text')).toBeFalsy();
+  });
+
+  it('should show EGW bible-text when fullTextPrimary has content', () => {
+    component.detail = mockDetail;
+    component.egwExpanded = true;
+    fixture.detectChanges();
+    const egwCard = Array.from(fixture.nativeElement.querySelectorAll('.section-card'))
+      .find((c: any) => c.querySelector('.egw-heading')) as HTMLElement | undefined;
+    expect(egwCard?.querySelector('.bible-text')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.text-unavailable')).toBeFalsy();
+  });
 });

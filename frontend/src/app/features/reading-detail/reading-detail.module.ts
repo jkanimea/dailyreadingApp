@@ -105,15 +105,19 @@ import { firstValueFrom, Subscription } from 'rxjs';
             </div>
             @if (egwExpanded) {
               <div class="section-body">
-                <div class="bible-text">
-                  @for (seg of getParagraphSegments(detail.fullTextPrimary); track $index) {
-                    @if (seg.isRef) {
-                      <span class="para-ref">{{ seg.text }}</span>
-                    } @else {
-                      <span>{{ seg.text }}</span>
+                @if (detail.fullTextPrimary) {
+                  <div class="bible-text">
+                    @for (seg of getParagraphSegments(detail.fullTextPrimary); track $index) {
+                      @if (seg.isRef) {
+                        <span class="para-ref">{{ seg.text }}</span>
+                      } @else {
+                        <span>{{ seg.text }}</span>
+                      }
                     }
-                  }
-                </div>
+                  </div>
+                } @else {
+                  <p class="text-unavailable">Text not yet available for this reading.</p>
+                }
               </div>
             }
           </div>
@@ -255,6 +259,13 @@ import { firstValueFrom, Subscription } from 'rxjs';
       white-space: pre-line;
       padding-left: 12px;
       border-left: 3px solid var(--ion-color-primary);
+    }
+    .text-unavailable {
+      font-size: 14px;
+      color: var(--ion-color-medium);
+      font-style: italic;
+      margin: 0;
+      padding: 4px 0;
     }
     .section-header {
       display: flex;

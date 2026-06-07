@@ -5,6 +5,7 @@ import { RouterModule, Routes, Router } from '@angular/router';
 import { SharedModule } from '../../shared/shared.module';
 import { ProgressService } from '../../core/services/progress.service';
 import { PreferencesService } from '../../core/services/preferences.service';
+import { SeriesService } from '../../core/services/series.service';
 import { JournalEntryDto } from '../../core/models/journal-entry.model';
 import { firstValueFrom } from 'rxjs';
 
@@ -13,7 +14,12 @@ import { firstValueFrom } from 'rxjs';
   template: `
     <ion-header class="print-hide">
       <ion-toolbar>
-        <ion-title>My Reading Journal — {{ seriesName }}</ion-title>
+        <ion-title>
+          <div class="header-title">
+            <ion-icon name="book-outline" class="header-book-icon"></ion-icon>
+            <span class="header-title-text">My Reading Journal — {{ seriesName || 'Daily Reading' }}</span>
+          </div>
+        </ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="goToSettings()">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
@@ -46,8 +52,8 @@ import { firstValueFrom } from 'rxjs';
       @if (!loading && !error && entries.length === 0) {
         <div class="empty-state">
           <ion-icon name="journal-outline" size="large" color="medium"></ion-icon>
-          <p class="empty-title">No journal entries</p>
-          <p class="empty-subtitle">Start by marking readings as complete and adding your thoughts.</p>
+          <p class="empty-title">No journal entries for this series</p>
+          <p class="empty-subtitle">Mark readings as complete and add your thoughts to build your journal.</p>
         </div>
       }
 
@@ -67,10 +73,6 @@ import { firstValueFrom } from 'rxjs';
               Share{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
             </ion-button>
           }
-        </div>
-
-        <div class="subheader">
-          Daily Reading — Series {{ seriesId }} — {{ seriesName }}
         </div>
 
         @for (entry of entries; track $index) {
@@ -122,11 +124,19 @@ import { firstValueFrom } from 'rxjs';
   standalone: false,
   styles: [`
     .error-message { color: var(--ion-color-danger); }
-    .subheader {
-      font-size: 14px;
-      color: var(--ion-color-medium);
-      margin-bottom: 16px;
-      font-weight: 500;
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-book-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .header-title-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .action-buttons {
       display: flex;
@@ -229,6 +239,7 @@ class JournalPage {
   private router = inject(Router);
   private progressService = inject(ProgressService);
   private prefs = inject(PreferencesService);
+  private seriesService = inject(SeriesService);
   private alertCtrl = inject(AlertController);
 
 
@@ -256,8 +267,12 @@ class JournalPage {
     this.error = undefined;
     try {
       this.seriesId = this.prefs.getSeriesId();
-      this.entries = await firstValueFrom(this.progressService.getJournal(this.seriesId));
-      this.seriesName = this.entries.length > 0 ? this.entries[0].seriesName : 'Reading';
+      const [entries, series] = await Promise.all([
+        firstValueFrom(this.progressService.getJournal(this.seriesId)),
+        firstValueFrom(this.seriesService.getById(this.seriesId))
+      ]);
+      this.entries = entries;
+      this.seriesName = series.name;
       this.selectAllEntries();
     } catch {
       this.error = 'Failed to load journal. Make sure the API is running.';
