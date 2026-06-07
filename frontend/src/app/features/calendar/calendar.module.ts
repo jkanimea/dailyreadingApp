@@ -111,6 +111,9 @@ import { SharedModule } from '../../shared/shared.module';
       color: var(--ion-text-color);
       font-weight: 600;
     }
+    .calendar-cell.selected {
+      box-shadow: 0 0 0 2px var(--ion-color-primary);
+    }
     .calendar-cell.bookmarked {
       box-shadow: 0 0 0 2px var(--ion-color-warning);
     }

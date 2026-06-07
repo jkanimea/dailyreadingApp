@@ -66,70 +66,84 @@ import { firstValueFrom, Subscription } from 'rxjs';
                   <ion-icon name="checkmark-circle"></ion-icon> Done
                 </ion-badge>
               }
-              @if (detail.bibleReading) {
-                <ion-select [value]="translation" (ionChange)="onTranslationChange($event)" interface="popover" class="version-select">
-                  <ion-select-option value="KJV">KJV</ion-select-option>
-                  <ion-select-option value="ASV">ASV</ion-select-option>
-                  <ion-select-option value="WEB">WEB</ion-select-option>
-                </ion-select>
-              }
             </div>
           </div>
 
-          <!-- Bible reading section -->
+          <!-- Bible reading card -->
           @if (detail.bibleReading) {
             <div class="section-card">
-              @if (bibleSections.length > 0) {
-                @for (section of bibleSections; track section.title) {
-                  <h3 class="bible-section-title">{{ section.title }}</h3>
-                  <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
-                }
-              } @else {
-                @if (detail.fullTextBible) {
-                  <div class="bible-text">{{ detail.fullTextBible }}</div>
-                } @else {
-                  <div class="empty-bible-text">
-                    <p>Bible text not available for {{ translation }}.</p>
-                    <ion-button fill="outline" size="small" (click)="onSeedBible()" [disabled]="seeding">
-                      {{ seeding ? 'Downloading...' : 'Download ' + translation + ' data' }}
-                    </ion-button>
-                  </div>
-                }
+              <div class="section-header" (click)="bibleExpanded = !bibleExpanded">
+                <ion-icon [name]="bibleExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
+                <span class="section-header-title">Bible Reading</span>
+              </div>
+              @if (bibleExpanded) {
+                <div class="section-body">
+                  @if (bibleSections.length > 0) {
+                    @for (section of bibleSections; track section.title) {
+                      <h3 class="bible-section-title">{{ section.title }}</h3>
+                      <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
+                    }
+                  } @else {
+                    @if (detail.fullTextBible) {
+                      <div class="bible-text">{{ detail.fullTextBible }}</div>
+                    } @else {
+                      <div class="empty-bible-text">
+                        <p>Bible text not available for {{ translation }}.</p>
+                        <ion-button fill="outline" size="small" (click)="onSeedBible()" [disabled]="seeding">
+                          {{ seeding ? 'Downloading...' : 'Download ' + translation + ' data' }}
+                        </ion-button>
+                      </div>
+                    }
+                  }
+                </div>
               }
             </div>
           }
 
-          <!-- Primary reading text -->
-          <div class="section-card reading-card">
-            <div class="reading-text">
-              @for (seg of getParagraphSegments(detail.fullTextPrimary); track $index) {
-                <span class="egw-text">
-                  @if (seg.isRef) {
-                    <span class="para-ref">{{ seg.text }}</span>
-                  } @else {
-                    <span>{{ seg.text }}</span>
-                  }
-                </span>
-              }
+          <!-- Primary EGW reading card -->
+          @if (detail.primaryBookPageRange) {
+          <div class="section-card">
+            <div class="section-header" (click)="egwExpanded = !egwExpanded">
+              <ion-icon [name]="egwExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
+              <span class="egw-heading">{{ detail.primaryBookPageRange }}</span>
             </div>
-          </div>
-
-          <!-- Secondary reading text -->
-          @defer {
-            @if (detail.fullTextSecondary) {
-              <div class="section-card reading-card">
-                <h2 class="companion-heading">Companion: {{ detail.secondaryBookPageRange }}</h2>
-                <div class="reading-text">
-                  @for (seg of getParagraphSegments(detail.fullTextSecondary); track $index) {
-                    <span class="egw-text">
-                      @if (seg.isRef) {
-                        <span class="para-ref">{{ seg.text }}</span>
-                      } @else {
-                        <span>{{ seg.text }}</span>
-                      }
-                    </span>
+            @if (egwExpanded) {
+              <div class="section-body">
+                <div class="bible-text">
+                  @for (seg of getParagraphSegments(detail.fullTextPrimary); track $index) {
+                    @if (seg.isRef) {
+                      <span class="para-ref">{{ seg.text }}</span>
+                    } @else {
+                      <span>{{ seg.text }}</span>
+                    }
                   }
                 </div>
+              </div>
+            }
+          </div>
+          }
+
+          <!-- Secondary reading card -->
+          @defer {
+            @if (detail.fullTextSecondary) {
+              <div class="section-card">
+                <div class="section-header" (click)="secondaryExpanded = !secondaryExpanded">
+                  <ion-icon [name]="secondaryExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
+                  <span class="companion-heading">Companion: {{ detail.secondaryBookPageRange }}</span>
+                </div>
+                @if (secondaryExpanded) {
+                  <div class="section-body">
+                    <div class="bible-text">
+                      @for (seg of getParagraphSegments(detail.fullTextSecondary); track $index) {
+                        @if (seg.isRef) {
+                          <span class="para-ref">{{ seg.text }}</span>
+                        } @else {
+                          <span>{{ seg.text }}</span>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
               </div>
             }
           } @placeholder {
@@ -200,7 +214,9 @@ import { firstValueFrom, Subscription } from 'rxjs';
     }
     .reading-meta {
       display: flex;
-      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
       gap: 8px;
     }
     .meta-primary {
@@ -235,15 +251,6 @@ import { firstValueFrom, Subscription } from 'rxjs';
       padding: 4px 10px;
       border-radius: 20px;
     }
-    .version-select {
-      --padding-top: 2px;
-      --padding-bottom: 2px;
-      --padding-start: 8px;
-      --padding-end: 4px;
-      min-height: 28px;
-      font-size: 13px;
-      font-weight: 600;
-    }
     .section-card {
       background: var(--card-bg, var(--ion-background-color));
       border-radius: 14px;
@@ -267,6 +274,26 @@ import { firstValueFrom, Subscription } from 'rxjs';
       white-space: pre-line;
       padding-left: 12px;
       border-left: 3px solid var(--ion-color-primary);
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .section-chevron {
+      font-size: 20px;
+      color: var(--ion-color-step-400, #bbb);
+      flex-shrink: 0;
+    }
+    .section-body {
+      margin-top: 12px;
+    }
+    .egw-heading {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ion-color-primary);
     }
     .egw-text {
       line-height: 1.9;
@@ -408,6 +435,9 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   summarizing = false;
   translation: BibleTranslation = 'KJV';
   seeding = false;
+  bibleExpanded = true;
+  egwExpanded = true;
+  secondaryExpanded = true;
   private notesDebounce?: ReturnType<typeof setTimeout>;
 
   override ngOnDestroy(): void {
@@ -592,14 +622,6 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     }
 
     return segments.length > 0 ? segments : [{ text, isRef: false }];
-  }
-
-  async onTranslationChange(event: CustomEvent): Promise<void> {
-    this.translation = event.detail.value as BibleTranslation;
-    await this.prefs.setTranslation(this.translation);
-    if (this.detail?.id) {
-      await this.loadDetail(this.detail.id, this.translation);
-    }
   }
 
   async onSeedBible(): Promise<void> {

@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text.Encodings.Web;
 using System.Threading.RateLimiting;
 using EncounterDaily.API.Middleware;
 using EncounterDaily.API.Services;
@@ -8,11 +10,13 @@ using EncounterDaily.Core.Interfaces.Services;
 using EncounterDaily.Infrastructure;
 using EncounterDaily.Infrastructure.Data;
 using EncounterDaily.Services;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
@@ -102,8 +106,13 @@ else
 {
     builder.Services.AddControllers();
     builder.Services.AddSingleton(RSA.Create());
+    builder.Services.AddAuthentication(DevAuthHandlerDefaults.AuthenticationScheme)
+        .AddScheme<DevAuthSchemeOptions, DevAuthHandler>(DevAuthHandlerDefaults.AuthenticationScheme, _ => { });
     builder.Services.AddAuthorization(options =>
     {
+        options.FallbackPolicy = new AuthorizationPolicyBuilder()
+            .RequireAuthenticatedUser()
+            .Build();
         options.AddPolicy("RequireAdminRole", policy => policy.RequireAssertion(_ => true));
     });
     Console.WriteLine("  [DevMode] Auth bypass enabled — all endpoints are anonymous.");
@@ -192,6 +201,8 @@ using (var scope = app.Services.CreateScope())
     await SeedDevUserAsync(dbContext);
 }
 
+app.UseMiddleware<ExceptionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -202,13 +213,8 @@ app.UseCors("AllowMobileApp");
 
 app.UseRateLimiter();
 
-if (!bypassAuth)
-{
-    app.UseAuthentication();
-    app.UseAuthorization();
-}
-
-app.UseMiddleware<ExceptionMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers()
    .RequireRateLimiting("PerIp");
@@ -313,5 +319,33 @@ static async Task SeedDevUserAsync(AppDbContext context)
             });
             await context.SaveChangesAsync();
         }
+    }
+}
+
+public static class DevAuthHandlerDefaults
+{
+    public const string AuthenticationScheme = "DevBypass";
+}
+
+public class DevAuthSchemeOptions : AuthenticationSchemeOptions { }
+
+public class DevAuthHandler : AuthenticationHandler<DevAuthSchemeOptions>
+{
+    public DevAuthHandler(IOptionsMonitor<DevAuthSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
+        : base(options, logger, encoder) { }
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "2"),
+            new Claim(ClaimTypes.Name, "Jack Kanimea"),
+            new Claim(ClaimTypes.Email, "jkanimea@gmail.com"),
+            new Claim("role", "User")
+        };
+        var identity = new ClaimsIdentity(claims, Scheme.Name);
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, Scheme.Name);
+        return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }

@@ -13,11 +13,7 @@ const routes: Routes = [
     loadChildren: () => import('./features/series/series.module').then(m => m.SeriesModule),
     canActivate: [AuthGuard]
   },
-  {
-    path: 'reading/:id',
-    loadChildren: () => import('./features/reading-detail/reading-detail.module').then(m => m.ReadingDetailModule),
-    canActivate: [AuthGuard]
-  },
+  { path: 'reading/:id', redirectTo: ({ params }) => `/tabs/reading/${params['id']}`, pathMatch: 'full' },
   {
     path: 'search',
     loadChildren: () => import('./features/search/search.module').then(m => m.SearchModule),

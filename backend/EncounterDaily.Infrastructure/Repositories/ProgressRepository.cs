@@ -11,9 +11,21 @@ namespace EncounterDaily.Infrastructure.Repositories
 
         public async Task<UserProgress?> GetUserReadingProgressAsync(int userId, int readingId)
         {
-            return await _dbSet
+            var allRecords = await _dbSet
                 .Include(p => p.DailyReading)
-                .FirstOrDefaultAsync(p => p.UserId == userId && p.DailyReadingId == readingId);
+                .Where(p => p.UserId == userId && p.DailyReadingId == readingId)
+                .OrderBy(p => p.Id)
+                .ToListAsync();
+
+            if (allRecords.Count <= 1)
+                return allRecords.FirstOrDefault();
+
+            // Clean up duplicates — keep the latest (highest Id), remove older ones
+            var latest = allRecords.Last();
+            var duplicates = allRecords.Take(allRecords.Count - 1).ToList();
+            _dbSet.RemoveRange(duplicates);
+            await _context.SaveChangesAsync();
+            return latest;
         }
 
         public async Task<int> GetStreakAsync(int userId, int seriesId)

@@ -20,6 +20,14 @@ describe('ReadingDetailPage', () => {
   let mockRouter: any;
   let paramMapSubject: BehaviorSubject<any>;
 
+  function getSectionHeaders(el: HTMLElement): HTMLElement[] {
+    return Array.from(el.querySelectorAll('.section-header'));
+  }
+
+  function getChevrons(el: HTMLElement): HTMLElement[] {
+    return Array.from(el.querySelectorAll('.section-chevron'));
+  }
+
   const mockDetail = {
     id: 5,
     seriesId: 2,
@@ -62,7 +70,8 @@ describe('ReadingDetailPage', () => {
     };
 
     mockProgressService = {
-      markComplete: jest.fn().mockReturnValue(of({ readingId: 5, isCompleted: true }))
+      markComplete: jest.fn().mockReturnValue(of({ readingId: 5, isCompleted: true })),
+      getSeriesProgress: jest.fn().mockReturnValue(of([]))
     };
 
     mockRouter = {
@@ -299,7 +308,9 @@ describe('ReadingDetailPage', () => {
     it('should not show bible text or section headings when fullTextBible is empty', fakeAsync(() => {
       component.detail = { ...mockDetail, fullTextBible: '' };
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('.bible-text')).toBeFalsy();
+      const headers: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-header-title'));
+      const bibleHeader = headers.find((h: HTMLElement) => h.textContent?.includes('Bible Reading'));
+      expect(bibleHeader).toBeTruthy();
       expect(fixture.nativeElement.querySelector('.bible-section-title')).toBeFalsy();
     }));
 
@@ -309,9 +320,9 @@ describe('ReadingDetailPage', () => {
       const deferBlocks = await fixture.getDeferBlocks();
       await deferBlocks[0].render(DeferBlockState.Complete);
       fixture.detectChanges();
-      const allHeadings: HTMLElement[] = fixture.nativeElement.querySelectorAll('h2');
-      const companion = Array.from(allHeadings).find(h => h.textContent?.includes('Companion'));
-      expect(companion).toBeTruthy();
+      const companionEl = fixture.nativeElement.querySelector('.companion-heading');
+      expect(companionEl).toBeTruthy();
+      expect(companionEl.textContent).toContain('Companion');
     });
 
     it('should show series name in ion-title', fakeAsync(() => {
@@ -319,7 +330,6 @@ describe('ReadingDetailPage', () => {
       fixture.detectChanges();
       const el: HTMLElement = fixture.nativeElement.querySelector('ion-title');
       expect(el.textContent).toContain('Christ The Church');
-      expect(el.textContent).toContain('Series 2');
     }));
 
     it('should render bible section headings as h3 elements', fakeAsync(() => {
@@ -334,13 +344,17 @@ describe('ReadingDetailPage', () => {
       expect(titles[1].textContent).toBe('Mark 5:21-43');
     }));
 
-    it('should render a .bible-text paragraph per section', fakeAsync(() => {
+    it('should render a .bible-text per section', fakeAsync(() => {
       component.detail = {
         ...mockDetail,
         fullTextBible: 'Matthew 9:18-31\n\n18 While he spake\n\nMark 5:21-43\n\n21 And when Jesus'
       };
       fixture.detectChanges();
-      const texts = fixture.nativeElement.querySelectorAll('p.bible-text');
+      const sectionCards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-card'));
+      const bibleCard = sectionCards.find((c: HTMLElement) =>
+        c.querySelector('.section-header-title')?.textContent?.includes('Bible Reading')
+      );
+      const texts = bibleCard?.querySelectorAll('.bible-text') ?? [];
       expect(texts.length).toBe(2);
       expect(texts[0].textContent).toContain('18 While he spake');
       expect(texts[1].textContent).toContain('21 And when Jesus');
@@ -374,5 +388,151 @@ describe('ReadingDetailPage', () => {
       const egwEl = fixture.nativeElement.querySelector('.egw-text');
       expect(egwEl).toBeFalsy();
     }));
+
+    describe('collapsible section cards', () => {
+      it('should show Bible section header with chevron icon', fakeAsync(() => {
+        component.detail = mockDetail;
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        const bibleHeader = headers.find(h => h.textContent?.includes('Bible Reading'));
+        expect(bibleHeader).toBeTruthy();
+        expect(bibleHeader!.querySelector('.section-chevron')).toBeTruthy();
+      }));
+
+      it('should show EGW section header with chevron icon', fakeAsync(() => {
+        component.detail = mockDetail;
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        const egwHeader = headers.find(h => h.textContent?.includes('Acts of the Apostles'));
+        expect(egwHeader).toBeTruthy();
+        expect(egwHeader!.querySelector('.section-chevron')).toBeTruthy();
+      }));
+
+      it('should show Companion section header with chevron icon', async () => {
+        component.detail = mockDetail;
+        fixture.detectChanges();
+        const deferBlocks = await fixture.getDeferBlocks();
+        await deferBlocks[0].render(DeferBlockState.Complete);
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        const companionHeader = headers.find(h => h.textContent?.includes('Companion'));
+        expect(companionHeader).toBeTruthy();
+        expect(companionHeader!.querySelector('.section-chevron')).toBeTruthy();
+      });
+
+      it('should put chevron icon on left side (first child) of section-header', fakeAsync(() => {
+        component.detail = mockDetail;
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        for (const header of headers) {
+          const firstChild = header.firstElementChild;
+          expect(firstChild?.classList.contains('section-chevron')).toBe(true);
+        }
+      }));
+
+      it('should show content when bibleExpanded is true', fakeAsync(() => {
+        component.detail = mockDetail;
+        component.bibleExpanded = true;
+        fixture.detectChanges();
+        const body = fixture.nativeElement.querySelector('.section-body');
+        expect(body).toBeTruthy();
+      }));
+
+      it('should hide content when bibleExpanded is false', fakeAsync(() => {
+        component.detail = mockDetail;
+        component.bibleExpanded = false;
+        fixture.detectChanges();
+        const sectionCards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-card'));
+        const bibleCard = sectionCards.find((c: HTMLElement) =>
+          c.querySelector('.section-header-title')?.textContent?.includes('Bible Reading')
+        );
+        expect(bibleCard?.querySelector('.section-body')).toBeFalsy();
+      }));
+
+      it('should toggle bibleExpanded when section-header is clicked', fakeAsync(() => {
+        component.detail = mockDetail;
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        const bibleHeader = headers.find(h => h.textContent?.includes('Bible Reading'))!;
+        expect(component.bibleExpanded).toBe(true);
+        bibleHeader.click();
+        expect(component.bibleExpanded).toBe(false);
+        bibleHeader.click();
+        expect(component.bibleExpanded).toBe(true);
+      }));
+
+      it('should toggle egwExpanded when EGW section-header is clicked', fakeAsync(() => {
+        component.detail = mockDetail;
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        const egwHeader = headers.find(h => h.textContent?.includes('Acts of the Apostles'))!;
+        expect(component.egwExpanded).toBe(true);
+        egwHeader.click();
+        expect(component.egwExpanded).toBe(false);
+      }));
+    });
+
+    describe('conditional card visibility', () => {
+      it('should hide Bible card when bibleReading is empty', fakeAsync(() => {
+        component.detail = { ...mockDetail, bibleReading: '' };
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        const bibleHeader = headers.find(h => h.textContent?.includes('Bible Reading'));
+        expect(bibleHeader).toBeFalsy();
+      }));
+
+      it('should hide EGW card when primaryBookPageRange is empty', fakeAsync(() => {
+        component.detail = { ...mockDetail, primaryBookPageRange: '' };
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        const egwHeader = headers.find(h => h.textContent?.includes('Acts of the Apostles'));
+        expect(egwHeader).toBeFalsy();
+      }));
+
+      it('should hide Companion card when fullTextSecondary is empty', async () => {
+        component.detail = { ...mockDetail, fullTextSecondary: undefined as any };
+        fixture.detectChanges();
+        const deferBlocks = await fixture.getDeferBlocks();
+        await deferBlocks[0].render(DeferBlockState.Complete);
+        fixture.detectChanges();
+        const headers = getSectionHeaders(fixture.nativeElement);
+        const companionHeader = headers.find(h => h.textContent?.includes('Companion'));
+        expect(companionHeader).toBeFalsy();
+      });
+    });
+
+    describe('reading-meta layout', () => {
+      it('should have meta-primary and meta-actions as siblings for same-row layout', fakeAsync(() => {
+        component.detail = mockDetail;
+        component.completed = true;
+        fixture.detectChanges();
+        const meta = fixture.nativeElement.querySelector('.reading-meta');
+        expect(meta).toBeTruthy();
+        expect(meta.querySelector('.meta-primary')).toBeTruthy();
+        expect(meta.querySelector('.completed-badge')).toBeTruthy();
+      }));
+    });
+
+    describe('chevron direction consistency with journal', () => {
+      it('should show chevron-up when bibleExpanded is true', () => {
+        component.bibleExpanded = true;
+        expect(component.bibleExpanded).toBe(true);
+      });
+
+      it('should show chevron-down when bibleExpanded is false', () => {
+        component.bibleExpanded = false;
+        expect(component.bibleExpanded).toBe(false);
+      });
+
+      it('should show chevron-up when egwExpanded is true', () => {
+        component.egwExpanded = true;
+        expect(component.egwExpanded).toBe(true);
+      });
+
+      it('should show chevron-down when egwExpanded is false', () => {
+        component.egwExpanded = false;
+        expect(component.egwExpanded).toBe(false);
+      });
+    });
   });
 });

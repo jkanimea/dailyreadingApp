@@ -23,7 +23,7 @@ import { firstValueFrom } from 'rxjs';
       </ion-toolbar>
     </ion-header>
 
-    <ion-content>
+    <ion-content class="ion-padding">
       @if (loading) {
         <div style="padding: 8px;">
           <div class="skeleton-shimmer" style="width:100%;height:140px;border-radius:14px;margin-bottom:14px;"></div>
@@ -73,7 +73,7 @@ import { firstValueFrom } from 'rxjs';
           Daily Reading — Series {{ seriesId }} — {{ seriesName }}
         </div>
 
-        @for (entry of entries; track entry.readingId) {
+        @for (entry of entries; track $index) {
           <div class="journal-card" [class.print-hide]="!isSelected(entry.readingId)">
             <div class="journal-card-header" (click)="toggleEntry(entry.readingId)">
               <ion-checkbox (click)="$event.stopPropagation()" (ionChange)="toggleSelected(entry.readingId)" [checked]="isSelected(entry.readingId)" class="entry-checkbox"></ion-checkbox>
@@ -175,7 +175,7 @@ import { firstValueFrom } from 'rxjs';
     }
     .journal-subtitle {
       font-size: 13px;
-      color: var(--ion-color-medium);
+      color: var(--ion-color-primary);
       display: block;
     }
     .journal-chevron {
@@ -197,7 +197,11 @@ import { firstValueFrom } from 'rxjs';
       white-space: pre-wrap;
       line-height: 1.7;
       font-size: 15px;
-      color: var(--ion-text-color);
+      color: var(--ion-text-color, #000);
+      background: var(--ion-background-color-step-100, #f0f0f0);
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 4px;
     }
     .journal-no-notes {
       color: var(--ion-color-medium);

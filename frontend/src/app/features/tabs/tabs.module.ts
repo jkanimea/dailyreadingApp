@@ -136,6 +136,7 @@ const tabsRoutes: Routes = [
     component: TabsLayoutComponent,
     children: [
       { path: 'today', loadChildren: () => import('../today/today.module').then(m => m.TodayModule) },
+      { path: 'reading/:id', loadChildren: () => import('../reading-detail/reading-detail.module').then(m => m.ReadingDetailModule) },
       { path: 'calendar', loadChildren: () => import('../calendar/calendar.module').then(m => m.CalendarModule) },
       { path: 'journal', loadChildren: () => import('../journal/journal.module').then(m => m.JournalModule) },
       { path: 'more', component: MorePage },
