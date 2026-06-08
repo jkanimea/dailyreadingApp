@@ -6,7 +6,6 @@ import { Component, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PreferencesService, ThemeMode, FontSize, BibleTranslation } from '../../core/services/preferences.service';
 import { NotificationService } from '../../core/services/notification.service';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-settings',
