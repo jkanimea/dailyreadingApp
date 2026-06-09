@@ -1,3 +1,14 @@
+# This compose file serves as documentation/reference.
+# Actual deployment uses podman pod (see deploy.sh or .github/workflows/deploy.yml)
+# Podman 3.4.4's compose support is too limited for reliable multi-container networking.
+#
+# Usage on VPS:
+#   podman pod rm -f encounter-pod 2>/dev/null
+#   podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000
+#   podman run -d --pod encounter-pod --name encounter-daily-sql ...
+#   podman run -d --pod encounter-pod --name encounter-daily-api ...
+#   podman run -d --pod encounter-pod --name encounter-daily-nginx ...
+
 version: '3.8'
 
 services:
@@ -8,31 +19,18 @@ services:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${SA_PASSWORD:-YourStrong@Passw0rd}
       - MSSQL_PID=Express
-    ports:
-      - "127.0.0.1:1433:1433"
     volumes:
       - sql-data:/var/opt/mssql
-    healthcheck:
-      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD:-YourStrong@Passw0rd}" -C -Q "SELECT 1" || exit 1
-      interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
 
   api:
     image: ghcr.io/jkanimea/encounter-daily-api:${API_IMAGE_TAG:-latest}
     container_name: encounter-daily-api
-    ports:
-      - "127.0.0.1:5000:5000"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:5000
-      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=EncounterDaily;User Id=sa;Password=${SA_PASSWORD:-YourStrong@Passw0rd};TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Server=localhost,1433;Database=EncounterDaily;User Id=sa;Password=${SA_PASSWORD:-YourStrong@Passw0rd};TrustServerCertificate=True;
       - Jwt__RsaPrivateKey=${JWT_RSA_PRIVATE_KEY}
       - DevMode__BypassAuth=${BYPASS_AUTH:-false}
-    depends_on:
-      sqlserver:
-        condition: service_healthy
     restart: unless-stopped
 
   nginx:
@@ -43,9 +41,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-    depends_on:
-      - api
+      - ./ssl:/etc/nginx/ssl:ro
     restart: unless-stopped
 
 volumes:

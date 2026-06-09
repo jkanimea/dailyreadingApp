@@ -132,12 +132,51 @@ jobs:
             API_IMAGE_TAG=production-latest
             ENVEOF
 
-            podman rm -f encounter-daily-sql encounter-daily-api encounter-daily-nginx 2>/dev/null || true
+            # Remove old pod/containers, pull latest image
+            podman pod rm -f encounter-pod 2>/dev/null || true
             podman pull ghcr.io/jkanimea/encounter-daily-api:production-latest
-            podman-compose -f podman-compose.yml up -d --no-build
 
+            # Source .env so we can reference env vars directly
+            set -a; source .env; set +a
+
+            # Create pod (shared network namespace — all containers use localhost)
+            podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000
+
+            # Start SQL
+            podman run -d --pod encounter-pod --name encounter-daily-sql \
+              -e ACCEPT_EULA=Y \
+              -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
+              -e MSSQL_PID=Express \
+              -v sql-data:/var/opt/mssql \
+              mcr.microsoft.com/mssql/server:2022-latest
+
+            # Wait for SQL to be healthy
+            echo "Waiting for SQL Server..."
+            for i in $(seq 1 30); do
+              podman exec encounter-daily-sql /opt/mssql-tools18/bin/sqlcmd \
+                -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
+              sleep 2
+            done
+
+            # Start API
+            podman run -d --pod encounter-pod --name encounter-daily-api \
+              -e ASPNETCORE_ENVIRONMENT="$ASPNETCORE_ENVIRONMENT" \
+              -e ASPNETCORE_URLS=http://+:5000 \
+              -e ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=EncounterDaily;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True;" \
+              -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
+              -e DevMode__BypassAuth="$BYPASS_AUTH" \
+              ghcr.io/jkanimea/encounter-daily-api:production-latest
+
+            # Start nginx
+            podman run -d --pod encounter-pod --name encounter-daily-nginx \
+              -v /opt/encounter-daily/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
+              -v /opt/encounter-daily/ssl:/etc/nginx/ssl:ro \
+              docker.io/nginx:alpine
+
+            # Health check
             sleep 5
-            curl -sf http://localhost:5000/api/v1/reading/series/1/today > /dev/null && echo "API healthy" || echo "Warning: API health check failed"
+            curl -sf http://localhost:5000/api/v1/reading/series/1/today > /dev/null \
+              && echo "API healthy" || echo "Warning: API health check failed"
 
   # ─── Android APK build (disabled until deploy-production is stable) ───
   #
