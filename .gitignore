@@ -49,7 +49,6 @@ yarn-error.log
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
-!.vscode/extensions.json
 .history/*
 
 
@@ -94,3 +93,9 @@ appsettings.Development.json
 /.editorconfig
 /.eslintrc.json
 dev-rsa-key.pem
+
+# opencode local config
+.claude/
+
+# Generated seed data
+seed-import.sql
