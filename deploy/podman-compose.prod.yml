@@ -1,0 +1,25 @@
+# Production overrides
+# Usage: podman-compose -f podman-compose.yml -f podman-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  api:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - DevMode__BypassAuth=false
+    restart: always
+
+  nginx:
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+
+  sqlserver:
+    environment:
+      - MSSQL_PID=Express
+    volumes:
+      - sql-prod-data:/var/opt/mssql
+    restart: always
+
+volumes:
+  sql-prod-data:

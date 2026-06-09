@@ -4,19 +4,42 @@ on:
   push:
     branches: [develop, main]
 
+permissions:
+  contents: read
+  packages: write
+
+env:
+  DOTNET_VERSION: 10.0.x
+  NODE_VERSION: 22.x
+
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 8.0.x
+        with: { dotnet-version: '${{ env.DOTNET_VERSION }}' }
+      - uses: actions/setup-node@v6
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - name: Run backend tests
+        run: dotnet test backend/ --filter "Category=Unit"
+      - name: Run frontend tests
+        run: |
+          cd frontend
+          npm ci
+          npm test -- --no-coverage
+
+  build:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v5
+        with: { dotnet-version: '${{ env.DOTNET_VERSION }}' }
+      - uses: actions/setup-node@v6
+        with: { node-version: '${{ env.NODE_VERSION }}' }
       - name: Build .NET API
         run: dotnet publish backend/EncounterDaily.API/EncounterDaily.API.csproj -c Release -o publish/api
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22.x
       - name: Build Angular app
         run: |
           cd frontend
@@ -28,37 +51,100 @@ jobs:
           name: build-output
           path: publish/
 
-  # deploy-staging:
-  #   if: github.ref == 'refs/heads/develop'
-  #   needs: [build]
-  #   runs-on: ubuntu-latest
-  #   environment:
-  #     name: staging
-  #     url: https://staging.encounterdaily.com
-  #   steps:
-  #     - uses: actions/download-artifact@v8
-  #       with:
-  #         name: build-output
-  #     - name: Deploy to Azure App Service (Staging)
-  #       uses: azure/webapps-deploy@v3
-  #       with:
-  #         app-name: encounter-daily-staging
-  #         slot-name: staging
-  #         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+  # ─── Staging deployment (for testers before production) ───
+  # Uncomment when you have testers ready:
+  #
+  #deploy-staging:
+  #  if: github.ref == 'refs/heads/develop'
+  #  needs: [build]
+  #  runs-on: ubuntu-latest
+  #  environment:
+  #    name: staging
+  #    url: https://${{ vars.STAGING_HOST }}
+  #  steps:
+  #    - uses: actions/checkout@v6
+  #    - uses: actions/setup-node@v6
+  #      with: { node-version: '${{ env.NODE_VERSION }}' }
+  #    - name: Install Podman
+  #      run: sudo apt-get update && sudo apt-get install -y podman podman-compose
+  #    - name: Authenticate with GHCR
+  #      run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+  #    - name: Deploy to staging VPS
+  #      env:
+  #        STAGING_HOST: ${{ vars.STAGING_HOST }}
+  #        SSH_USER: ${{ vars.SSH_USER }}
+  #        SSH_KEY: ${{ secrets.SSH_KEY }}
+  #        SA_PASSWORD: ${{ secrets.SA_PASSWORD }}
+  #        JWT_RSA_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY }}
+  #        GHCR_USER: ${{ github.actor }}
+  #        GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #      run: |
+  #        mkdir -p ~/.ssh
+  #        echo "$SSH_KEY" > ~/.ssh/id_ed25519
+  #        chmod 600 ~/.ssh/id_ed25519
+  #        ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
+  #        for ps1 in database/encounter/convert-*.ps1; do pwsh "$ps1" || true; done
+  #        for ps1 in deploy/scripts/convert-*.ps1; do pwsh "$ps1" || true; done
+  #        ./deploy/deploy.sh staging
 
-  # deploy-production:
-  #   if: github.ref == 'refs/heads/main'
-  #   needs: [build]
-  #   runs-on: ubuntu-latest
-  #   environment:
-  #     name: production
-  #     url: https://encounterdaily.com
-  #   steps:
-  #     - uses: actions/download-artifact@v8
-  #       with:
-  #         name: build-output
-  #     - name: Deploy to Azure App Service (Production)
-  #       uses: azure/webapps-deploy@v3
-  #       with:
-  #         app-name: encounter-daily-prod
-  #         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PRODUCTION }}
+  deploy-production:
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    needs: [build]
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://${{ vars.PRODUCTION_HOST }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - name: Install Podman
+        run: sudo apt-get update && sudo apt-get install -y podman podman-compose
+      - name: Authenticate with GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Deploy to production VPS
+        env:
+          PRODUCTION_HOST: ${{ vars.PRODUCTION_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SA_PASSWORD: ${{ secrets.SA_PASSWORD }}
+          JWT_RSA_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts
+
+          for ps1 in database/encounter/convert-*.ps1; do pwsh "$ps1" || true; done
+          for ps1 in deploy/scripts/convert-*.ps1; do pwsh "$ps1" || true; done
+
+          ./deploy/deploy.sh production
+
+  android-apk:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build Android builder image
+        run: docker build -t android-builder -f deploy/android/Containerfile .
+      - name: Write keystore
+        run: |
+          echo "${{ secrets.KEYSTORE }}" | grep -v '^---' | base64 -d > /tmp/encounter-daily-keystore.jks
+      - name: Build signed APK
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/frontend:/app/frontend:ro \
+            -v /tmp/encounter-daily-keystore.jks:/tmp/encounter-daily-keystore.jks:ro \
+            -v ${{ github.workspace }}/apk-output:/output \
+            -e API_URL=https://mg-encounter.com/api/v1 \
+            -e KEYSTORE_PATH=/tmp/encounter-daily-keystore.jks \
+            -e KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
+            -e KEY_PASSWORD=${{ secrets.KEY_PASSWORD }} \
+            android-builder
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: app-release
+          path: apk-output/

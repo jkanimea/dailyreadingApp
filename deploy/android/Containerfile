@@ -1,0 +1,23 @@
+# Android APK builder — run on demand:
+#   podman run --rm -v ./frontend:/app/frontend:ro -v ./deploy/android/output:/output \
+#     localhost/encounter-daily-android-builder
+
+FROM docker.io/library/node:22 AS node-deps
+WORKDIR /tmp
+COPY frontend/package*.json ./
+RUN npm ci && cp -r node_modules /node_modules
+
+FROM docker.io/library/gradle:8-jdk17
+WORKDIR /app
+
+# Accept Android SDK license
+ENV ANDROID_HOME=/opt/android-sdk
+RUN mkdir -p $ANDROID_HOME/licenses && \
+    echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license && \
+    echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
+
+COPY --from=node-deps /node_modules /node_modules
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
