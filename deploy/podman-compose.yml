@@ -9,7 +9,7 @@ services:
       - MSSQL_SA_PASSWORD=${SA_PASSWORD:-YourStrong@Passw0rd}
       - MSSQL_PID=Express
     ports:
-      - "1433:1433"
+      - "127.0.0.1:1433:1433"
     volumes:
       - sql-data:/var/opt/mssql
     healthcheck:
@@ -23,7 +23,7 @@ services:
     image: ghcr.io/jkanimea/encounter-daily-api:${API_IMAGE_TAG:-latest}
     container_name: encounter-daily-api
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ASPNETCORE_URLS=http://+:5000
