@@ -109,7 +109,7 @@ jobs:
           host: ${{ vars.PRODUCTION_HOST }}
           username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "deploy/"
+          source: "deploy/*"
           target: "/opt/encounter-daily"
 
       - name: Deploy on VPS
@@ -119,7 +119,7 @@ jobs:
           username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /opt/encounter-daily/deploy
+            cd /opt/encounter-daily
 
             cat > .env <<'ENVEOF'
             SA_PASSWORD=${{ secrets.SA_PASSWORD }}
