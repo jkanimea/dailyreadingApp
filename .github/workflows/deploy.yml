@@ -121,6 +121,9 @@ jobs:
           script: |
             cd /opt/encounter-daily
 
+            # Clean up old build artifacts that could interfere
+            rm -rf android 2>/dev/null || true
+
             cat > .env <<'ENVEOF'
             SA_PASSWORD=${{ secrets.SA_PASSWORD }}
             JWT_RSA_PRIVATE_KEY=${{ secrets.JWT_RSA_PRIVATE_KEY }}
@@ -131,7 +134,7 @@ jobs:
 
             podman rm -f encounter-daily-sql encounter-daily-api encounter-daily-nginx 2>/dev/null || true
             podman pull ghcr.io/jkanimea/encounter-daily-api:production-latest
-            podman-compose -f podman-compose.yml up -d
+            podman-compose -f podman-compose.yml up -d --no-build
 
             sleep 5
             curl -sf http://localhost:5000/api/v1/reading/series/1/today > /dev/null && echo "API healthy" || echo "Warning: API health check failed"

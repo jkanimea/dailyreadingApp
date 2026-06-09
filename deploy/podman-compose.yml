@@ -25,9 +25,6 @@ services:
       start_period: 30s
 
   api:
-    build:
-      context: ../backend
-      dockerfile: Containerfile
     image: ghcr.io/jkanimea/encounter-daily-api:${API_IMAGE_TAG:-latest}
     container_name: encounter-daily-api
     network_mode: host
