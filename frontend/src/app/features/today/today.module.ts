@@ -28,7 +28,7 @@ interface BibleSection {
         <ion-title>
           <div class="header-title">
             <ion-icon name="sunny-outline" class="header-icon"></ion-icon>
-            <span>Today</span>
+            <span>Today — {{ seriesName }}</span>
           </div>
         </ion-title>
         <ion-buttons slot="end">
@@ -432,6 +432,7 @@ export class TodayPage {
   }
   error?: string;
   detail?: ReadingDetail;
+  seriesName = '';
   translation: BibleTranslation = 'KJV';
   completed = false;
   notes = '';
@@ -600,6 +601,7 @@ export class TodayPage {
       const now = new Date();
       const reading = await firstValueFrom(this.readingService.getToday(this.seriesId, now.getMonth() + 1, now.getDate()));
       this.readingId = reading.id;
+      this.seriesName = reading.seriesName;
       await this.loadDetail(this.readingId, this.translation);
       await this.checkCompleted();
     } catch {
