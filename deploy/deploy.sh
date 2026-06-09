@@ -218,14 +218,17 @@ deploy_stack() {
         cat > .env <<EOF
 SA_PASSWORD=$SA_PASSWORD
 JWT_RSA_PRIVATE_KEY=${JWT_RSA_PRIVATE_KEY}
-ASPNETCORE_ENVIRONMENT=$([ "$ENVIRONMENT" = "production" ] && echo Production || echo Production)
-BYPASS_AUTH=false
+ASPNETCORE_ENVIRONMENT=Production
+BYPASS_AUTH=true
 API_IMAGE_TAG=${ENVIRONMENT}-latest
 EOF
 
         echo "[Remote] Pulling latest images..."
         export DOCKER_HOST="unix:///run/podman/podman.sock"
         podman-compose -f podman-compose.yml $([ "$ENVIRONMENT" = "production" ] && echo "-f podman-compose.prod.yml") pull api
+
+        echo "[Remote] Cleaning up old containers..."
+        podman rm -f encounter-daily-sql encounter-daily-api encounter-daily-nginx 2>/dev/null || true
 
         echo "[Remote] Starting stack..."
         podman-compose -f podman-compose.yml $([ "$ENVIRONMENT" = "production" ] && echo "-f podman-compose.prod.yml") up -d --remove-orphans
