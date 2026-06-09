@@ -176,6 +176,9 @@ setup_ssl() {
 deploy_stack() {
     log "Deploying $ENVIRONMENT stack to $REMOTE_HOST..."
 
+    # Ensure rsync is available
+    command -v rsync &>/dev/null || sudo apt-get install -y rsync
+
     # 1. Determine image tag and build
     local git_sha
     git_sha="$(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo "latest")"

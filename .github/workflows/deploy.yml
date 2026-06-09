@@ -99,21 +99,20 @@ jobs:
       - uses: actions/setup-node@v6
         with: { node-version: '${{ env.NODE_VERSION }}' }
       - name: Install Podman
-        run: sudo apt-get update && sudo apt-get install -y podman podman-compose
+        run: sudo apt-get update && sudo apt-get install -y podman podman-compose rsync
       - name: Authenticate with GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
       - name: Deploy to production VPS
         env:
           PRODUCTION_HOST: ${{ vars.PRODUCTION_HOST }}
           SSH_USER: ${{ vars.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
           SA_PASSWORD: ${{ secrets.SA_PASSWORD }}
           JWT_RSA_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY }}
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p ~/.ssh
-          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$PRODUCTION_HOST" >> ~/.ssh/known_hosts
 
