@@ -30,7 +30,7 @@ All components run as **Podman containers** on a single VPS (or Docker — same 
 | Resource | Example |
 |---|---|
 | **VPS** (Linux, 2GB+ RAM, 20GB+ disk) | Ubuntu 22.04/24.04 on any provider (Linode, Hetzner, DigitalOcean, etc.) |
-| **DNS name** | `your-dns-name.com` pointing to your VPS IP |
+| **DNS name** | `mg-encounter.com` pointing to your VPS IP |
 | **Domain email** | For Let's Encrypt SSL certificate notifications |
 | **SSH key** | For secure access to the VPS |
 
@@ -152,18 +152,13 @@ Output goes to `database/seed-data/series-{1,2,3,4}-readings.csv`.
 ### 5.2 Build and Deploy
 
 ```bash
-# Build the backend container image
-podman build -t encounter-daily-api -f backend/Containerfile backend/
-
-# Save and transfer to VPS
-podman save encounter-daily-api:latest | gzip > /tmp/api.tar.gz
-scp /tmp/api.tar.gz deploy@your-vps:/opt/encounter-daily/
+# Build and push via GitHub Container Registry
+podman build -t ghcr.io/jkanimea/encounter-daily-api:staging-latest -f backend/Containerfile backend/
+podman push ghcr.io/jkanimea/encounter-daily-api:staging-latest
 
 # On the VPS:
 cd /opt/encounter-daily
-podman load -i api.tar.gz
-
-# Start the stack
+podman-compose pull api
 podman-compose up -d
 
 # Seed the database (after SQL Server is healthy)
@@ -178,7 +173,7 @@ podman build -t encounter-daily-android-builder -f deploy/android/Containerfile 
 podman run --rm \
   -v ./frontend:/app/frontend:ro \
   -v ./deploy/android/output:/output \
-  -e "API_URL=https://your-dns-name.com/api/v1" \
+  -e "API_URL=https://mg-encounter.com/api/v1" \
   encounter-daily-android-builder
 # APK at: deploy/android/output/app-release.apk
 
@@ -213,8 +208,7 @@ Set these in `deploy/.env` or pass as environment variables:
 | `DEEPSEEK_API_KEY` | Yes | DeepSeek API key for AI Summarize feature (journal notes) |
 | `STAGING_HOST` | For staging | DNS name of staging server |
 | `PRODUCTION_HOST` | For production | DNS name of production server |
-| `STAGING_SSH_USER` | For staging | SSH username for staging VPS |
-| `PRODUCTION_SSH_USER` | For production | SSH username for production VPS |
+| `SSH_USER` | Both | SSH username for VPS |
 | `SSH_KEY` | Yes | Path to local SSH private key used to connect to VPS (default: `~/.ssh/id_ed25519`) |
 | `CERTBOT_EMAIL` | For SSL | Email for Let's Encrypt notifications |
 | `MSSQL_PID` | No | SQL Server edition — defaults to `Express` (10 GB database size cap). Set to `Developer` or `Standard` for larger datasets. |
@@ -263,8 +257,7 @@ test  ──▶  build  ──▶  deploy-staging (develop)
 
 | Secret | Purpose |
 |---|---|
-| `STAGING_SSH_KEY` | Private SSH key for staging VPS |
-| `PRODUCTION_SSH_KEY` | Private SSH key for production VPS |
+| `SSH_KEY` | Private SSH key for VPS (staging and production share the same) |
 | `SA_PASSWORD` | SQL Server password |
 | `JWT_RSA_PRIVATE_KEY` | JWT signing key |
 | `DEEPSEEK_API_KEY` | DeepSeek API key for AI Summarize feature |
@@ -278,8 +271,7 @@ test  ──▶  build  ──▶  deploy-staging (develop)
 |---|---|
 | `STAGING_HOST` | DNS name of staging server |
 | `PRODUCTION_HOST` | DNS name of production server |
-| `STAGING_SSH_USER` | SSH username for staging |
-| `PRODUCTION_SSH_USER` | SSH username for production |
+| `SSH_USER` | SSH username for VPS |
 
 ---
 
