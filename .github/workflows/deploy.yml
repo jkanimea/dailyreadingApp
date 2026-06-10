@@ -191,7 +191,7 @@ jobs:
       - name: Build signed APK
         run: |
           docker run --rm \
-            -v ${{ github.workspace }}/frontend:/app/frontend:ro \
+            -v ${{ github.workspace }}/frontend:/app/frontend \
             -v /tmp/encounter-daily-keystore.jks:/tmp/encounter-daily-keystore.jks:ro \
             -v ${{ github.workspace }}/apk-output:/output \
             -e API_URL=https://mg-encounter.com/api/v1 \
