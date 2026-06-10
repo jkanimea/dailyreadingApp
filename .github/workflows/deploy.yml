@@ -10,7 +10,7 @@ permissions:
 
 env:
   DOTNET_VERSION: 10.0.x
-  NODE_VERSION: 22.x
+  NODE_VERSION: 20.x
 
 jobs:
   test:
@@ -26,7 +26,8 @@ jobs:
       - name: Run frontend tests
         run: |
           cd frontend
-          rm -rf node_modules
+          npm cache clean --force
+          rm -rf node_modules package-lock.json
           npm ci
           npm test -- --no-coverage
 
@@ -44,7 +45,8 @@ jobs:
       - name: Build Angular app
         run: |
           cd frontend
-          rm -rf node_modules
+          npm cache clean --force
+          rm -rf node_modules package-lock.json
           npm ci
           npm run build -- --configuration production
       - name: Upload build artifacts
