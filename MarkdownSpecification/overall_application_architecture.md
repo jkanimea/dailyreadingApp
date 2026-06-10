@@ -172,20 +172,156 @@ User clicks Print on Journal page
 
 ---
 
-## 5. Authentication & Security
+## 5. Authentication Architecture
 
-| Aspect | Implementation |
-|--------|---------------|
-| Token type | JWT with RS256 signing (asymmetric keys) |
-| Access token | 15-minute lifetime |
-| Refresh token | 30-day lifetime, stored hashed in DB with SHA-256 |
-| Token storage | `@capgo/capacitor-secure-storage-plugin` (iOS Keychain / Android EncryptedSharedPreferences) |
-| Token refresh | Automatic via `AuthInterceptor` — catches 401, calls `/auth/refresh`, retries original request |
-| Replay detection | Revoke all tokens if same refresh token reused 3+ times |
-| Rate limiting | Partitioned per-IP (1000/min) and per-user (100/min) buckets |
-| Auth bypass | `DevMode:BypassAuth` flag for local development |
-| CORS | Restricted to known origins in production |
-| OAuth providers | Google OAuth (primary), Guest login (dev), Facebook removed (system Share API covers it) |
+The authentication system is split across **four layers** — two on the frontend (UI + middle-tier) and two on the backend (middle-tier + persistence).
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  FRONTEND                                                          │
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Layer 1: UI (Login Screen)                                 │  │
+│  │  • Google Sign-In button → Capacitor Google Auth plugin     │  │
+│  │  • Guest Login button → creates dummy credentials           │  │
+│  │  • Loading/error states, OAuth popup handling               │  │
+│  └──────────────────────┬───────────────────────────────────────┘  │
+│                         │ raw OAuth token or guest flag            │
+│                         ▼                                          │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Layer 2: Frontend Middle-Tier (AuthService + Interceptor)   │  │
+│  │                                                              │  │
+│  │  AuthService.ts:                                              │  │
+│  │  ├── signInWithGoogle() → calls plugin → POST /auth/google   │  │
+│  │  ├── guestLogin() → POST /auth/guest → get tokens            │  │
+│  │  ├── refreshToken() → POST /auth/refresh → rotate tokens     │  │
+│  │  ├── logout() → POST /auth/logout → clear secure storage     │  │
+│  │  └── getValidToken() → returns access token or refreshes     │  │
+│  │                                                              │  │
+│  │  SecureStorageService.ts:                                     │  │
+│  │  └── Wraps @capgo/capacitor-secure-storage-plugin            │  │
+│  │      ├── setTokens(access, refresh) → iOS Keychain /         │  │
+│  │      │                            Android EncryptedSharedPrefs│  │
+│  │      ├── getAccessToken() → returns stored access token       │  │
+│  │      └── clearTokens() → removes all stored credentials      │  │
+│  │                                                              │  │
+│  │  AuthInterceptor.ts (HttpInterceptor):                        │  │
+│  │  ├── intercept(req, next):                                   │  │
+│  │  │   1. Read access token from SecureStorage                  │  │
+│  │  │   2. Attach Authorization: Bearer <token> header           │  │
+│  │  │   3. Forward request                                       │  │
+│  │  │   4. On 401 response:                                      │  │
+│  │  │      a. Call authService.refreshToken()                    │  │
+│  │  │      b. Store new tokens in SecureStorage                  │  │
+│  │  │      c. Retry original request with new token              │  │
+│  │  │      d. If refresh fails → redirect to login               │  │
+│  │  └── Queue: pending requests during refresh are queued        │  │
+│  │       and replayed once the new token is obtained             │  │
+│  └──────────────────────┬───────────────────────────────────────┘  │
+└─────────────────────────┼──────────────────────────────────────────┘
+                          │ HTTPS with Bearer token
+                          ▼
+┌────────────────────────────────────────────────────────────────────┐
+│  BACKEND                                                           │
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Layer 3: Backend Middle-Tier (AuthController + AuthService)  │  │
+│  │                                                              │  │
+│  │  AuthController:                                              │  │
+│  │  ├── POST /api/v1/auth/google  { idToken }                   │  │
+│  │  ├── POST /api/v1/auth/guest   { displayName }               │  │
+│  │  ├── POST /api/v1/auth/refresh { refreshToken }              │  │
+│  │  ├── POST /api/v1/auth/logout  { refreshToken }              │  │
+│  │  └── GET  /api/v1/auth/me      → current user (requires JWT) │  │
+│  │                                                              │  │
+│  │  AuthService (business logic):                                │  │
+│  │  ├── GoogleLoginAsync(idToken):                              │  │
+│  │  │   1. Validate idToken with Google API (verify email)       │  │
+│  │  │   2. Find or create User record (by Provider+ProviderId)   │  │
+│  │  │   3. Generate RS256 JWT (15min) + RefreshToken (30 days)   │  │
+│  │  │   4. Hash refresh token with SHA-256, store in DB          │  │
+│  │  │   5. Return TokenResponse { accessToken, refreshToken }    │  │
+│  │  │                                                           │  │
+│  │  ├── RefreshTokenAsync(refreshToken):                        │  │
+│  │  │   1. Hash incoming refresh token with SHA-256              │  │
+│  │  │   2. Look up hash in RefreshTokens table                   │  │
+│  │  │   3. If not found → return 401 (token invalid/revoked)     │  │
+│  │  │   4. Check ReuseCount:                                     │  │
+│  │  │      a. If ReuseCount >= 3 → revoke ALL tokens for user   │  │
+│  │  │         (replay attack detected → force re-login)          │  │
+│  │  │      b. If ReuseCount > 0 (but < 3) → token was stolen   │  │
+│  │  │         — issue new tokens but flag the event              │  │
+│  │  │   5. Increment ReuseCount on old token                     │  │
+│  │  │   6. Issue new access token + new refresh token            │  │
+│  │  │   7. Store new refresh token hash in DB                    │  │
+│  │  │   8. Return TokenResponse                                  │  │
+│  │  │                                                           │  │
+│  │  ├── LogoutAsync(refreshToken):                              │  │
+│  │  │   1. Hash and find the refresh token                      │  │
+│  │  │   2. Delete it from the database                          │  │
+│  │  │                                                           │  │
+│  │  └── GetCurrentUserAsync(userId):                            │  │
+│  │      1. Look up User by ID from JWT claim                     │  │
+│  │      2. Return UserDto (id, email, displayName, etc.)        │  │
+│  │                                                              │  │
+│  │  TokenResponse DTO:                                           │  │
+│  │  { accessToken: string, refreshToken: string, expiresIn: 900,│  │
+│  │    user: { id, email, displayName, picture, provider } }      │  │
+│  └──────────────────────┬───────────────────────────────────────┘  │
+│                         ▼                                          │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │  Layer 4: Data Persistence (RefreshTokens table)             │  │
+│  │                                                              │  │
+│  │  RefreshToken entity:                                         │  │
+│  │  ├── Id (PK, int)                                            │  │
+│  │  ├── UserId (FK → Users.Id)                                  │  │
+│  │  ├── TokenHash (nvarchar, SHA-256 of refresh token)          │  │
+│  │  ├── ExpiresAt (datetime, 30 days from issue)                │  │
+│  │  ├── IsRevoked (bit)                                         │  │
+│  │  ├── ReuseCount (int, tracks how many times presented)       │  │
+│  │  └── CreatedAt (datetime)                                    │  │
+│  │                                                              │  │
+│  │  JWT payload:                                                 │  │
+│  │  { sub: userId, email, name,                                 │  │
+│  │    iat: issuedAt, exp: expiresAt (15min),                    │  │
+│  │    iss: "encounter-daily", aud: "encounter-daily-api" }      │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+### Token Lifecycle
+
+```
+1. LOGIN: User signs in → tokens issued → stored in SecureStorage
+2. REQUEST: AuthInterceptor reads token → attaches Bearer header → API validates JWT signature + expiry
+3. REFRESH (automatic):
+   a. API returns 401 (token expired)
+   b. Interceptor catches 401 → queues concurrent requests
+   c. Calls POST /auth/refresh with refresh token
+   d. Backend rotates tokens (old invalidated, new issued)
+   e. Interceptor retries original request with new token
+   f. If refresh fails → redirect to login screen
+4. REPLAY DETECTION:
+   a. If same refresh token presented 2nd time → ReuseCount > 0 → 
+      still valid but flagged (token likely stolen)
+   b. If same refresh token presented 4th time → ReuseCount >= 3 →
+      ALL tokens for that user revoked → force re-login
+5. LOGOUT: Refresh token deleted from DB → no further refresh possible
+```
+
+### Security Hardening
+
+| Layer | Measure |
+|-------|---------|
+| Transport | TLS 1.2+ enforced on all API traffic |
+| Token storage | iOS Keychain / Android EncryptedSharedPreferences via Capacitor Secure Storage plugin |
+| JWT signing | RS256 with private key on server, public key available for verification |
+| Refresh token | Stored hashed (SHA-256), never in plaintext |
+| Replay protection | ReuseCount tracking with automatic revocation at threshold 3 |
+| Rate limiting | Per-IP (1000/min) and per-user (100/min) partitioned buckets |
+| Auth bypass | `DevMode:BypassAuth` flag exists for local development only — never enabled in production |
+| CORS | Restricted to known origins in production configuration |
+| Input validation | All auth endpoints validate and sanitize inputs server-side |
 
 ---
 
