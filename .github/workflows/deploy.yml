@@ -100,7 +100,7 @@ jobs:
       - name: Build and push API image
         run: |
           docker build -t ghcr.io/jkanimea/encounter-daily-api:production-latest -f backend/Containerfile backend
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker push ghcr.io/jkanimea/encounter-daily-api:production-latest
 
       - name: Sync deploy files to VPS
