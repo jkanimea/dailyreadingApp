@@ -10,7 +10,7 @@ permissions:
 
 env:
   DOTNET_VERSION: 10.0.x
-  NODE_VERSION: 20.x
+  NODE_VERSION: 22.x
 
 jobs:
   test:
@@ -21,10 +21,6 @@ jobs:
         with: { dotnet-version: '${{ env.DOTNET_VERSION }}' }
       - uses: actions/setup-node@v6
         with: { node-version: '${{ env.NODE_VERSION }}' }
-      - name: Enable corepack
-        run: |
-          corepack enable
-          corepack prepare npm@latest --activate
       - name: Run backend tests
         run: dotnet test backend/ --filter "Category=Unit"
       - name: Run frontend tests
@@ -42,10 +38,6 @@ jobs:
         with: { dotnet-version: '${{ env.DOTNET_VERSION }}' }
       - uses: actions/setup-node@v6
         with: { node-version: '${{ env.NODE_VERSION }}' }
-      - name: Enable corepack
-        run: |
-          corepack enable
-          corepack prepare npm@latest --activate
       - name: Build .NET API
         run: dotnet publish backend/EncounterDaily.API/EncounterDaily.API.csproj -c Release -o publish/api
       - name: Build Angular app
