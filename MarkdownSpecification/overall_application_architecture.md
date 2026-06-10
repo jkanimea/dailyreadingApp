@@ -289,6 +289,46 @@ The authentication system is split across **four layers** — two on the fronten
 └────────────────────────────────────────────────────────────────────┘
 ```
 
+### Purpose of Capacitor Plugins
+
+Capacitor is the cross-platform native runtime that wraps the web app (Angular/Ionic) and exposes native device APIs to JavaScript. The plugins used in this app serve as the **bridge between the TypeScript frontend and the device OS**:
+
+| Plugin | Purpose |
+|--------|---------|
+| `@capacitor/core` | Core runtime — provides the bridge API, app lifecycle events, and back button handling |
+| `@capgo/capacitor-secure-storage-plugin` | **Auth-critical** — stores JWT tokens in the platform's secure enclave (iOS Keychain / Android EncryptedSharedPreferences). Unlike `localStorage` (plaintext on disk) or `localStorage` (accessible via WebView inspector), this ensures tokens are encrypted at rest and inaccessible to other apps or debug tools. |
+| `@capacitor/push-notifications` | Registers the device for push notifications, handles permission requests, and routes incoming notification payloads |
+| `@capacitor/local-notifications` | Schedules daily reading reminders locally (no server needed — the app fires the notification at the user's selected time) |
+| `@capacitor/google-auth` | Handles the native Google OAuth flow — opens the OS account picker, manages the redirect URI dance, and returns the ID token to the app |
+
+**Why Capacitor instead of Cordova?** Capacitor runs the web app as a modern WebView (WKWebView on iOS, Android WebView), has first-class modern JavaScript support, and each plugin is a self-contained npm package with a clean API. Unlike Cordova, plugins can be tree-shaken and the tooling integrates natively with modern Angular/Ionic CLI workflows.
+
+### JWT vs Session-Based Authentication — Why JWT?
+
+| Aspect | JWT (Stateless) | Session (Stateful) |
+|--------|-----------------|-------------------|
+| **Server storage** | None — the token contains all claims (userId, email, expiry). Signature verifies authenticity. | Server stores session in memory or Redis. Every request looks up the session. |
+| **Horizontal scaling** | Works out of the box — any server can verify a JWT using the public key. No sticky sessions or shared session store needed. | Requires a shared session store (Redis, SQL Server) or sticky load balancer. Adds infrastructure complexity. |
+| **Mobile friendliness** | Tokens are stored on-device and sent via HTTP headers. Works naturally with REST APIs. | Cookies + sessions are designed for browsers. Mobile apps don't handle cookies the same way — you end up simulating session tokens anyway. |
+| **Token expiry** | Short-lived (15 min) + refresh token rotation. The server can revoke by deleting the refresh token. | Session can be invalidated server-side immediately. |
+| **Security trade-off** | If a JWT is stolen, it's valid until expiry. Mitigation: short expiry (15 min) + refresh token rotation + replay detection. | If a session ID is stolen, it's valid until the session expires or is revoked. Server-side revocation is immediate. |
+
+**Why we chose JWT for this app:**
+1. **Mobile-first** — no browser cookie handling; tokens via `Authorization` header work identically on iOS and Android
+2. **Serverless-friendly** — the deployment uses containerized APIs that can scale horizontally; JWT eliminates the need for a shared session store
+3. **Offline resilience** — the access token can be used until it expires, even if the server is unreachable (briefly). The interceptor refreshes silently when connectivity returns
+4. **Secure storage** — `@capgo/capacitor-secure-storage-plugin` provides OS-level encryption that's actually more secure than browser cookies for session tokens
+
+### Authentication Workflow (Interview Explanation)
+
+> "When a user signs in with Google, the Capacitor Google Auth plugin opens the OS account picker and returns an ID token. The `AuthService` sends this to our backend's `POST /auth/google` endpoint. The `AuthService` on the backend validates the token with Google's API, then finds or creates a User record. It generates two tokens: a short-lived **access token** (JWT, 15 minutes) and a long-lived **refresh token** (30 days). The refresh token is hashed with SHA-256 and stored in the database — we never store the raw token. Both tokens are returned to the frontend, which stores them in the device's secure storage (iOS Keychain / Android EncryptedSharedPreferences) via the Capacitor Secure Storage plugin.
+>
+> On every API request, the `AuthInterceptor` reads the access token from secure storage and attaches it as an `Authorization: Bearer` header. The backend validates the JWT signature and expiry using the public RS256 key — no database lookup needed for auth on each request.
+>
+> When the access token expires (after 15 minutes), the API returns a 401. The interceptor catches this, queues any concurrent requests, and calls `POST /auth/refresh` with the refresh token. The backend hashes the incoming refresh token, looks it up, and if valid, issues a new access token + a new refresh token (rotation). The interceptor then retries the original request with the new token. This all happens transparently — the user never sees a login screen mid-session.
+>
+> For security, we track how many times a refresh token is presented. If the same token is used 3+ times, we detect a replay attack and revoke **all** tokens for that user, forcing re-authentication. This protects against token theft — even if someone steals a refresh token, the legitimate user will trigger the replay detection on their next request."
+
 ### Token Lifecycle
 
 ```
