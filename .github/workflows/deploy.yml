@@ -21,8 +21,10 @@ jobs:
         with: { dotnet-version: '${{ env.DOTNET_VERSION }}' }
       - uses: actions/setup-node@v6
         with: { node-version: '${{ env.NODE_VERSION }}' }
-      - name: Reinstall npm
-        run: npm install -g npm@latest
+      - name: Enable corepack
+        run: |
+          corepack enable
+          corepack prepare npm@latest --activate
       - name: Run backend tests
         run: dotnet test backend/ --filter "Category=Unit"
       - name: Run frontend tests
@@ -40,8 +42,10 @@ jobs:
         with: { dotnet-version: '${{ env.DOTNET_VERSION }}' }
       - uses: actions/setup-node@v6
         with: { node-version: '${{ env.NODE_VERSION }}' }
-      - name: Reinstall npm
-        run: npm install -g npm@latest
+      - name: Enable corepack
+        run: |
+          corepack enable
+          corepack prepare npm@latest --activate
       - name: Build .NET API
         run: dotnet publish backend/EncounterDaily.API/EncounterDaily.API.csproj -c Release -o publish/api
       - name: Build Angular app
