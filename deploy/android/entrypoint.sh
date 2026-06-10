@@ -23,7 +23,7 @@ sed -i "s|apiUrl:.*|apiUrl: '$API_URL',|" "$FRONTEND_DIR/src/environments/enviro
 # Build Angular
 cd "$FRONTEND_DIR"
 echo "Building Angular app..."
-npx ng build --configuration production
+npm run build -- --configuration production
 
 # If Android project doesn't exist, create it
 if [ ! -d "$FRONTEND_DIR/android" ]; then
