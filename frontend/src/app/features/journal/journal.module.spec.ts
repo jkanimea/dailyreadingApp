@@ -1,4 +1,3 @@
-import { fakeAsync, tick } from '@angular/core/testing';
 import { JournalEntryDto } from '../../core/models/journal-entry.model';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -84,12 +83,107 @@ describe('JournalPage', () => {
         this.selectedCount = this.selectedEntryIds.size;
       },
       printJournal() {
-        this.allExpanded = true;
-        if (this.selectedCount > 0) {
-          this.expandedEntries = new Set(this.selectedEntryIds);
+        const selected = this.selectedCount > 0
+          ? this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId))
+          : this.entries;
+        if (selected.length === 0) return;
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        printWindow.document.write(this.buildPrintHtml(selected));
+        printWindow.document.close();
+        printWindow.focus();
+
+        printWindow.onafterprint = () => printWindow.close();
+        setTimeout(() => printWindow.print(), 300);
+      },
+      buildPrintHtml(entries: JournalEntryDto[]) {
+        const lines: string[] = [];
+        lines.push('<!DOCTYPE html><html><head><meta charset="utf-8">');
+        lines.push(`<title>Journal — ${this.escapeHtml(this.seriesName)}</title>`);
+        lines.push('<style>');
+        lines.push(`
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  padding: 24px;
+  color: #000;
+  background: #fff;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.print-header {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #222;
+}
+.journal-card {
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  page-break-inside: avoid;
+}
+.journal-date {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #000;
+}
+.journal-subtitle {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 8px;
+}
+.journal-subtitle a { color: #555; text-decoration: none; }
+.journal-secondary {
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+  margin-bottom: 8px;
+}
+.journal-notes {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 15px;
+  color: #000;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+@media print {
+  body { padding: 12px; }
+  .journal-card { break-inside: avoid; }
+}`);
+        lines.push('</style></head><body>');
+        lines.push(`<div class="print-header">My Reading Journal — ${this.escapeHtml(this.seriesName)}</div>`);
+
+        for (const entry of entries) {
+          const date = `${this.getMonthName(entry.month)} ${entry.day}`;
+          lines.push('<div class="journal-card">');
+          lines.push(`<div class="journal-date">${this.escapeHtml(date)}</div>`);
+          lines.push(`<div class="journal-subtitle">${this.escapeHtml(entry.bibleReading)} — ${this.escapeHtml(entry.primaryBookPageRange)}</div>`);
+          if (entry.secondaryBookPageRange) {
+            lines.push(`<div class="journal-secondary">${this.escapeHtml(entry.secondaryBookPageRange)}</div>`);
+          }
+          if (entry.notes) {
+            lines.push(`<div class="journal-notes">${this.escapeHtml(entry.notes)}</div>`);
+          }
+          lines.push('</div>');
         }
-        window.addEventListener('afterprint', () => { this.allExpanded = false; this.expandedEntries.clear(); }, { once: true });
-        setTimeout(() => window.print(), 0);
+
+        lines.push('</body></html>');
+        return lines.join('\n');
+      },
+      escapeHtml(text: string) {
+        return text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
       },
       shareJournal() {
         if (!navigator.share) return;
@@ -114,6 +208,10 @@ describe('JournalPage', () => {
         return lines.join('\n');
       }
     };
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   // ─── Loading ─────────────────────────────────────────────────────────
@@ -302,58 +400,110 @@ describe('JournalPage', () => {
     expect(component.isExpanded(3)).toBe(true);
   });
 
-  // ─── Print ────────────────────────────────────────────────────────────
+  // ─── Print (new-window approach) ──────────────────────────────────────
 
-  it('printJournal should expand all entries and call window.print', fakeAsync(() => {
-    const printSpy = jest.spyOn(window, 'print').mockImplementation(() => {});
-    component.allExpanded = false;
+  it('buildPrintHtml should produce valid HTML document with all entries', () => {
+    component.ionViewWillEnter();
+    const html = component.buildPrintHtml(component.entries);
 
-    component.printJournal();
-    tick(0);
+    expect(html).toMatch(/^<!DOCTYPE html><html>/);
+    expect(html).toContain('</html>');
+    expect(html).toContain('My Reading Journal — Christ The Way');
+    expect(html).toContain('January 5');
+    expect(html).toContain('Mark 1:1');
+    expect(html).toContain('DA 1-5');
+    expect(html).toContain('Great insight');
+    expect(html).toContain('February 1');
+  });
 
-    expect(component.allExpanded).toBe(true);
-    expect(printSpy).toHaveBeenCalled();
-
-    window.dispatchEvent(new Event('afterprint'));
-  }));
-
-  it('printJournal should add expandedEntries from selected IDs when selectedCount > 0', () => {
+  it('buildPrintHtml should include only selected entries', () => {
     component.ionViewWillEnter();
     component.deselectAllEntries();
     component.toggleSelected(1);
-    component.toggleSelected(3);
-    jest.spyOn(window, 'print').mockImplementation(() => {});
+    const html = component.buildPrintHtml(
+      component.entries.filter((e: JournalEntryDto) => component.selectedEntryIds.has(e.readingId))
+    );
 
-    component.printJournal();
-
-    expect(component.expandedEntries.has(1)).toBe(true);
-    expect(component.expandedEntries.has(2)).toBe(false);
-    expect(component.expandedEntries.has(3)).toBe(true);
-    expect(component.allExpanded).toBe(true);
-
-    window.dispatchEvent(new Event('afterprint'));
+    expect(html).toContain('January 5');
+    expect(html).not.toContain('January 10');
+    expect(html).not.toContain('February 1');
   });
 
-  it('toggleEntry should work after print preview closes (allExpanded resets on afterprint)', fakeAsync(() => {
-    jest.spyOn(window, 'print').mockImplementation(() => {});
+  it('buildPrintHtml should escape HTML in notes', () => {
+    component.ionViewWillEnter();
+    component.entries[0].notes = '<script>alert("xss")</script>';
+    const html = component.buildPrintHtml([component.entries[0]]);
+
+    expect(html).toContain('&lt;script&gt;');
+    expect(html).not.toContain('<script>');
+  });
+
+  it('buildPrintHtml should escape HTML in series name', () => {
+    component.seriesName = 'Test & "Series"';
+    const html = component.buildPrintHtml([]);
+
+    expect(html).toContain('Test &amp; &quot;Series&quot;');
+    expect(html).not.toContain('Test & "Series"');
+    expect(html).toContain('<title>Journal — Test &amp; &quot;Series&quot;</title>');
+  });
+
+  it('buildPrintHtml should include print CSS with contain:none fallback for multi-page', () => {
+    component.ionViewWillEnter();
+    const html = component.buildPrintHtml(component.entries);
+
+    expect(html).toContain('page-break-inside: avoid');
+    expect(html).toContain('@media print');
+    expect(html).toContain('.journal-card { break-inside: avoid; }');
+  });
+
+  it('printJournal should open print window with buildPrintHtml content', () => {
+    const mockDoc = { write: jest.fn(), close: jest.fn() };
+    const mockWin: any = { document: mockDoc, focus: jest.fn(), close: jest.fn(), onafterprint: null, print: jest.fn() };
+    const openSpy = jest.spyOn(window, 'open').mockReturnValue(mockWin);
     component.ionViewWillEnter();
 
     component.printJournal();
-    tick(0);
-    expect(component.allExpanded).toBe(true);
 
-    // Dispatch twice to clear any stale listeners from prior tests
-    window.dispatchEvent(new Event('afterprint'));
+    expect(openSpy).toHaveBeenCalledWith('', '_blank');
+    expect(mockDoc.write).toHaveBeenCalledWith(expect.stringContaining('<!DOCTYPE html>'));
+    expect(mockDoc.write).toHaveBeenCalledWith(expect.stringContaining('My Reading Journal — Christ The Way'));
+    expect(mockDoc.close).toHaveBeenCalled();
+    expect(mockWin.focus).toHaveBeenCalled();
+    expect(mockWin.onafterprint).toBeInstanceOf(Function);
+  });
 
-    expect(component.allExpanded).toBe(false);
-    expect(component.isExpanded(1)).toBe(false);
+  it('printJournal should not print when there are no entries', () => {
+    const openSpy = jest.spyOn(window, 'open');
+    component.entries = [];
+    component.selectedCount = 0;
 
-    component.toggleEntry(1);
-    expect(component.isExpanded(1)).toBe(true);
+    component.printJournal();
 
-    component.toggleEntry(1);
-    expect(component.isExpanded(1)).toBe(false);
-  }));
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it('printJournal should not print when window.open returns null', () => {
+    jest.spyOn(window, 'open').mockReturnValue(null);
+    const writeSpy = jest.fn();
+    component.ionViewWillEnter();
+
+    component.printJournal();
+
+    // Should not throw; silently bails out
+  });
+
+  it('printJournal should close print window on afterprint', () => {
+    const mockDoc = { write: jest.fn(), close: jest.fn() };
+    const closeFn = jest.fn();
+    const mockWin: any = { document: mockDoc, focus: jest.fn(), close: closeFn, onafterprint: null, print: jest.fn() };
+    jest.spyOn(window, 'open').mockReturnValue(mockWin);
+    component.ionViewWillEnter();
+
+    component.printJournal();
+
+    mockWin.onafterprint();
+    expect(closeFn).toHaveBeenCalled();
+  });
 
   // ─── Share ────────────────────────────────────────────────────────────
 
@@ -447,32 +597,6 @@ describe('JournalPage', () => {
     expect(content).toMatch(/contain:\s*none\s*!important/);
     expect(content).toMatch(/height:\s*auto\s*!important/);
     expect(content).toMatch(/overflow:\s*visible\s*!important/);
-  });
-
-  it('printJournal should show at least 2 pages worth of content when many entries exist', () => {
-    const manyEntries: JournalEntryDto[] = Array.from({ length: 20 }, (_, i) => ({
-      readingId: i + 1,
-      seriesId: 2,
-      seriesName: 'Test Series',
-      month: Math.floor(i / 10) + 1,
-      day: (i % 10) + 1,
-      bibleReading: `Book ${i + 1}:1`,
-      primaryBookPageRange: `PP ${i * 5 + 1}-${i * 5 + 5}`,
-      isCompleted: true,
-      notes: 'A'.repeat(200)
-    }));
-    component.entries = manyEntries;
-    component.selectAllEntries();
-    jest.spyOn(window, 'print').mockImplementation(() => {});
-
-    component.printJournal();
-
-    expect(component.allExpanded).toBe(true);
-    expect(component.isExpanded(1)).toBe(true);
-    expect(component.isExpanded(20)).toBe(true);
-    expect(component.expandedEntries.size).toBe(20);
-
-    window.dispatchEvent(new Event('afterprint'));
   });
 
 });

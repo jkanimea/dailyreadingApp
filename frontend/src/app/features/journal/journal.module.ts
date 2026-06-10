@@ -334,12 +334,109 @@ class JournalPage {
   }
 
   printJournal(): void {
-    this.allExpanded = true;
-    if (this.selectedCount > 0) {
-      this.expandedEntries = new Set(this.selectedEntryIds);
+    const selected = this.selectedCount > 0
+      ? this.entries.filter(e => this.selectedEntryIds.has(e.readingId))
+      : this.entries;
+    if (selected.length === 0) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(this.buildPrintHtml(selected));
+    printWindow.document.close();
+    printWindow.focus();
+
+    printWindow.onafterprint = () => printWindow.close();
+    setTimeout(() => printWindow.print(), 300);
+  }
+
+  private buildPrintHtml(entries: JournalEntryDto[]): string {
+    const lines: string[] = [];
+    lines.push('<!DOCTYPE html><html><head><meta charset="utf-8">');
+    lines.push(`<title>Journal — ${this.escapeHtml(this.seriesName)}</title>`);
+    lines.push('<style>');
+    lines.push(`
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  padding: 24px;
+  color: #000;
+  background: #fff;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.print-header {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #222;
+}
+.journal-card {
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  page-break-inside: avoid;
+}
+.journal-date {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: #000;
+}
+.journal-subtitle {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 8px;
+}
+.journal-subtitle a { color: #555; text-decoration: none; }
+.journal-secondary {
+  font-size: 13px;
+  color: #888;
+  font-style: italic;
+  margin-bottom: 8px;
+}
+.journal-notes {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-size: 15px;
+  color: #000;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+@media print {
+  body { padding: 12px; }
+  .journal-card { break-inside: avoid; }
+}`);
+    lines.push('</style></head><body>');
+    lines.push(`<div class="print-header">My Reading Journal — ${this.escapeHtml(this.seriesName)}</div>`);
+
+    for (const entry of entries) {
+      const date = `${this.getMonthName(entry.month)} ${entry.day}`;
+      lines.push('<div class="journal-card">');
+      lines.push(`<div class="journal-date">${this.escapeHtml(date)}</div>`);
+      lines.push(`<div class="journal-subtitle">${this.escapeHtml(entry.bibleReading)} — ${this.escapeHtml(entry.primaryBookPageRange)}</div>`);
+      if (entry.secondaryBookPageRange) {
+        lines.push(`<div class="journal-secondary">${this.escapeHtml(entry.secondaryBookPageRange)}</div>`);
+      }
+      if (entry.notes) {
+        lines.push(`<div class="journal-notes">${this.escapeHtml(entry.notes)}</div>`);
+      }
+      lines.push('</div>');
     }
-    window.addEventListener('afterprint', () => { this.allExpanded = false; this.expandedEntries.clear(); }, { once: true });
-    setTimeout(() => window.print(), 0);
+
+    lines.push('</body></html>');
+    return lines.join('\n');
+  }
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   async shareJournal(): Promise<void> {
