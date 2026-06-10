@@ -45,7 +45,7 @@ jobs:
         run: |
           cd frontend
           rm -rf node_modules
-          npm ci --prefer-offline --no-audit
+          npm ci --no-audit
           npx ng build --configuration production
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
