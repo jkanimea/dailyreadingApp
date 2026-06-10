@@ -181,7 +181,7 @@ jobs:
               && echo "API healthy" || echo "Warning: API health check failed"
 
   android-apk:
-    needs: [build]
+    needs: [deploy-production]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
