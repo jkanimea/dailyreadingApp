@@ -27,7 +27,7 @@ jobs:
         run: |
           cd frontend
           npm cache clean --force
-          rm -rf node_modules package-lock.json
+          rm -rf node_modules
           npm ci
           npm test -- --no-coverage
 
@@ -46,7 +46,7 @@ jobs:
         run: |
           cd frontend
           npm cache clean --force
-          rm -rf node_modules package-lock.json
+          rm -rf node_modules
           npm ci
           npm run build -- --configuration production
       - name: Upload build artifacts
