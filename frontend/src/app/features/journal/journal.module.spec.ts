@@ -1,5 +1,7 @@
 import { fakeAsync, tick } from '@angular/core/testing';
 import { JournalEntryDto } from '../../core/models/journal-entry.model';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 const mockEntries: JournalEntryDto[] = [
   { readingId: 1, seriesId: 2, seriesName: 'Christ The Way', month: 1, day: 5,
@@ -432,6 +434,45 @@ describe('JournalPage', () => {
     const text: string = shareMock.mock.calls[0][0].text;
     expect(text).toContain('February 1');
     expect(text).not.toContain('Notes:');
+  });
+
+  // ─── Print Multi-Page CSS ──────────────────────────────────────────────
+
+  it('global.scss @media print should have contain:none on ion-content::part(scroll) to enable multi-page printing', () => {
+    const scssPath = resolve(process.cwd(), 'src/global.scss');
+    const content = readFileSync(scssPath, 'utf8');
+
+    expect(content).toMatch(/@media\s+print/);
+    expect(content).toMatch(/ion-content::part\(scroll\)/);
+    expect(content).toMatch(/contain:\s*none\s*!important/);
+    expect(content).toMatch(/height:\s*auto\s*!important/);
+    expect(content).toMatch(/overflow:\s*visible\s*!important/);
+  });
+
+  it('printJournal should show at least 2 pages worth of content when many entries exist', () => {
+    const manyEntries: JournalEntryDto[] = Array.from({ length: 20 }, (_, i) => ({
+      readingId: i + 1,
+      seriesId: 2,
+      seriesName: 'Test Series',
+      month: Math.floor(i / 10) + 1,
+      day: (i % 10) + 1,
+      bibleReading: `Book ${i + 1}:1`,
+      primaryBookPageRange: `PP ${i * 5 + 1}-${i * 5 + 5}`,
+      isCompleted: true,
+      notes: 'A'.repeat(200)
+    }));
+    component.entries = manyEntries;
+    component.selectAllEntries();
+    jest.spyOn(window, 'print').mockImplementation(() => {});
+
+    component.printJournal();
+
+    expect(component.allExpanded).toBe(true);
+    expect(component.isExpanded(1)).toBe(true);
+    expect(component.isExpanded(20)).toBe(true);
+    expect(component.expandedEntries.size).toBe(20);
+
+    window.dispatchEvent(new Event('afterprint'));
   });
 
 });
