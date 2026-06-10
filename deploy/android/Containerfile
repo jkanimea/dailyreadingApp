@@ -16,10 +16,12 @@ RUN mkdir -p $ANDROID_HOME/licenses && \
     echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license && \
     echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> $ANDROID_HOME/licenses/android-sdk-license
 
-COPY --from=node-deps /usr/local/bin/node /usr/local/bin/node
-COPY --from=node-deps /usr/local/bin/npm /usr/local/bin/npm
-COPY --from=node-deps /usr/local/bin/npx /usr/local/bin/npx
-COPY --from=node-deps /usr/local/lib/node_modules /usr/local/lib/node_modules
+# Install Node.js via apt-get to preserve correct symlinks and module paths
+RUN apt-get update && apt-get install -y curl ca-certificates gnupg && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=node-deps /node_modules /node_modules
 COPY deploy/android/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
