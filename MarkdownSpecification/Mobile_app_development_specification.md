@@ -376,19 +376,22 @@ src/
 │   │   │   ├── api.service.ts
 │   │   │   ├── series.service.ts
 │   │   │   ├── reading.service.ts
-│   │   │   ├── progress.service.ts
+│   │   │   ├── progress.service.ts          # Also: saveNotes(), getJournal(), summarizeNotes()
 │   │   │   ├── bookmark.service.ts
 │   │   │   ├── search.service.ts
 │   │   │   ├── notification.service.ts
-│   │   │   └── offline-storage.service.ts
+│   │   │   ├── offline-storage.service.ts
+│   │   │   └── preferences.service.ts       # Theme, font size, seriesId, Bible translation
 │   │   ├── guards/
-│   │   │   └── auth.guard.ts
+│   │   │   ├── auth.guard.ts
+│   │   │   └── admin.guard.ts
 │   │   ├── interceptors/
 │   │   │   └── auth.interceptor.ts
 │   │   └── models/
 │   │       ├── series.model.ts
 │   │       ├── reading.model.ts
 │   │       ├── progress.model.ts
+│   │       ├── journal-entry.model.ts
 │   │       └── user.model.ts
 │   ├── shared/
 │   │   ├── components/
@@ -413,7 +416,8 @@ src/
 │   │   ├── progress/
 │   │   ├── bookmarks/
 │   │   ├── settings/
-│   │   └── series/
+│   │   ├── series/
+│   │   └── journal/                        # Journal page (notes + print + share)
 │   └── app-routing.module.ts
 ├── assets/
 │   ├── data/
@@ -482,21 +486,38 @@ src/
 | --------------- | ------------------------------ | ------------------------ |
 | `daySelected` | `EventEmitter<{month, day}>` | Emits when day is tapped |
 
-### 6.3 Screen Specifications
+### 6.3 Navigation Architecture
+
+The app uses a **bottom tab bar** with 3 primary tabs:
+- **Today** (`/tabs/today`) — today's reading with notes
+- **Journal** (`/tabs/journal`) — journal entries with notes/print/share
+- **Calendar** (`/tabs/calendar`) — month grid view
+- **More** (action sheet) — overflow for Search, Progress, Bookmarks, Settings, Switch Series
+
+**Navigation flow:**
+```
+App Launch → Login or Auth Check
+  → First time? → Series Selection (/series)
+  → Returning? → Today's Reading (/tabs/today)
+  → From Series Selection: auto-navigates to Today after selection
+```
+
+### 6.4 Screen Specifications
 
 | Screen                       | Description                                                                                        |
 | ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| **Login**              | Two buttons: Sign in with Google, Sign in with Facebook                                            |
-| **Series Selection**   | 4 cards showing each series with title, description, progress                                      |
-| **Today's Reading**    | Shows active series, Bible passage, summary points; buttons for full text, mark complete, bookmark |
-| **Full Reading**       | Tabbed view for Series 2 (primary + secondary text); font size controls; night mode                |
-| **Calendar View**      | Month grid with completion/bookmark indicators; series selector dropdown                           |
-| **Search**             | Search across Bible references, book text, summaries; filter by series                             |
+| **Login**              | Sign in with Google, Guest login; Facebook button removed (system Share API covers it)             |
+| **Series Selection**   | 4 cards showing each series with title, description; auto-navigates to Today on selection          |
+| **Today's Reading**    | Shows active series name + Bible passage + summary; icon header `[sunny] Today — {seriesName}`; AI Summarize on notes; bottom tab bar |
+| **Full Reading**       | Tabbed view for Series 2 (primary + secondary text); font size controls; dark mode; Bible translation toggle (KJV/ASV/WEB) |
+| **Calendar View**      | Month grid with completion/today/bookmarked styling; icon header `[calendar] Calendar`             |
+| **Search**             | Search across Bible references, book text, summaries; filter by series; debounced input            |
 | **Progress Dashboard** | Charts, streak counter, completion by series                                                       |
 | **Bookmarks**          | List grouped by series; swipe to delete                                                            |
-| **Settings**           | Notification time, dark mode, font size, logout                                                    |
+| **Journal**            | Chronological reading cards with expandable notes, completion badges, select/deselect checkboxes, AI Summarize per-entry, print via new-window, share via Web Share API; icon header `[book] Journal — {seriesName}` |
+| **Settings**           | Theme select (light/dark/system), font size (small/medium/large), daily reminder toggle with time picker, series selector (tappable row navigating to `/series`), logout |
 
-### 6.4 Offline Architecture Specification
+### 6.5 Offline Architecture Specification
 
 #### Storage Engine
 
@@ -536,7 +557,7 @@ offline-storage.service.ts
 └── getLastSyncTimestamp() → Date
 ```
 
-### 6.5 Push Notification Specification
+### 6.6 Push Notification Specification
 
 #### Service Selection
 
@@ -784,16 +805,18 @@ All books are publicly available from the Ellen G. White Estate:
 
 ---
 
-## 17. DEVELOPMENT PHASES
+## 17. DEVELOPMENT PHASES (Actual)
 
 | Phase           | Duration              | Tasks                                                                     |
 | --------------- | --------------------- | ------------------------------------------------------------------------- |
 | Phase 1         | 1.5 weeks             | Database design, generic repository/service/controller patterns, Unit of Work, authentication |
 | Phase 2         | 1.5 weeks             | Import all 4 series readings (approx. 1,460 daily records), extract text  |
-| Phase 3         | 2 weeks               | Generate summaries for all 4 series (AI-assisted)                         |
-| Phase 4         | 2 weeks               | Build reusable Angular components + base classes                          |
-| Phase 5         | 1 week                | Implement all screens with series-switching capability                    |
-| Phase 6         | 1 week                | Search, progress tracking, bookmarks, offline support                     |
-| Phase 7         | 1 week                | Push notifications, settings, polish                                      |
-| Phase 8         | 3 days                | Testing, bug fixes, deployment                                            |
-| **Total** | **10-11 weeks** |                                                                           |
+| Phase 3         | 2 weeks               | Generate summaries for all 4 series (AI-assisted); EGW + Bible caching    |
+| Phase 4         | 1 week                | Progress & Bookmarks backend + frontend core                              |
+| Phase 5         | 0.5 weeks             | Search backend (paginated, Full-Text)                                     |
+| Phase 6         | 1.5 weeks             | Angular + Ionic project init, core services, shared components, routing   |
+| Phase 7         | 3 weeks               | All 9 frontend screens (including Journal), bottom tab nav, icon headers, collapsible cards, skeleton loading, print multi-page fix, AI Summarize, Bible translations |
+| Phase 8         | 1 week                | Offline sync, notifications, CI/CD pipeline, Android APK build            |
+| Phase 9         | 1 week                | AI Summarize frontend, dark mode, font scaling                            |
+| Phase 10        | Ongoing               | Hardening: coverage, performance, security, deployment                    |
+| **Total** | **~13 weeks** | **287 tests, 25 suites, all passing**                                     |

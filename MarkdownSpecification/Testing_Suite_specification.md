@@ -143,20 +143,16 @@ dotnet test --filter "FullyQualifiedName~ReadingServiceTests"
 
 ### 3.2 Test Project Structure
 
-**text**
-
 ```
 src/
 ├── app/
-│   ├── core/services/*.spec.ts
+│   ├── core/
+│   │   ├── models/*.spec.ts
+│   │   ├── services/*.spec.ts
+│   │   └── guards/*.spec.ts
 │   ├── shared/components/*/*.spec.ts
-│   ├── shared/pipes/*.spec.ts
-│   ├── shared/directives/*.spec.ts
 │   └── features/*/*.spec.ts
-└── test/
-    ├── mocks/
-    ├── helpers/
-    └── setup.ts
+└── setup-jest.ts
 ```
 
 ### 3.3 Component Test Requirements
@@ -216,39 +212,44 @@ src/
 | getProgress returns completion percentage |
 | getStreak returns consecutive days        |
 | syncOfflineProgress syncs when online     |
+| saveNotes PUTs to correct endpoint        |
+| getJournal GETs correct endpoint          |
 
 ### 3.5 Code Coverage Requirements (Frontend)
 
-| Component Type     | Minimum Coverage |
-| ------------------ | ---------------- |
-| Services           | 85%              |
-| Components (logic) | 80%              |
-| Pipes              | 100%             |
-| Guards             | 90%              |
-| Directives         | 75%              |
-| Pages              | 75%              |
-| **Overall**  | **80%**    |
+| Component Type     | Minimum Coverage | Current (jest.config.js) |
+| ------------------ | ---------------- | ------------------------ |
+| Services           | 85%              | —                        |
+| Components (logic) | 80%              | —                        |
+| Pipes              | 100%             | —                        |
+| Guards             | 90%              | —                        |
+| Directives         | 75%              | —                        |
+| **Global thresholds (actual)** | **80%**   | Branches 20%, Functions 30%, Lines 35%, Statements 35% |
+
+> **Note:** Current jest.config.js thresholds are set to minimum passing levels (20%/30%/35%/35%). These need to be raised to meet target coverage (80%+). Run `npx jest --coverage` to measure current actual coverage.
 
 ### 3.6 Running Frontend Tests
 
 **bash**
 
 ```
-# Run all unit tests
-ng test
+# Run all unit tests (Jest, not ng test)
+npx jest
 
 # Run with coverage report
-ng test --code-coverage
+npx jest --coverage
 
 # Run specific test file
-ng test --include=**/reading.service.spec.ts
+npx jest --testPathPattern="reading.service"
 
 # Run in watch mode (development)
-ng test --watch
+npx jest --watch
 
-# Run headless (CI environment)
-ng test --watch=false --browsers=ChromeHeadless
+# Run without coverage (faster)
+npx jest --no-coverage
 ```
+
+> **Note:** The project uses `jest` directly (not Angular's `ng test`) via `@angular-builders/jest`. The `package.json` script `"test": "jest"` supports `npm test` as an alias.
 
 ---
 
@@ -451,13 +452,47 @@ regression/
 | Dependency Update    | All tests + performance  |
 | Database Migration   | Integration tests + E2E  |
 
-### 6.3 Automation Pipeline (CI/CD)
+### 6.3 Current Test Status
+
+**Current test count:** **287 tests, 25 suites, all passing**
+
+#### Frontend Spec Files (25 total)
+
+| File | Type |
+|------|------|
+| `admin.guard.spec.ts` | Guard |
+| `auth.guard.spec.ts` | Guard |
+| `bookmark.model.spec.ts` | Model |
+| `paged-result.model.spec.ts` | Model |
+| `progress.model.spec.ts` | Model |
+| `reading.model.spec.ts` | Model |
+| `user.model.spec.ts` | Model |
+| `admin-log.service.spec.ts` | Service |
+| `api.service.spec.ts` | Service |
+| `auth.service.spec.ts` | Service |
+| `bookmark.service.spec.ts` | Service |
+| `logging.service.spec.ts` | Service |
+| `preferences.service.spec.ts` | Service |
+| `progress.service.spec.ts` | Service |
+| `reading.service.spec.ts` | Service |
+| `series.service.spec.ts` | Service |
+| `sync.service.spec.ts` | Service |
+| `log-viewer.component.spec.ts` | Component |
+| `avatar-button.component.spec.ts` | Component |
+| `journal.module.spec.ts` | Feature (36 tests) |
+| `login.module.spec.ts` | Feature |
+| `progress.module.spec.ts` | Feature |
+| `reading-detail.spec.ts` | Feature |
+| `reading-detail-notes.spec.ts` | Feature |
+| `today.module.spec.ts` | Feature |
+
+### 6.4 Automation Pipeline (CI/CD)
 
 **yaml**
 
 ```
-# .github/workflows/test.yml (pseudo-configuration)
-name: Test Suite
+# .github/workflows/ci.yml (actual configuration)
+name: CI
 
 on:
   push:
@@ -472,27 +507,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
       - run: dotnet test --filter "Category=Unit" --collect:"XPlat Code Coverage"
-
-  backend-integration-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - run: podman-compose up -d sqlserver
-      - run: dotnet test --filter "Category=Integration"
-
-  backend-security-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: OWASP ZAP Scan
-        uses: zaproxy/action-full-scan@v0.12
-        with:
-          target: 'https://staging.encounterdaily.com'
 
   frontend-unit-tests:
     runs-on: ubuntu-latest
@@ -500,49 +516,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22.x
       - run: npm ci
-      - run: ng test --watch=false --browsers=ChromeHeadless --code-coverage
-
-  frontend-a11y-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-      - run: npm ci
-      - run: npx cypress run --spec "cypress/e2e/a11y/**"
-
-  e2e-tests:
-    runs-on: macos-latest
-    needs: [backend-unit-tests, frontend-unit-tests]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-      - run: npm ci
-      - run: npm run e2e:ios -- --headless
-
-  performance-tests:
-    runs-on: ubuntu-latest
-    needs: [backend-unit-tests]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - run: dotnet run --project backend/EncounterDaily.API &
-      - uses: grafana/k6-action@v0.3
-        with:
-          filename: tests/performance/load-test.js
-
-  regression-smoke:
-    runs-on: ubuntu-latest
-    needs: [backend-unit-tests, frontend-unit-tests, backend-security-scan]
-    steps:
-      - run: npm run test:smoke
+      - run: npx jest --no-coverage
 ```
 
 ---
@@ -763,6 +739,23 @@ npm run report:open                            # Open reports in browser
 ---
 
 ## 15. NOTES FOR DEVELOPER
+
+### Print Testing (Journal Page)
+
+The journal print feature uses a **new-window approach** (`window.open` + `buildPrintHtml()`) to bypass Ionic's shadow DOM scroll container. Tests validate:
+
+- `buildPrintHtml()` generates valid standalone HTML with all entries
+- Selected-entry filtering (only checked entries appear)
+- HTML escaping for notes, series name, and bible references
+- Inline CSS includes `@media print` with `break-inside: avoid` for multi-page pagination
+- Window lifecycle: opens, writes content, closes on `onafterprint`
+- Edge cases: no entries, `window.open` returns null (popup blocked)
+
+The tests use a **plain mock object pattern** (not TestBed) — the component is a hand-built object replicating all methods and state. This avoids Ionic's complex TestBed setup and keeps tests fast.
+
+### Global CSS Regression Test
+
+One test reads `src/global.scss` from the filesystem and asserts the `@media print` block contains `contain: none !important`, `height: auto !important`, and `overflow: visible !important` on `ion-content::part(scroll)`. This ensures the CSS safety net for in-page printing is never accidentally removed.
 
 * All tests must be **deterministic** (no flaky tests)
 * External API calls (OAuth) should be **mocked** in unit/integration tests
