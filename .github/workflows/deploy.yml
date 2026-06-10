@@ -124,9 +124,9 @@ jobs:
             # Clean up old build artifacts that could interfere
             rm -rf android 2>/dev/null || true
 
-            cat > .env <<'ENVEOF'
-            SA_PASSWORD=${{ secrets.SA_PASSWORD }}
-            JWT_RSA_PRIVATE_KEY=${{ secrets.JWT_RSA_PRIVATE_KEY }}
+            cat > .env <<ENVEOF
+            SA_PASSWORD="${{ secrets.SA_PASSWORD }}"
+            JWT_RSA_PRIVATE_KEY="${{ secrets.JWT_RSA_PRIVATE_KEY }}"
             ASPNETCORE_ENVIRONMENT=Production
             BYPASS_AUTH=true
             API_IMAGE_TAG=production-latest
@@ -196,8 +196,8 @@ jobs:
             -v ${{ github.workspace }}/apk-output:/output \
             -e API_URL=https://mg-encounter.com/api/v1 \
             -e KEYSTORE_PATH=/tmp/encounter-daily-keystore.jks \
-            -e KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }} \
-            -e KEY_PASSWORD=${{ secrets.KEY_PASSWORD }} \
+            -e KEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -e KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}" \
             android-builder
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
