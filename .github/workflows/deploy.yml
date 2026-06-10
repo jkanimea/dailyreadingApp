@@ -124,7 +124,7 @@ jobs:
             # Clean up old build artifacts that could interfere
             rm -rf android 2>/dev/null || true
 
-            cat > .env <<ENVEOF
+            cat > .env <<'ENVEOF'
             SA_PASSWORD="${{ secrets.SA_PASSWORD }}"
             JWT_RSA_PRIVATE_KEY="${{ secrets.JWT_RSA_PRIVATE_KEY }}"
             ASPNETCORE_ENVIRONMENT=Production
