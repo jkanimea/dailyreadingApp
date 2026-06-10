@@ -26,8 +26,6 @@ jobs:
       - name: Run frontend tests
         run: |
           cd frontend
-          npm cache clean --force
-          rm -rf node_modules
           npm ci
           npm test -- --no-coverage
 
@@ -45,8 +43,6 @@ jobs:
       - name: Build Angular app
         run: |
           cd frontend
-          npm cache clean --force
-          rm -rf node_modules
           npm ci
           npm run build -- --configuration production
       - name: Upload build artifacts
