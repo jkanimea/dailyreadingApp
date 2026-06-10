@@ -7,7 +7,7 @@ API_URL="${API_URL:-https://mg-encounter.com/api/v1}"
 
 if [ ! -d "$FRONTEND_DIR" ]; then
     echo "ERROR: Mount frontend directory to /app/frontend"
-    echo "Usage: podman run --rm -v ./frontend:/app/frontend:ro -v ./output:/output \"
+    echo "Usage: podman run --rm -v ./frontend:/app/frontend:ro -v ./output:/output"
     echo "    localhost/encounter-daily-android-builder"
     exit 1
 fi
