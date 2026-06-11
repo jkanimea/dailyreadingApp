@@ -187,7 +187,9 @@ jobs:
         run: docker build -t android-builder -f deploy/android/Containerfile .
       - name: Write keystore
         run: |
-          printf '%s\n' "${{ secrets.KEYSTORE }}" | tr -d '\n' | base64 -d > /tmp/encounter-daily-keystore.jks
+          printf '%s\n' "${{ secrets.KEYSTORE }}" | tr -d '[:space:]' | base64 -d > /tmp/encounter-daily-keystore.jks
+          test -s /tmp/encounter-daily-keystore.jks || { echo "ERROR: Keystore decode produced empty file — check the KEYSTORE secret is valid base64"; exit 1; }
+          echo "Keystore written: $(wc -c < /tmp/encounter-daily-keystore.jks) bytes"
       - name: Build signed APK
         run: |
           docker run --rm \

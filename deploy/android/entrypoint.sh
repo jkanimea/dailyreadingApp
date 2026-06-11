@@ -38,6 +38,10 @@ npx cap sync android
 
 # Configure signing if keystore is provided
 if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
+    if [ ! -s "$KEYSTORE_PATH" ]; then
+        echo "ERROR: Keystore file is empty or missing at $KEYSTORE_PATH — check the KEYSTORE secret"
+        exit 1
+    fi
     echo "Converting keystore to legacy PKCS12 format for Android compatibility..."
     LEGACY_KEYSTORE_PATH="/tmp/encounter-daily-keystore-legacy.p12"
     keytool -importkeystore \
