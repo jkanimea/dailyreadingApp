@@ -99,3 +99,16 @@ dev-rsa-key.pem
 
 # Generated seed data
 seed-import.sql
+
+# Media and document files (prevent accidental commits)
+*.mp4
+*.mp3
+*.wav
+*.avi
+*.mov
+*.pdf
+*.txt
+*.zip
+*.rar
+*.tar.gz
+*.7z
