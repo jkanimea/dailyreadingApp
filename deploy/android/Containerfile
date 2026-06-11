@@ -7,7 +7,7 @@ WORKDIR /tmp
 COPY frontend/package*.json ./
 RUN npm ci && cp -r node_modules /node_modules
 
-FROM docker.io/library/gradle:8-jdk17
+FROM docker.io/library/gradle:8-jdk21
 WORKDIR /app
 
 # Accept Android SDK license
