@@ -187,7 +187,8 @@ jobs:
         run: docker build -t android-builder -f deploy/android/Containerfile .
       - name: Write keystore
         run: |
-          echo "${{ secrets.KEYSTORE }}" | base64 -d > /tmp/encounter-daily-keystore.jks
+          printf '%s\n' "${{ secrets.KEYSTORE }}" | base64 -d > /tmp/encounter-daily-keystore.jks
+          file /tmp/encounter-daily-keystore.jks
       - name: Build signed APK
         run: |
           docker run --rm \
