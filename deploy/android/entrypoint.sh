@@ -38,6 +38,17 @@ npx cap sync android
 
 # Configure signing if keystore is provided
 if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
+    echo "Converting keystore to legacy PKCS12 format for Android compatibility..."
+    LEGACY_KEYSTORE_PATH="/tmp/encounter-daily-keystore-legacy.p12"
+    keytool -importkeystore \
+        -srckeystore "$KEYSTORE_PATH" \
+        -destkeystore "$LEGACY_KEYSTORE_PATH" \
+        -srcstorepass "$KEYSTORE_PASSWORD" \
+        -deststorepass "$KEYSTORE_PASSWORD" \
+        -noprompt \
+        -J-Dkeystore.pkcs12.legacy
+    KEYSTORE_PATH="$LEGACY_KEYSTORE_PATH"
+
     echo "Configuring APK signing..."
     cat > android/signing.gradle <<GRADLE
 android {
