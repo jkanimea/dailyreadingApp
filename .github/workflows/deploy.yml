@@ -149,7 +149,9 @@ jobs:
             API_IMAGE_TAG=production-latest
             ENVEOF
 
-            # Remove old pod/containers, pull latest image
+            # Remove old pod/containers (both root and jkanimea), pull latest image
+            sudo podman pod rm -f encounter-pod 2>/dev/null || true
+            sleep 2
             podman pod rm -f encounter-pod 2>/dev/null || true
             podman pull ghcr.io/jkanimea/encounter-daily-api:production-latest
 
@@ -157,7 +159,12 @@ jobs:
             set -a; source .env; set +a
 
             # Create pod (shared network namespace — all containers use localhost)
-            podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000
+            podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000 \
+              || { echo "Pod create failed — ports may be held by root. Retrying after sudo cleanup...";
+                   sudo podman pod rm -f encounter-pod 2>/dev/null || true;
+                   sleep 2;
+                   podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000 \
+                     || { echo "FATAL: Could not create pod."; exit 1; }; }
 
             # Start SQL
             podman run -d --pod encounter-pod --name encounter-daily-sql \
