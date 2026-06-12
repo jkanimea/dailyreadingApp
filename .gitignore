@@ -112,3 +112,4 @@ seed-import.sql
 *.rar
 *.tar.gz
 *.7z
+*.jks
