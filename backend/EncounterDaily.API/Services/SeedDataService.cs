@@ -35,7 +35,8 @@ public class SeedDataService : IHostedService
         }
         else
         {
-            _logger.LogInformation("Database already seeded. Skipping.");
+            _logger.LogInformation("Database already seeded. Checking for missing EGW text...");
+            await UpdateMissingTextAsync(context, cancellationToken);
         }
     }
 
@@ -149,4 +150,52 @@ public class SeedDataService : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private async Task UpdateMissingTextAsync(AppDbContext context, CancellationToken ct)
+    {
+        var missingCount = await context.Set<DailyReading>().CountAsync(r => r.FullTextPrimary == null || r.FullTextPrimary == "", ct);
+        if (missingCount == 0)
+        {
+            _logger.LogInformation("All readings already have EGW text. Nothing to update.");
+            return;
+        }
+
+        _logger.LogInformation("Found {Count} readings missing EGW text. Updating from CSV...", missingCount);
+        var seriesList = await context.Set<Series>().OrderBy(s => s.Id).ToListAsync(ct);
+        int updated = 0;
+
+        foreach (var series in seriesList)
+        {
+            var csvPath = Path.Combine(_seedDir, $"series-{series.Id}-readings.csv");
+            if (!File.Exists(csvPath)) continue;
+
+            var lines = await File.ReadAllLinesAsync(csvPath, ct);
+            foreach (var line in lines.Skip(1))
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                var fields = ParseCsvLine(line);
+                if (fields.Count < 12) continue;
+
+                var month = int.Parse(fields[1]);
+                var day = int.Parse(fields[2]);
+                var fullText = fields[11];
+
+                if (string.IsNullOrEmpty(fullText)) continue;
+
+                var reading = await context.Set<DailyReading>()
+                    .FirstOrDefaultAsync(r => r.SeriesId == series.Id && r.Month == month && r.Day == day, ct);
+
+                if (reading != null && string.IsNullOrEmpty(reading.FullTextPrimary))
+                {
+                    reading.FullTextPrimary = fullText;
+                    if (fields.Count > 12) reading.FullTextSecondary = fields[12];
+                    if (fields.Count > 13) reading.SummaryPoints = fields[13];
+                    updated++;
+                }
+            }
+        }
+
+        await context.SaveChangesAsync(ct);
+        _logger.LogInformation("Updated {Count} readings with EGW text.", updated);
+    }
 }

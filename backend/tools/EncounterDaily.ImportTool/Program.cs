@@ -143,7 +143,7 @@ static Task GenerateSeedCsvAsync(string outputDir)
                     PrimaryBookPageEnd = pageEnd,
                     SortOrder = (month * 100) + day,
                     FullTextPrimary = $"Sample text from {series.PrimaryBook} pages {page}-{pageEnd}. This is placeholder content for the daily reading.",
-                    SummaryPoints = $"- Reading covers {series.PrimaryBook} pages {page}-{pageEnd}\n- Key theme: Faith and obedience\n- Application: Reflect on God's guidance"
+                    SummaryPoints = $"- Reading covers {series.PrimaryBook} pages {page}-{pageEnd} | Key theme: Faith and obedience | Application: Reflect on God's guidance"
                 });
 
                 if (series.SecondaryBook != null && series.PagesSecondary.HasValue)
