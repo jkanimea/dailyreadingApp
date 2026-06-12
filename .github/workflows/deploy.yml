@@ -129,6 +129,20 @@ jobs:
           source: "frontend/www/*"
           target: "/opt/encounter-daily/frontend/www"
 
+      - name: Fix frontend path and deploy
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          host: ${{ vars.PRODUCTION_HOST }}
+          username: ${{ vars.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # SCP nested the files, move them up
+            if [ -d "/opt/encounter-daily/frontend/www/frontend/www" ]; then
+              echo "Fixing nested frontend path..."
+              cp -r /opt/encounter-daily/frontend/www/frontend/www/* /opt/encounter-daily/frontend/www/
+              rm -rf /opt/encounter-daily/frontend/www/frontend
+            fi
+
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v0.1.3
         with:
