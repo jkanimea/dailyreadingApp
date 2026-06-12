@@ -105,6 +105,9 @@ jobs:
           name: build-output
           path: .
 
+      - name: Copy seed data to build context
+        run: cp -r database/seed-data backend/seed-data
+
       - name: Build and push API image
         run: |
           docker build -t ghcr.io/jkanimea/encounter-daily-api:production-latest -f backend/Containerfile backend

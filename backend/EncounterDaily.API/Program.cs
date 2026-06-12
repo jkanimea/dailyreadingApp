@@ -187,6 +187,7 @@ builder.Services.AddSingleton<BibleSeedService>();
 builder.Services.AddSingleton<IBibleSeedService>(sp => sp.GetRequiredService<BibleSeedService>());
 builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<BibleSeedService>());
 builder.Services.AddHostedService<LogCleanupService>();
+builder.Services.AddHostedService<SeedDataService>();
 
 var app = builder.Build();
 

@@ -7,7 +7,7 @@ public class BibleBook : BaseEntity
     [Required, MaxLength(50)]
     public string Name { get; set; } = string.Empty;
 
-    [Required, MaxLength(10)]
+    [Required, MaxLength(50)]
     public string Abbreviation { get; set; } = string.Empty;
 
     public int ChapterCount { get; set; }
