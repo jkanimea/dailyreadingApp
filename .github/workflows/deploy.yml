@@ -167,6 +167,7 @@ jobs:
             OAUTH__GOOGLE__CLIENTID="${{ secrets.GOOGLE_CLIENT_ID }}"
             OAUTH__FACEBOOK__APPID="${{ secrets.FACEBOOK_APP_ID }}"
             OAUTH__FACEBOOK__APPSECRET="${{ secrets.FACEBOOK_APP_SECRET }}"
+            DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}"
             API_IMAGE_TAG=production-latest
             ENVEOF
 
@@ -211,6 +212,7 @@ jobs:
               -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
               -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
               -e DevMode__BypassAuth="$BYPASS_AUTH" \
+              -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" \
               ghcr.io/jkanimea/encounter-daily-api:production-latest
 
             # Start nginx
