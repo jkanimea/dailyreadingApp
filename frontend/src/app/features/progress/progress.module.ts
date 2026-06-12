@@ -5,6 +5,7 @@ import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { SeriesService } from '../../core/services/series.service';
 import { ProgressService } from '../../core/services/progress.service';
+import { LoggingService } from '../../core/services/logging.service';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom } from 'rxjs';
 import { SharedModule } from '../../shared/shared.module';
@@ -142,6 +143,7 @@ class ProgressPage {
   private router = inject(Router);
   private seriesService = inject(SeriesService);
   private progressService = inject(ProgressService);
+  private loggingService = inject(LoggingService);
 
   stats: SeriesStats[] = [];
   loading = false;
@@ -175,13 +177,15 @@ class ProgressPage {
               firstValueFrom(this.progressService.getCompletedCount(s.id))
             ]);
             return { series: s, percentage, streak, completedCount };
-          } catch {
+          } catch (e: unknown) {
+            this.loggingService.error('ProgressPage', 'seriesStats', e);
             return { series: s, percentage: 0, streak: 0, completedCount: 0 };
           }
         })
       );
       this.stats = results;
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('ProgressPage', 'loadStats', e);
       this.error = 'Failed to load progress. Make sure the API is running.';
     } finally {
       this.loading = false;

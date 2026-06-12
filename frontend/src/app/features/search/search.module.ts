@@ -7,6 +7,7 @@ import { SearchService } from '../../core/services/search.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { SearchResultDto } from '../../core/models/search-result.model';
 import { PagedResult } from '../../core/models/paged-result.model';
+import { LoggingService } from '../../core/services/logging.service';
 import { firstValueFrom, Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SharedModule } from '../../shared/shared.module';
@@ -154,6 +155,7 @@ class SearchPage {
   private router = inject(Router);
   private searchService = inject(SearchService);
   private prefs = inject(PreferencesService);
+  private loggingService = inject(LoggingService);
 
   query = '';
   readonly results = signal<SearchResultDto[]>([]);
@@ -205,7 +207,8 @@ class SearchPage {
       );
       this.results.set(result.items);
       this.totalPages.set(result.totalPages);
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('SearchPage', 'performSearch', e);
       this.error.set('Search failed. Make sure the API is running.');
     } finally {
       this.loading.set(false);

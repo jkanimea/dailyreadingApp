@@ -1,7 +1,4 @@
 import 'reflect-metadata';
-import { setupZoneTestEnv } from 'jest-preset-angular/setup-env/zone';
-
-setupZoneTestEnv();
 
 class MockIntersectionObserver implements IntersectionObserver {
   readonly root: Element | Document | null = null;

@@ -132,8 +132,8 @@ namespace EncounterDaily.Services
                 Day = reading.Day,
                 BibleReading = reading.BibleReading,
                 FullTextBible = bibleText,
-                FullTextPrimary = primaryText,
-                FullTextSecondary = secondaryText,
+                FullTextPrimary = string.IsNullOrEmpty(primaryText) ? (reading.FullTextPrimary ?? "") : primaryText,
+                FullTextSecondary = string.IsNullOrEmpty(secondaryText) ? (reading.FullTextSecondary ?? "") : secondaryText,
                 PrimaryBookPageRange = reading.PrimaryBookPageRange,
                 SecondaryBookPageRange = reading.SecondaryBookPageRange,
                 HasSecondaryReading = reading.SecondaryBookPageRange != null

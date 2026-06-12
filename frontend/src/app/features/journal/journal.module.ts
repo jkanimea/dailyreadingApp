@@ -6,6 +6,7 @@ import { SharedModule } from '../../shared/shared.module';
 import { ProgressService } from '../../core/services/progress.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { SeriesService } from '../../core/services/series.service';
+import { LoggingService } from '../../core/services/logging.service';
 import { JournalEntryDto } from '../../core/models/journal-entry.model';
 import { firstValueFrom } from 'rxjs';
 
@@ -241,6 +242,7 @@ class JournalPage {
   private prefs = inject(PreferencesService);
   private seriesService = inject(SeriesService);
   private alertCtrl = inject(AlertController);
+  private loggingService = inject(LoggingService);
 
 
   entries: JournalEntryDto[] = [];
@@ -274,7 +276,8 @@ class JournalPage {
       this.entries = entries;
       this.seriesName = series.name;
       this.selectAllEntries();
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('JournalPage', 'loadJournal', e);
       this.error = 'Failed to load journal. Make sure the API is running.';
     } finally {
       this.loading = false;
@@ -484,7 +487,8 @@ body {
         ]
       });
       await alert.present();
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('JournalPage', 'onSummarize', e);
       const alert = await this.alertCtrl.create({
         header: 'Error',
         message: 'Failed to summarize notes. Please try again.',
@@ -502,7 +506,8 @@ body {
     entry.notes = summary;
     try {
       await firstValueFrom(this.progressService.saveNotes(readingId, summary));
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('JournalPage', 'replaceNotesWithSummary', e);
     }
   }
 

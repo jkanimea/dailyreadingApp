@@ -7,6 +7,7 @@ import { BaseReadingPageComponent } from '../base/base-reading-page-component';
 import { ProgressService } from '../../core/services/progress.service';
 import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService, BibleTranslation } from '../../core/services/preferences.service';
+import { LoggingService } from '../../core/services/logging.service';
 import { ActivatedRoute } from '@angular/router';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom, Subscription } from 'rxjs';
@@ -418,7 +419,6 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   private alertCtrl = inject(AlertController);
   private actionSheetCtrl = inject(ActionSheetController);
   private progressService = inject(ProgressService);
-
   seriesList: Series[] = [];
   private routeSub?: Subscription;
   completed = false;
@@ -451,7 +451,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
         await firstValueFrom(this.progressService.unmarkComplete(this.detail.id));
       }
       this.completed = checked;
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('ReadingDetailPage', 'toggleComplete', String(e));
       this.completed = !checked;
     }
   }
@@ -463,7 +464,9 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
       if (el && el.scrollHeight <= el.clientHeight + 2) {
         this.readingSeen = true;
       }
-    } catch {}
+    } catch (e: unknown) {
+      this.loggingService.error('ReadingDetailPage', 'notifyContentFit', String(e));
+    }
   }
 
   onReadingScroll(_event: CustomEvent): void {
@@ -505,7 +508,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   async switchSeries(): Promise<void> {
     try {
       this.seriesList = await firstValueFrom(this.seriesService.getAll());
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('ReadingDetailPage', 'switchSeries', String(e));
       return;
     }
 
@@ -534,7 +538,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
         this.router.navigate(['/reading', reading.id]);
         return;
       }
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('ReadingDetailPage', 'onSeriesSelected', String(e));
       /* fall through to /today */
     }
     this.router.navigate(['/today']);
@@ -555,7 +560,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     try {
       await firstValueFrom(this.progressService.saveNotes(this.detail.id, this.notes));
       this.notesSaved = true;
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('ReadingDetailPage', 'saveNotes', String(e));
     }
   }
 
@@ -573,7 +579,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
         ]
       });
       await alert.present();
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('ReadingDetailPage', 'onSummarize', String(e));
       const alert = await this.alertCtrl.create({
         header: 'Error',
         message: 'Failed to summarize notes. Please try again.',
@@ -650,7 +657,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
       if (this.detail?.id) {
         await this.loadDetail(this.detail.id, this.translation);
       }
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('ReadingDetailPage', 'onSeedBible', String(e));
     } finally {
       this.seeding = false;
     }
@@ -680,7 +688,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
         this.notes = readingProgress.notes;
         this.showNotes = true;
       }
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('ReadingDetailPage', 'checkCompleted', String(e));
       this.completed = false;
     }
   }

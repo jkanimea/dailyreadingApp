@@ -4,6 +4,7 @@ import { Observable, firstValueFrom, BehaviorSubject } from 'rxjs';
 import { TokenResponse, UserDto } from '../models/user.model';
 import { environment } from '../../../environments/environment';
 import { SecureStorageService } from './secure-storage.service';
+import { LoggingService } from './logging.service';
 
 const GUEST_ID_KEY = 'encounter_guest_id';
 
@@ -11,6 +12,7 @@ const GUEST_ID_KEY = 'encounter_guest_id';
 export class AuthService {
   private http = inject(HttpClient);
   private secureStorage = inject(SecureStorageService);
+  private loggingService = inject(LoggingService);
 
   private readonly apiUrl = environment.apiUrl;
   private cachedRole: string | null = null;
@@ -57,7 +59,8 @@ export class AuthService {
       const payload = JSON.parse(atob(parts[1]));
       this.cachedRole = payload['role'] ?? null;
       return this.cachedRole;
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('AuthService', 'getRole', String(e));
       return null;
     }
   }
@@ -87,7 +90,8 @@ export class AuthService {
         selectedSeriesId: 1,
         role: payload['role'] ?? 'User'
       };
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('AuthService', 'getUserFromToken', String(e));
       return null;
     }
   }
@@ -119,7 +123,9 @@ export class AuthService {
     if (refreshToken && !refreshToken.startsWith('guest-')) {
       try {
         await firstValueFrom(this.http.post<void>(`${this.apiUrl}/auth/logout`, { refreshToken }));
-      } catch { }
+      } catch (e: unknown) {
+        this.loggingService.error('AuthService', 'logout', String(e));
+      }
     }
   }
 }

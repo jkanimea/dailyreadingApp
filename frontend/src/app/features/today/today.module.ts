@@ -7,6 +7,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
 import { PreferencesService, BibleTranslation } from '../../core/services/preferences.service';
+import { LoggingService } from '../../core/services/logging.service';
 import { ReadingDetail } from '../../core/models/reading.model';
 import { SharedModule } from '../../shared/shared.module';
 import { firstValueFrom } from 'rxjs';
@@ -417,6 +418,7 @@ interface BibleSection {
 })
 export class TodayPage {
   private router = inject(Router);
+  private loggingService = inject(LoggingService);
   private readingService = inject(ReadingService);
   private progressService = inject(ProgressService);
   private prefs = inject(PreferencesService);
@@ -496,7 +498,8 @@ export class TodayPage {
     try {
       await firstValueFrom(this.readingService.seedBible());
       await this.loadDetail(this.readingId, this.translation);
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('TodayPage', 'onSeedBible', String(e));
       // ignore
     } finally {
       this.seeding = false;
@@ -526,7 +529,8 @@ export class TodayPage {
       try {
         await firstValueFrom(this.progressService.saveNotes(this.readingId, val));
         this.notesSaved = true;
-      } catch {
+      } catch (e: unknown) {
+        this.loggingService.error('TodayPage', 'onNotesChange', String(e));
         this.notesSaved = false;
       }
     }, 1500);
@@ -546,7 +550,8 @@ export class TodayPage {
         ]
       });
       await alert.present();
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('TodayPage', 'onSummarize', String(e));
       const alert = await this.alertCtrl.create({
         header: 'Error',
         message: 'Failed to summarize notes. Please try again.',
@@ -564,7 +569,8 @@ export class TodayPage {
     try {
       await firstValueFrom(this.progressService.saveNotes(this.readingId, summary));
       this.notesSaved = true;
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('TodayPage', 'replaceNotesWithSummary', String(e));
       this.notesSaved = false;
     }
   }
@@ -578,7 +584,8 @@ export class TodayPage {
         this.notes = readingProgress.notes;
         this.showNotes = true;
       }
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('TodayPage', 'checkCompleted', String(e));
       this.completed = false;
     }
   }
@@ -586,7 +593,8 @@ export class TodayPage {
   private async loadDetail(readingId: number, translation = 'KJV'): Promise<void> {
     try {
       this.detail = await firstValueFrom(this.readingService.getFullReading(readingId, translation));
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('TodayPage', 'loadDetail', String(e));
       this.detail = undefined;
     }
   }
@@ -604,7 +612,8 @@ export class TodayPage {
       this.seriesName = reading.seriesName;
       await this.loadDetail(this.readingId, this.translation);
       await this.checkCompleted();
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('TodayPage', 'loadToday', String(e));
       this.error = 'Failed to load today\'s reading. Make sure the API is running.';
     } finally {
       this.loading = false;

@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { BehaviorSubject, of } from 'rxjs';
 import { SyncService, SyncQueueItem } from './sync.service';
 import { OfflineStorageService } from './offline-storage.service';
@@ -32,6 +33,7 @@ describe('SyncService', () => {
     };
 
     TestBed.configureTestingModule({
+      imports: [HttpClientTestingModule],
       providers: [
         SyncService,
         { provide: OfflineStorageService, useValue: storage },

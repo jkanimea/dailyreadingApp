@@ -5,6 +5,7 @@ import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { LoggingService } from '../../core/services/logging.service';
 import { environment } from '../../../environments/environment';
 
 @Component({
@@ -172,6 +173,7 @@ import { environment } from '../../../environments/environment';
 export class LoginPage implements OnDestroy {
   private router = inject(Router);
   private authService = inject(AuthService);
+  private loggingService = inject(LoggingService);
 
   loading = false;
   error?: string;
@@ -234,7 +236,7 @@ export class LoginPage implements OnDestroy {
         });
       }
       this.googleInitialized = true;
-    } catch { /* will show error on button click */ }
+    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initGoogle', String(e)); /* will show error on button click */ }
   }
 
   private async initFacebook(): Promise<void> {
@@ -250,7 +252,7 @@ export class LoginPage implements OnDestroy {
         });
       }
       this.facebookInitialized = true;
-    } catch { /* will show error on button click */ }
+    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initFacebook', String(e)); /* will show error on button click */ }
   }
 
   async continueAsGuest(): Promise<void> {
@@ -259,7 +261,8 @@ export class LoginPage implements OnDestroy {
     try {
       await this.authService.guestLogin();
       this.router.navigate(['/series']);
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('LoginPage', 'continueAsGuest', String(e));
       this.error = 'Failed to start guest session.';
     } finally {
       this.loading = false;
@@ -316,6 +319,7 @@ export class LoginPage implements OnDestroy {
         this.router.navigate(['/series']);
       }
     } catch (e) {
+      this.loggingService.error('LoginPage', 'loginWithGoogle', String(e));
       this.error = e instanceof Error ? e.message : 'Google sign-in failed.';
     } finally {
       this.loading = false;
@@ -350,6 +354,7 @@ export class LoginPage implements OnDestroy {
         this.router.navigate(['/series']);
       }
     } catch (e) {
+      this.loggingService.error('LoginPage', 'loginWithFacebook', String(e));
       this.error = e instanceof Error ? e.message : 'Facebook sign-in failed.';
     } finally {
       this.loading = false;

@@ -5,6 +5,7 @@ import { OfflineStorageService } from './offline-storage.service';
 import { ProgressService } from './progress.service';
 import { BookmarkService } from './bookmark.service';
 import { firstValueFrom } from 'rxjs';
+import { LoggingService } from './logging.service';
 
 export interface SyncQueueItem {
   id: string;
@@ -20,6 +21,7 @@ export class SyncService {
   private progress = inject(ProgressService);
   private bookmark = inject(BookmarkService);
   private zone = inject(NgZone);
+  private loggingService = inject(LoggingService);
 
   private readonly isOnlineSubject = new BehaviorSubject<boolean>(navigator.onLine);
   readonly isOnline$ = this.isOnlineSubject.asObservable();
@@ -84,7 +86,8 @@ export class SyncService {
         try {
           await this.processItem(item);
           await this.removeFromQueue(item.id);
-        } catch {
+        } catch (e: unknown) {
+          this.loggingService.error('SyncService', 'processQueue', String(e));
           if (!navigator.onLine) break;
         }
       }

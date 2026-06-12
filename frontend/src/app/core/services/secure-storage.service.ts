@@ -1,11 +1,13 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
+import { LoggingService } from './logging.service';
 
 const TOKEN_KEY = 'encounter_access_token';
 const REFRESH_KEY = 'encounter_refresh_token';
 
 @Injectable({ providedIn: 'root' })
 export class SecureStorageService {
+  private loggingService = inject(LoggingService);
   private ready: Promise<void>;
 
   constructor() {
@@ -14,12 +16,12 @@ export class SecureStorageService {
 
   private async initialize(): Promise<void> {
     if (Capacitor.isNativePlatform()) {
-      try { await import('capacitor-secure-storage-plugin'); } catch { }
+      try { await import('capacitor-secure-storage-plugin'); } catch (e: unknown) { this.loggingService.error('SecureStorageService', 'initialize', String(e)); }
     }
   }
 
   private async isReady(): Promise<void> {
-    try { await this.ready; } catch { }
+    try { await this.ready; } catch (e: unknown) { this.loggingService.error('SecureStorageService', 'isReady', String(e)); }
   }
 
   async setTokens(accessToken: string, refreshToken: string): Promise<void> {

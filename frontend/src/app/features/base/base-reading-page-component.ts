@@ -2,6 +2,7 @@ import { DestroyRef, Directive, OnDestroy, inject } from '@angular/core';
 import { Subject } from 'rxjs';
 import { ReadingService } from '../../core/services/reading.service';
 import { DailyReading, ReadingDetail, ReadingSummary } from '../../core/models/reading.model';
+import { LoggingService } from '../../core/services/logging.service';
 
 @Directive()
 export abstract class BaseReadingPageComponent implements OnDestroy {
@@ -17,6 +18,7 @@ export abstract class BaseReadingPageComponent implements OnDestroy {
   error?: string;
 
   protected readingService = inject(ReadingService);
+  protected loggingService = inject(LoggingService);
 
   ionViewWillEnter(): void {
     this.load();
@@ -35,7 +37,8 @@ export abstract class BaseReadingPageComponent implements OnDestroy {
     try {
       const now = new Date();
       this.reading = await this.readingService.getToday(seriesId, now.getMonth() + 1, now.getDate()).toPromise();
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('BaseReadingPageComponent', 'loadReading', String(e));
       this.error = 'Failed to load reading';
     } finally {
       this.loading = false;
@@ -50,7 +53,8 @@ export abstract class BaseReadingPageComponent implements OnDestroy {
       if (this.detail) {
         this.summary = await this.readingService.getSummary(readingId).toPromise();
       }
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('BaseReadingPageComponent', 'loadDetail', String(e));
       this.error = 'Failed to load reading details';
     } finally {
       this.loading = false;

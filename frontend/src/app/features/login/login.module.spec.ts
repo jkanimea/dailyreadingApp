@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { IonicModule } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { LoginPage } from './login.module';
@@ -55,7 +56,7 @@ describe('LoginPage', () => {
 
     await TestBed.configureTestingModule({
       declarations: [LoginPage],
-      imports: [CommonModule, IonicModule.forRoot()],
+      imports: [CommonModule, IonicModule.forRoot(), HttpClientTestingModule],
       providers: [
         { provide: AuthService, useValue: authService },
         { provide: Router, useValue: router }

@@ -477,5 +477,30 @@ namespace EncounterDaily.Tests.UnitTests.Services
             result.FullTextPrimary.Should().BeEmpty();
             result.FullTextSecondary.Should().BeNullOrEmpty();
         }
+
+        [Fact]
+        public async Task GetFullReadingAsync_ShouldFallbackToReadingFullTextPrimary_WhenNoEgwPages()
+        {
+            var book = new Book { Id = 10, BookType = BookType.DesireOfAges, Title = "Desire of Ages" };
+            var series = new Series { Id = 1, PrimaryBookId = 10, PrimaryBook = book };
+            var reading = new DailyReading
+            {
+                Id = 1, SeriesId = 1, Month = 6, Day = 12,
+                BibleReading = "John 3:16",
+                PrimaryBookPageRange = "Desire of Ages pp. 388-390",
+                PrimaryBookPageStart = 388, PrimaryBookPageEnd = 390,
+                Series = series,
+                FullTextPrimary = "Sample text from Desire of Ages pages 388-390. This is placeholder content for the daily reading."
+            };
+            _mockReadingRepo.Setup(r => r.GetByIdAsync(1)).ReturnsAsync(reading);
+
+            var mockEgwRepo = new Mock<IRepository<EgwPage>>();
+            mockEgwRepo.Setup(r => r.Query()).Returns(new List<EgwPage>().AsQueryable());
+            _mockUow.Setup(u => u.Repository<EgwPage>()).Returns(mockEgwRepo.Object);
+
+            var result = await _service.GetFullReadingAsync(1);
+
+            result.FullTextPrimary.Should().Be("Sample text from Desire of Ages pages 388-390. This is placeholder content for the daily reading.");
+        }
     }
 }

@@ -5,6 +5,7 @@ import { RouterModule, Routes, Router } from '@angular/router';
 import { Component } from '@angular/core';
 import { BookmarkService } from '../../core/services/bookmark.service';
 import { BookmarkDto } from '../../core/models/bookmark.model';
+import { LoggingService } from '../../core/services/logging.service';
 import { firstValueFrom } from 'rxjs';
 import { SharedModule } from '../../shared/shared.module';
 
@@ -132,6 +133,7 @@ import { SharedModule } from '../../shared/shared.module';
 class BookmarksPage {
   private router = inject(Router);
   private bookmarkService = inject(BookmarkService);
+  private loggingService = inject(LoggingService);
 
   bookmarks: BookmarkDto[] = [];
   loading = false;
@@ -150,7 +152,8 @@ class BookmarksPage {
     this.error = undefined;
     try {
       this.bookmarks = await firstValueFrom(this.bookmarkService.getAll());
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('BookmarksPage', 'loadBookmarks', e);
       this.error = 'Failed to load bookmarks. Make sure the API is running.';
     } finally {
       this.loading = false;
@@ -161,7 +164,8 @@ class BookmarksPage {
     try {
       await firstValueFrom(this.bookmarkService.removeBookmark(b.readingId));
       this.bookmarks = this.bookmarks.filter(x => x.readingId !== b.readingId);
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('BookmarksPage', 'removeBookmark', e);
       this.error = 'Failed to remove bookmark.';
     }
   }

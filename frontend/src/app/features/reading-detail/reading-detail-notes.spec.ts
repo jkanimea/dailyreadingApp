@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { IonicModule, AlertController, NavController } from '@ionic/angular';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { BehaviorSubject, of, throwError, firstValueFrom } from 'rxjs';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
@@ -80,7 +81,7 @@ describe('ReadingDetailPage — notes', () => {
 
     await TestBed.configureTestingModule({
       declarations: [ReadingDetailPage],
-      imports: [IonicModule.forRoot(), SharedModule],
+      imports: [IonicModule.forRoot(), SharedModule, HttpClientTestingModule],
       providers: [
         { provide: ReadingService, useValue: mockReadingService },
         { provide: ProgressService, useValue: mockProgressService },

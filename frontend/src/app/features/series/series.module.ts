@@ -6,6 +6,7 @@ import { Component, OnInit } from '@angular/core';
 import { SeriesService } from '../../core/services/series.service';
 import { PreferencesService } from '../../core/services/preferences.service';
 import { Series } from '../../core/models/series.model';
+import { LoggingService } from '../../core/services/logging.service';
 import { firstValueFrom } from 'rxjs';
 import { SharedModule } from '../../shared/shared.module';
 
@@ -130,6 +131,7 @@ class SeriesPage implements OnInit {
   private router = inject(Router);
   private seriesService = inject(SeriesService);
   private prefs = inject(PreferencesService);
+  private loggingService = inject(LoggingService);
 
   series: Series[] = [];
   loading = false;
@@ -144,7 +146,8 @@ class SeriesPage implements OnInit {
     this.error = undefined;
     try {
       this.series = await firstValueFrom(this.seriesService.getAll());
-    } catch {
+    } catch (e: unknown) {
+      this.loggingService.error('SeriesPage', 'loadSeries', e);
       this.error = 'Failed to load series. Make sure the API is running.';
     } finally {
       this.loading = false;
