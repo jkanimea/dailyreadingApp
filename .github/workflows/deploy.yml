@@ -160,6 +160,10 @@ jobs:
             JWT_RSA_PRIVATE_KEY="${{ secrets.JWT_RSA_PRIVATE_KEY }}"
             ASPNETCORE_ENVIRONMENT=Production
             BYPASS_AUTH=true
+            JWT__GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
+            OAUTH__GOOGLE__CLIENTID="${{ secrets.GOOGLE_CLIENT_ID }}"
+            OAUTH__FACEBOOK__APPID="${{ secrets.FACEBOOK_APP_ID }}"
+            OAUTH__FACEBOOK__APPSECRET="${{ secrets.FACEBOOK_APP_SECRET }}"
             API_IMAGE_TAG=production-latest
             ENVEOF
 
@@ -202,6 +206,7 @@ jobs:
               -e ASPNETCORE_URLS=http://+:5000 \
               -e ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=EncounterDaily;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True;" \
               -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
+              -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
               -e DevMode__BypassAuth="$BYPASS_AUTH" \
               ghcr.io/jkanimea/encounter-daily-api:production-latest
 
