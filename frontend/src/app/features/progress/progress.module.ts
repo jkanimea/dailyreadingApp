@@ -178,14 +178,14 @@ class ProgressPage {
             ]);
             return { series: s, percentage, streak, completedCount };
           } catch (e: unknown) {
-            this.loggingService.error('ProgressPage', 'seriesStats', e);
+            this.loggingService.error('ProgressPage', 'seriesStats', e instanceof Error ? e.message : String(e));
             return { series: s, percentage: 0, streak: 0, completedCount: 0 };
           }
         })
       );
       this.stats = results;
     } catch (e: unknown) {
-      this.loggingService.error('ProgressPage', 'loadStats', e);
+      this.loggingService.error('ProgressPage', 'loadStats', e instanceof Error ? e.message : String(e));
       this.error = 'Failed to load progress. Make sure the API is running.';
     } finally {
       this.loading = false;

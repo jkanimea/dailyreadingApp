@@ -147,7 +147,7 @@ class SeriesPage implements OnInit {
     try {
       this.series = await firstValueFrom(this.seriesService.getAll());
     } catch (e: unknown) {
-      this.loggingService.error('SeriesPage', 'loadSeries', e);
+      this.loggingService.error('SeriesPage', 'loadSeries', e instanceof Error ? e.message : String(e));
       this.error = 'Failed to load series. Make sure the API is running.';
     } finally {
       this.loading = false;

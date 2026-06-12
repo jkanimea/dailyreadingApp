@@ -153,7 +153,7 @@ class BookmarksPage {
     try {
       this.bookmarks = await firstValueFrom(this.bookmarkService.getAll());
     } catch (e: unknown) {
-      this.loggingService.error('BookmarksPage', 'loadBookmarks', e);
+      this.loggingService.error('BookmarksPage', 'loadBookmarks', e instanceof Error ? e.message : String(e));
       this.error = 'Failed to load bookmarks. Make sure the API is running.';
     } finally {
       this.loading = false;
@@ -165,7 +165,7 @@ class BookmarksPage {
       await firstValueFrom(this.bookmarkService.removeBookmark(b.readingId));
       this.bookmarks = this.bookmarks.filter(x => x.readingId !== b.readingId);
     } catch (e: unknown) {
-      this.loggingService.error('BookmarksPage', 'removeBookmark', e);
+      this.loggingService.error('BookmarksPage', 'removeBookmark', e instanceof Error ? e.message : String(e));
       this.error = 'Failed to remove bookmark.';
     }
   }

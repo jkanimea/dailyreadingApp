@@ -208,7 +208,7 @@ class SearchPage {
       this.results.set(result.items);
       this.totalPages.set(result.totalPages);
     } catch (e: unknown) {
-      this.loggingService.error('SearchPage', 'performSearch', e);
+      this.loggingService.error('SearchPage', 'performSearch', e instanceof Error ? e.message : String(e));
       this.error.set('Search failed. Make sure the API is running.');
     } finally {
       this.loading.set(false);
