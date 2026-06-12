@@ -190,6 +190,13 @@ jobs:
           printf '%s\n' "${{ secrets.KEYSTORE }}" | tr -d '[:space:]' | base64 -d > /tmp/encounter-daily-keystore.jks
           test -s /tmp/encounter-daily-keystore.jks || { echo "ERROR: Keystore decode produced empty file — check the KEYSTORE secret is valid base64"; exit 1; }
           echo "Keystore written: $(wc -c < /tmp/encounter-daily-keystore.jks) bytes"
+      - name: Verify pass lengths
+        run: |
+          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
+          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       - name: Build signed APK
         run: |
           docker run --rm \
