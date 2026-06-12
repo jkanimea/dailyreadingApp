@@ -13,10 +13,13 @@ public class SeedDataService : IHostedService
     private readonly string _seedDir;
 
     public SeedDataService(IServiceScopeFactory scopeFactory, ILogger<SeedDataService> logger)
+        : this(scopeFactory, logger, Path.Combine(AppContext.BaseDirectory, "seed-data")) { }
+
+    public SeedDataService(IServiceScopeFactory scopeFactory, ILogger<SeedDataService> logger, string seedDir)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
-        _seedDir = Path.Combine(AppContext.BaseDirectory, "seed-data");
+        _seedDir = seedDir;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -153,14 +156,15 @@ public class SeedDataService : IHostedService
 
     private async Task UpdateMissingTextAsync(AppDbContext context, CancellationToken ct)
     {
-        var missingCount = await context.Set<DailyReading>().CountAsync(r => r.FullTextPrimary == null || r.FullTextPrimary == "", ct);
+        var missingCount = await context.Set<DailyReading>().CountAsync(
+            r => r.FullTextPrimary == null || r.FullTextPrimary == "" || r.FullTextPrimary.StartsWith("Sample text from"), ct);
         if (missingCount == 0)
         {
             _logger.LogInformation("All readings already have EGW text. Nothing to update.");
             return;
         }
 
-        _logger.LogInformation("Found {Count} readings missing EGW text. Updating from CSV...", missingCount);
+        _logger.LogInformation("Found {Count} readings missing or with placeholder EGW text. Updating from CSV...", missingCount);
         var seriesList = await context.Set<Series>().OrderBy(s => s.Id).ToListAsync(ct);
         int updated = 0;
 
@@ -185,7 +189,7 @@ public class SeedDataService : IHostedService
                 var reading = await context.Set<DailyReading>()
                     .FirstOrDefaultAsync(r => r.SeriesId == series.Id && r.Month == month && r.Day == day, ct);
 
-                if (reading != null && string.IsNullOrEmpty(reading.FullTextPrimary))
+                if (reading != null && (string.IsNullOrEmpty(reading.FullTextPrimary) || reading.FullTextPrimary.StartsWith("Sample text from")))
                 {
                     reading.FullTextPrimary = fullText;
                     if (fields.Count > 12) reading.FullTextSecondary = fields[12];
