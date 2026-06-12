@@ -10,12 +10,14 @@ namespace EncounterDaily.API.Controllers
     {
         private readonly IReadingService _readingService;
         private readonly IBibleSeedService _bibleSeedService;
+        private readonly IAppLogService _appLogService;
 
-        public ReadingController(IReadingService readingService, IBibleSeedService bibleSeedService, ILogger<ReadingController> logger)
+        public ReadingController(IReadingService readingService, IBibleSeedService bibleSeedService, ILogger<ReadingController> logger, IAppLogService appLogService)
             : base(readingService, logger)
         {
             _readingService = readingService;
             _bibleSeedService = bibleSeedService;
+            _appLogService = appLogService;
         }
 
         [HttpGet("debug/bible-status")]
@@ -33,9 +35,10 @@ namespace EncounterDaily.API.Controllers
                 var result = await _readingService.GetTodayReadingAsync(seriesId, month, day);
                 return Ok(result);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException ex)
             {
                 _logger.LogWarning("Today's reading not found for series {SeriesId}, month {Month}, day {Day}", seriesId, month, day);
+                await _appLogService.SaveServerLogAsync("warn", "ReadingController.GetToday", $"Today's reading not found for series {seriesId}", ex.ToString());
                 return NotFound(new { message = "No reading found for today" });
             }
         }
@@ -71,9 +74,10 @@ namespace EncounterDaily.API.Controllers
                 var result = await _readingService.GetFullReadingAsync(id, translation);
                 return Ok(result);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException ex)
             {
                 _logger.LogWarning("Full reading not found: {ReadingId}", id);
+                await _appLogService.SaveServerLogAsync("warn", "ReadingController.GetFullReading", $"Full reading not found: {id}", ex.ToString());
                 return NotFound();
             }
         }
@@ -86,9 +90,10 @@ namespace EncounterDaily.API.Controllers
                 var result = await _readingService.GetSummaryAsync(id);
                 return Ok(result);
             }
-            catch (KeyNotFoundException)
+            catch (KeyNotFoundException ex)
             {
                 _logger.LogWarning("Summary not found: {ReadingId}", id);
+                await _appLogService.SaveServerLogAsync("warn", "ReadingController.GetSummary", $"Summary not found: {id}", ex.ToString());
                 return NotFound();
             }
         }

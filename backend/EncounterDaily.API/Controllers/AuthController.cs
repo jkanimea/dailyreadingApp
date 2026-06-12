@@ -10,11 +10,13 @@ namespace EncounterDaily.API.Controllers
     {
         private readonly IAuthService _authService;
         private readonly ILogger<AuthController> _logger;
+        private readonly IAppLogService _appLogService;
 
-        public AuthController(IAuthService authService, ILogger<AuthController> logger)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger, IAppLogService appLogService)
         {
             _authService = authService;
             _logger = logger;
+            _appLogService = appLogService;
         }
 
         [AllowAnonymous]
@@ -26,9 +28,10 @@ namespace EncounterDaily.API.Controllers
                 var result = await _authService.LoginWithGoogleAsync(request.IdToken);
                 return Ok(result);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
                 _logger.LogWarning("Google login failed with invalid token");
+                await _appLogService.SaveServerLogAsync("warn", "AuthController.LoginWithGoogle", "Google login failed with invalid token", ex.ToString());
                 return Unauthorized(new { message = "Invalid Google token" });
             }
         }
@@ -42,9 +45,10 @@ namespace EncounterDaily.API.Controllers
                 var result = await _authService.LoginWithFacebookAsync(request.IdToken);
                 return Ok(result);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException ex)
             {
                 _logger.LogWarning("Facebook login failed with invalid token");
+                await _appLogService.SaveServerLogAsync("warn", "AuthController.LoginWithFacebook", "Facebook login failed with invalid token", ex.ToString());
                 return Unauthorized(new { message = "Invalid Facebook token" });
             }
         }
@@ -61,6 +65,7 @@ namespace EncounterDaily.API.Controllers
             catch (UnauthorizedAccessException ex)
             {
                 _logger.LogWarning("Token refresh failed: {Message}", ex.Message);
+                await _appLogService.SaveServerLogAsync("warn", "AuthController.Refresh", $"Token refresh failed: {ex.Message}", ex.ToString());
                 return Unauthorized(new { message = ex.Message });
             }
         }
@@ -77,6 +82,7 @@ namespace EncounterDaily.API.Controllers
             catch (UnauthorizedAccessException ex)
             {
                 _logger.LogWarning("Logout failed: {Message}", ex.Message);
+                await _appLogService.SaveServerLogAsync("warn", "AuthController.Logout", $"Logout failed: {ex.Message}", ex.ToString());
                 return Unauthorized(new { message = ex.Message });
             }
         }

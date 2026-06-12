@@ -19,7 +19,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public ProgressControllerNotesTests()
         {
             _mockService = new Mock<IProgressService>();
-            _controller = new ProgressController(_mockService.Object, Mock.Of<IAiSummaryService>(), Mock.Of<ILogger<ProgressController>>());
+            _controller = new ProgressController(_mockService.Object, Mock.Of<IAiSummaryService>(), Mock.Of<ILogger<ProgressController>>(), Mock.Of<IAppLogService>());
             _controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext

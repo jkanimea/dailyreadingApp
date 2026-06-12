@@ -18,7 +18,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public AuthControllerTests()
         {
             _mockService = new Mock<IAuthService>();
-            _controller = new AuthController(_mockService.Object, Mock.Of<ILogger<AuthController>>());
+            _controller = new AuthController(_mockService.Object, Mock.Of<ILogger<AuthController>>(), Mock.Of<IAppLogService>());
         }
 
         [Fact]

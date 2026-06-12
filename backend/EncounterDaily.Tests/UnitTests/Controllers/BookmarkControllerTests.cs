@@ -18,7 +18,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public BookmarkControllerTests()
         {
             _mockService = new Mock<IBookmarkService>();
-            _controller = new BookmarkController(_mockService.Object, Mock.Of<ILogger<BookmarkController>>());
+            _controller = new BookmarkController(_mockService.Object, Mock.Of<ILogger<BookmarkController>>(), Mock.Of<IAppLogService>());
             _controller.ControllerContext = new ControllerContext
             {
                 HttpContext = new DefaultHttpContext

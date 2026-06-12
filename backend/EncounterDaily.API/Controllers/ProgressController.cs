@@ -10,12 +10,14 @@ namespace EncounterDaily.API.Controllers
         private readonly IProgressService _progressService;
         private readonly IAiSummaryService _aiSummaryService;
         private readonly ILogger<ProgressController> _logger;
+        private readonly IAppLogService _appLogService;
 
-        public ProgressController(IProgressService progressService, IAiSummaryService aiSummaryService, ILogger<ProgressController> logger)
+        public ProgressController(IProgressService progressService, IAiSummaryService aiSummaryService, ILogger<ProgressController> logger, IAppLogService appLogService)
         {
             _progressService = progressService;
             _aiSummaryService = aiSummaryService;
             _logger = logger;
+            _appLogService = appLogService;
         }
 
         [HttpGet("series/{seriesId}")]
@@ -62,6 +64,7 @@ namespace EncounterDaily.API.Controllers
             catch (KeyNotFoundException ex)
             {
                 _logger.LogWarning("Mark complete failed: {Message} (readingId: {ReadingId})", ex.Message, readingId);
+                await _appLogService.SaveServerLogAsync("warn", "ProgressController.MarkComplete", $"Mark complete failed for reading {readingId}: {ex.Message}", ex.ToString());
                 return NotFound(new { message = ex.Message });
             }
         }
@@ -103,10 +106,12 @@ namespace EncounterDaily.API.Controllers
             catch (KeyNotFoundException ex)
             {
                 _logger.LogWarning("Save notes failed: {Message} (readingId: {ReadingId})", ex.Message, readingId);
+                await _appLogService.SaveServerLogAsync("warn", "ProgressController.SaveNotes", $"Save notes failed for reading {readingId}: {ex.Message}", ex.ToString());
                 return NotFound(new { message = ex.Message });
             }
             catch (ValidationException ex)
             {
+                await _appLogService.SaveServerLogAsync("warn", "ProgressController.SaveNotes", $"Validation error: {ex.Message}", ex.ToString());
                 return BadRequest(new { message = ex.Message });
             }
         }
@@ -138,11 +143,13 @@ namespace EncounterDaily.API.Controllers
             catch (InvalidOperationException ex)
             {
                 _logger.LogWarning("Summarize failed: {Message}", ex.Message);
+                await _appLogService.SaveServerLogAsync("warn", "ProgressController.SummarizeNotes", $"Summarize failed: {ex.Message}", ex.ToString());
                 return BadRequest(new { message = ex.Message });
             }
             catch (ArgumentException ex)
             {
                 _logger.LogWarning("Summarize invalid: {Message}", ex.Message);
+                await _appLogService.SaveServerLogAsync("warn", "ProgressController.SummarizeNotes", $"Summarize invalid: {ex.Message}", ex.ToString());
                 return BadRequest(new { message = ex.Message });
             }
         }

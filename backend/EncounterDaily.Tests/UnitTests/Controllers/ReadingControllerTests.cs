@@ -18,7 +18,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public ReadingControllerTests()
         {
             _mockService = new Mock<IReadingService>();
-            _controller = new ReadingController(_mockService.Object, Mock.Of<IBibleSeedService>(), Mock.Of<ILogger<ReadingController>>());
+            _controller = new ReadingController(_mockService.Object, Mock.Of<IBibleSeedService>(), Mock.Of<ILogger<ReadingController>>(), Mock.Of<IAppLogService>());
         }
 
         [Fact]
