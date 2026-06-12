@@ -208,23 +208,21 @@ jobs:
           printf '%s\n' "${{ secrets.KEYSTORE }}" | tr -d '[:space:]' | base64 -d > /tmp/encounter-daily-keystore.jks
           test -s /tmp/encounter-daily-keystore.jks || { echo "ERROR: Keystore decode produced empty file — check the KEYSTORE secret is valid base64"; exit 1; }
           echo "Keystore written: $(wc -c < /tmp/encounter-daily-keystore.jks) bytes"
-      - name: Verify pass lengths
-        run: |
-          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
-          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
+      - name: Build signed APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-      - name: Build signed APK
         run: |
+          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
+          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
           docker run --rm \
             -v ${{ github.workspace }}/frontend:/app/frontend \
             -v /tmp/encounter-daily-keystore.jks:/tmp/encounter-daily-keystore.jks:ro \
             -v ${{ github.workspace }}/apk-output:/output \
             -e API_URL=https://mg-encounter.com/api/v1 \
             -e KEYSTORE_PATH=/tmp/encounter-daily-keystore.jks \
-            -e KEYSTORE_PASSWORD="${{ secrets.KEYSTORE_PASSWORD }}" \
-            -e KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}" \
+            -e KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
+            -e KEY_PASSWORD="$KEY_PASSWORD" \
             android-builder
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
