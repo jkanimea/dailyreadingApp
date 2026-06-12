@@ -24,6 +24,10 @@ namespace EncounterDaily.Services
             if (string.IsNullOrWhiteSpace(notes))
                 throw new ArgumentException("Notes cannot be empty.", nameof(notes));
 
+            var keyLen = _settings.DeepSeekApiKey?.Length ?? 0;
+            if (keyLen == 0)
+                throw new InvalidOperationException($"AI key not configured (len={keyLen}). Add Ai:DeepSeekApiKey to env.");
+
             var client = _httpClientFactory.CreateClient("DeepSeek");
 
             var request = new DeepSeekRequest
@@ -57,8 +61,8 @@ namespace EncounterDaily.Services
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogError(ex, "DeepSeek API call failed");
-                throw new InvalidOperationException("AI summarization failed. Please try again.");
+                _logger.LogError(ex, "DeepSeek API call failed (key len={KeyLen})", keyLen);
+                throw new InvalidOperationException($"AI summarization failed (key len={keyLen}).");
             }
             catch (OperationCanceledException ex)
             {
