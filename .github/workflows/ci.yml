@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: 22.x
       - name: Install dependencies
-        run: cd frontend && npm ci
+        run: cd frontend && npm ci --legacy-peer-deps
       - name: Run unit tests
         run: cd frontend && npx jest --ci
       - name: Run linting
