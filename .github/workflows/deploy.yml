@@ -99,9 +99,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Debug DEEPSEEK_API_KEY secret
-        run: echo "DEEPSEEK_API_KEY is ${{ secrets.DEEPSEEK_API_KEY != '' && 'SET' || 'EMPTY' }}"
-
       - name: Download build artifacts
         uses: actions/download-artifact@v7
         with:
