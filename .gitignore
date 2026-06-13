@@ -12,6 +12,9 @@ $RECYCLE.BIN/
 *.log
 log.txt
 
+# Private keys – never commit
+*.pem
+
 
 /.sourcemaps
 /.versions
