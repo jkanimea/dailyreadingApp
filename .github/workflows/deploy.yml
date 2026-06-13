@@ -99,6 +99,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Debug DEEPSEEK_API_KEY secret
+        run: echo "DEEPSEEK_API_KEY is ${{ secrets.DEEPSEEK_API_KEY != '' && 'SET' || 'EMPTY' }}"
+
       - name: Download build artifacts
         uses: actions/download-artifact@v7
         with:
@@ -212,7 +215,7 @@ jobs:
               -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
               -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
               -e DevMode__BypassAuth="$BYPASS_AUTH" \
-              -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" \
+              -e Ai__DeepSeekApiKey="${{ secrets.DEEPSEEK_API_KEY }}" \
               ghcr.io/jkanimea/encounter-daily-api:production-latest
 
             # Start nginx
