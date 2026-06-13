@@ -244,6 +244,7 @@ jobs:
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
           echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
@@ -255,6 +256,7 @@ jobs:
             -e KEYSTORE_PATH=/tmp/encounter-daily-keystore.jks \
             -e KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
             -e KEY_PASSWORD="$KEY_PASSWORD" \
+            -e GOOGLE_SERVICES_JSON="$GOOGLE_SERVICES_JSON" \
             android-builder
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7

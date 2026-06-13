@@ -36,6 +36,14 @@ echo "Syncing Capacitor..."
 npx cap copy android
 npx cap sync android
 
+# Inject google-services.json for native Google Sign-In
+if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+    echo "Injecting google-services.json..."
+    echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+else
+    echo "WARNING: GOOGLE_SERVICES_JSON not set — native Google Sign-In will not work"
+fi
+
 # Configure signing if keystore is provided
 if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
     if [ ! -s "$KEYSTORE_PATH" ]; then

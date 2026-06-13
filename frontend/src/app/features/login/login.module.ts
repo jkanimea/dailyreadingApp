@@ -7,6 +7,8 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { environment } from '../../../environments/environment';
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 
 @Component({
   template: `
@@ -273,45 +275,52 @@ export class LoginPage implements OnDestroy {
     this.loading = true;
     this.error = undefined;
     try {
-      if (!this.googleInitialized) await this.initGoogle();
-      if (!window.google?.accounts?.id) {
-        throw new Error('Google Sign-In unavailable. Please refresh and try again.');
+      let credential: string;
+
+      if (Capacitor.isNativePlatform()) {
+        // Native Android/iOS — use native Google Sign-In plugin
+        const user = await GoogleAuth.signIn();
+        const idToken = user?.authentication?.idToken;
+        if (!idToken) throw new Error('Google sign-in failed — no ID token returned.');
+        credential = idToken;
+      } else {
+        // Web browser — use Google Identity Services popup flow
+        if (!this.googleInitialized) await this.initGoogle();
+        if (!window.google?.accounts?.id) {
+          throw new Error('Google Sign-In unavailable. Please refresh and try again.');
+        }
+
+        let gBtn = this.gBtnHost?.nativeElement?.querySelector<HTMLElement>('[role="button"]');
+        if (!gBtn) {
+          this.googleInitialized = false;
+          await this.initGoogle();
+          gBtn = this.gBtnHost?.nativeElement?.querySelector<HTMLElement>('[role="button"]');
+        }
+        if (!gBtn) {
+          throw new Error('Google Sign-In is still loading — please try again in a moment.');
+        }
+
+        credential = await new Promise<string>((resolve, reject) => {
+          let settled = false;
+          const settle = (fn: 'resolve' | 'reject', val: any) => {
+            if (settled) return;
+            settled = true;
+            this.googleCredResolve = undefined;
+            this.googleCredReject = undefined;
+            window.removeEventListener('focus', onFocus);
+            if (fn === 'resolve') resolve(val); else reject(val);
+          };
+
+          this.googleCredResolve = (cred) => settle('resolve', cred);
+          this.googleCredReject = (err) => settle('reject', err);
+
+          const onFocus = () =>
+            setTimeout(() => settle('reject', new Error('Google sign-in was cancelled.')), 600);
+          window.addEventListener('focus', onFocus);
+
+          gBtn.click();
+        });
       }
-
-      // Find the pre-rendered Google button. If missing (e.g., after Ionic page
-      // cache), re-initialize once before giving up.
-      let gBtn = this.gBtnHost?.nativeElement?.querySelector<HTMLElement>('[role="button"]');
-      if (!gBtn) {
-        this.googleInitialized = false;
-        await this.initGoogle();
-        gBtn = this.gBtnHost?.nativeElement?.querySelector<HTMLElement>('[role="button"]');
-      }
-      if (!gBtn) {
-        throw new Error('Google Sign-In is still loading — please try again in a moment.');
-      }
-
-      const credential = await new Promise<string>((resolve, reject) => {
-        let settled = false;
-        const settle = (fn: 'resolve' | 'reject', val: any) => {
-          if (settled) return;
-          settled = true;
-          this.googleCredResolve = undefined;
-          this.googleCredReject = undefined;
-          window.removeEventListener('focus', onFocus);
-          if (fn === 'resolve') resolve(val); else reject(val);
-        };
-
-        this.googleCredResolve = (cred) => settle('resolve', cred);
-        this.googleCredReject = (err) => settle('reject', err);
-
-        // When the popup closes without a credential the browser refocuses
-        // our window — wait 600 ms to let the credential callback fire first.
-        const onFocus = () =>
-          setTimeout(() => settle('reject', new Error('Google sign-in was cancelled.')), 600);
-        window.addEventListener('focus', onFocus);
-
-        gBtn.click(); // triggers popup — must be synchronous here
-      });
 
       const res = await firstValueFrom(this.authService.login('google', credential));
       if (res) {
