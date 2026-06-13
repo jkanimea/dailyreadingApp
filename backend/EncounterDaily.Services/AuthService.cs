@@ -205,7 +205,7 @@ namespace EncounterDaily.Services
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.DisplayName),
                 new Claim("provider", user.Provider),
-                new Claim("role", roleName)
+                new Claim(ClaimTypes.Role, roleName)
             };
 
             var token = new JwtSecurityToken(

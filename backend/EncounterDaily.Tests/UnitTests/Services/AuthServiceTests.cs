@@ -137,7 +137,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             // Decode JWT payload without validation to inspect claims
             var handler = new JwtSecurityTokenHandler();
             var jwt = handler.ReadJwtToken(result.AccessToken);
-            var roleClaim = jwt.Claims.FirstOrDefault(c => c.Type == "role");
+            var roleClaim = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role");
 
             roleClaim.Should().NotBeNull();
             roleClaim!.Value.Should().Be("Admin");
@@ -164,7 +164,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
 
             var handler = new JwtSecurityTokenHandler();
             var jwt = handler.ReadJwtToken(result.AccessToken);
-            var roleClaim = jwt.Claims.FirstOrDefault(c => c.Type == "role");
+            var roleClaim = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role || c.Type == "role");
 
             roleClaim!.Value.Should().Be("User");
         }
