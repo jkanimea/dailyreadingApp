@@ -42,20 +42,6 @@ if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
         echo "ERROR: Keystore file is empty or missing at $KEYSTORE_PATH — check the KEYSTORE secret"
         exit 1
     fi
-    echo "Converting keystore to legacy PKCS12 format for Android compatibility..."
-    LEGACY_KEYSTORE_PATH="/tmp/encounter-daily-keystore-legacy.p12"
-    keytool -importkeystore \
-     -srckeystore "$KEYSTORE_PATH" \
-     -srcstoretype JKS \
-     -destkeystore "$LEGACY_KEYSTORE_PATH" \
-     -deststoretype PKCS12 \
-     -srcstorepass "$KEYSTORE_PASSWORD" \
-     -deststorepass "$KEYSTORE_PASSWORD" \
-     -destkeypass "$KEY_PASSWORD" \
-     -noprompt \
-     -J-Dkeystore.pkcs12.legacy
-    KEYSTORE_PATH="$LEGACY_KEYSTORE_PATH"
-
     echo "Configuring APK signing..."
     cat > android/signing.gradle <<GRADLE
 android {
