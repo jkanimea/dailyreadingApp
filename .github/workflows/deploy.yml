@@ -228,7 +228,7 @@ jobs:
               && echo "API healthy" || echo "Warning: API health check failed"
 
   android-apk:
-    if: false # TODO: re-enable once Google Play signing is sorted
+    if: github.ref == 'refs/heads/main'
     needs: [deploy-production]
     runs-on: ubuntu-latest
     steps:
