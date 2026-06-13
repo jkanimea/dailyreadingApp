@@ -48,7 +48,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: build-output
+          name: build-output-${{ github.ref_name }}-run${{ github.run_number }}
           path: |
             publish/
             frontend/www/
@@ -102,7 +102,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v7
         with:
-          name: build-output
+          name: build-output-${{ github.ref_name }}-run${{ github.run_number }}
           path: .
 
       - name: Copy seed data to build context
@@ -261,5 +261,5 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
         with:
-          name: app-release
+          name: app-release-run${{ github.run_number }}
           path: apk-output/
