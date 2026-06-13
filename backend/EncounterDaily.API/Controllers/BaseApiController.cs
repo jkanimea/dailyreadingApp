@@ -12,6 +12,6 @@ public abstract class BaseApiController : ControllerBase
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (claim != null && int.TryParse(claim, out var userId))
             return userId;
-        return 1;
+        throw new UnauthorizedAccessException("User identity claim missing from token.");
     }
 }
