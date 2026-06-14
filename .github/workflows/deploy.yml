@@ -122,16 +122,16 @@ jobs:
 
           for attempt in 1 2 3; do
             echo "Attempt $attempt: syncing deploy files..."
-            rsync -avz --timeout=60 -e "ssh $SSH_OPTS" \
+            rsync -avz --timeout=300 -e "ssh $SSH_OPTS" \
               deploy/ ${{ vars.SSH_USER }}@${{ vars.PRODUCTION_HOST }}:/opt/encounter-daily/deploy/ && \
             echo "Attempt $attempt: syncing frontend..." && \
-            rsync -avz --timeout=60 -e "ssh $SSH_OPTS" \
+            rsync -avz --timeout=300 -e "ssh $SSH_OPTS" \
               frontend/www/ ${{ vars.SSH_USER }}@${{ vars.PRODUCTION_HOST }}:/opt/encounter-daily/frontend/www/ && \
             echo "Sync successful." && exit 0
-            echo "Attempt $attempt failed. Retrying in 15s..."
-            sleep 15
+            echo "Attempt $attempt failed. Retrying in 30s..."
+            sleep 30
           done
-          echo "All 3 attempts failed."
+          echo "All 3 attempts failed — check VPS connectivity."
           exit 1
 
       - name: Deploy on VPS
