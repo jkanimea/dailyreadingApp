@@ -13,7 +13,9 @@ export interface CalendarDay {
   reading?: DailyReading;
 }
 
-@Directive()
+@Directive({
+  standalone: false
+})
 export abstract class BaseCalendarPageComponent implements OnDestroy {
   /** Modern cleanup hook — prefer over destroy$ for new subscriptions */
   protected readonly destroyRef = inject(DestroyRef);

@@ -79,7 +79,7 @@ import { SharedModule } from '../../shared/shared.module';
     }
   `]
 })
-class MorePage {}
+export class MorePage {}
 
 @Component({
   selector: 'app-tabs',
@@ -128,7 +128,7 @@ class MorePage {}
     }
   `]
 })
-class TabsLayoutComponent {}
+export class TabsLayoutComponent {}
 
 const tabsRoutes: Routes = [
   {

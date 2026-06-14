@@ -131,7 +131,7 @@ import { UserDto } from '../../core/models/user.model';
     }
   `]
 })
-class AccountPage implements OnDestroy {
+export class AccountPage implements OnDestroy {
   private auth = inject(AuthService);
   private router = inject(Router);
 

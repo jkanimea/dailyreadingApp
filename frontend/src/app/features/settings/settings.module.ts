@@ -136,7 +136,7 @@ import { NotificationService } from '../../core/services/notification.service';
     }
   `]
 })
-class SettingsPage implements OnInit {
+export class SettingsPage implements OnInit {
   private prefs = inject(PreferencesService);
   private notifications = inject(NotificationService);
   private router = inject(Router);

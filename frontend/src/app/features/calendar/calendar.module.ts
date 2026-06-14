@@ -130,7 +130,7 @@ import { SharedModule } from '../../shared/shared.module';
   `],
   standalone: false
 })
-class CalendarPage extends BaseCalendarPageComponent {
+export class CalendarPage extends BaseCalendarPageComponent {
   private router = inject(Router);
   private prefs = inject(PreferencesService);
 
