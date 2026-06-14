@@ -191,8 +191,8 @@ jobs:
             JWT_RSA_PRIVATE_KEY="${{ secrets.JWT_RSA_PRIVATE_KEY }}"
             ASPNETCORE_ENVIRONMENT=Production
             BYPASS_AUTH=false
-            JWT__GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
-            OAUTH__GOOGLE__CLIENTID="${{ secrets.GOOGLE_CLIENT_ID }}"
+            JWT__GOOGLE_CLIENT_ID="868571551367-kkm4ggn0d9cc457k6s0p9rhoipq1bkio.apps.googleusercontent.com"
+            OAUTH__GOOGLE__CLIENTID="868571551367-kkm4ggn0d9cc457k6s0p9rhoipq1bkio.apps.googleusercontent.com"
             OAUTH__FACEBOOK__APPID="${{ secrets.FACEBOOK_APP_ID }}"
             OAUTH__FACEBOOK__APPSECRET="${{ secrets.FACEBOOK_APP_SECRET }}"
             DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}"
