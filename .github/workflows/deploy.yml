@@ -114,41 +114,25 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker push ghcr.io/jkanimea/encounter-daily-api:production-latest
 
-      - name: Sync deploy files to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.PRODUCTION_HOST }}
-          username: ${{ vars.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "deploy/*"
-          target: "/opt/encounter-daily"
-          timeout: 120s
-          command_timeout: 30m
+      - name: Sync files to VPS
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          SSH_OPTS="-i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
 
-      - name: Sync frontend to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ vars.PRODUCTION_HOST }}
-          username: ${{ vars.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "frontend/www/*"
-          target: "/opt/encounter-daily/frontend/www"
-          timeout: 120s
-          command_timeout: 30m
-
-      - name: Fix frontend path and deploy
-        uses: appleboy/ssh-action@v0.1.3
-        with:
-          host: ${{ vars.PRODUCTION_HOST }}
-          username: ${{ vars.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            # SCP nested the files, move them up
-            if [ -d "/opt/encounter-daily/frontend/www/frontend/www" ]; then
-              echo "Fixing nested frontend path..."
-              cp -r /opt/encounter-daily/frontend/www/frontend/www/* /opt/encounter-daily/frontend/www/
-              rm -rf /opt/encounter-daily/frontend/www/frontend
-            fi
+          for attempt in 1 2 3; do
+            echo "Attempt $attempt: syncing deploy files..."
+            rsync -avz --timeout=60 -e "ssh $SSH_OPTS" \
+              deploy/ ${{ vars.SSH_USER }}@${{ vars.PRODUCTION_HOST }}:/opt/encounter-daily/deploy/ && \
+            echo "Attempt $attempt: syncing frontend..." && \
+            rsync -avz --timeout=60 -e "ssh $SSH_OPTS" \
+              frontend/www/ ${{ vars.SSH_USER }}@${{ vars.PRODUCTION_HOST }}:/opt/encounter-daily/frontend/www/ && \
+            echo "Sync successful." && exit 0
+            echo "Attempt $attempt failed. Retrying in 15s..."
+            sleep 15
+          done
+          echo "All 3 attempts failed."
+          exit 1
 
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v0.1.3
