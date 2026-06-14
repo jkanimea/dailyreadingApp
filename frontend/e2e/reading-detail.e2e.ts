@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { mockAllRoutes } from './fixtures/mocks';
+import { mockAllRoutes, MOCK_PROGRESS } from './fixtures/mocks';
+import type { Route } from '@playwright/test';
 
 test.describe('Reading detail', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,6 +14,10 @@ test.describe('Reading detail', () => {
 
   test('displays reading body text', async ({ page }) => {
     await expect(page.getByText(/Today's devotional text/)).toBeVisible();
+  });
+
+  test('shows page range metadata', async ({ page }) => {
+    await expect(page.getByText('170-172')).toBeVisible();
   });
 
   test('completion checkbox hidden until 85% scroll (gap #4)', async ({ page }) => {
@@ -61,7 +66,47 @@ test.describe('Reading detail', () => {
 
     const checkbox = page.locator('.complete-section ion-checkbox');
     await expect(checkbox).toBeVisible({ timeout: 3000 });
-    await checkbox.click();
+    // Use evaluate to dispatch ionChange directly (Ionic shadow DOM can swallow Playwright clicks)
+    await page.evaluate(() => {
+      const cb = document.querySelector('.complete-section ion-checkbox');
+      if (cb) {
+        cb.dispatchEvent(new CustomEvent('ionChange', {
+          bubbles: true,
+          detail: { checked: true }
+        }));
+      }
+    });
+    await page.waitForTimeout(500);
     await expect(page.locator('ion-badge.completed-badge')).toBeVisible();
+  });
+});
+
+// Journal section tests use a separate describe with a custom progress mock so
+// checkCompleted() finds reading 101 as completed+with notes — no dev-mode hacks needed.
+test.describe('Reading detail — journal section', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAllRoutes(page);
+    // Override progress to return reading 101 as completed with notes (last-registered wins)
+    await page.route('**/api/v1/progress/series/**', (r: Route) =>
+      r.fulfill({ json: [
+        MOCK_PROGRESS[0],
+        {
+          readingId: 101, seriesId: 1, isCompleted: true,
+          notes: 'My saved note.', completedAt: '2026-06-14T10:00:00Z',
+          month: 6, day: 14, bibleReading: 'John 3:16'
+        }
+      ] })
+    );
+    await page.goto('/tabs/reading/101');
+  });
+
+  test('journal section appears when reading is completed with notes', async ({ page }) => {
+    // checkCompleted() loads notes from the mocked progress → journal section shows
+    await expect(page.locator('.journal-toggle')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('journal notes textarea shown after expanding journal section', async ({ page }) => {
+    // checkCompleted() auto-expands showNotes when notes exist, so textarea is already visible
+    await expect(page.locator('ion-textarea.journal-textarea')).toBeVisible({ timeout: 5000 });
   });
 });

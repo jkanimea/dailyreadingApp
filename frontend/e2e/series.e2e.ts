@@ -24,4 +24,18 @@ test.describe('Series list', () => {
     await page.locator('.series-card').first().click();
     await expect(page).toHaveURL(/\/tabs\/today|\/reading|\/series\/1/);
   });
+
+  test('renders both mock series cards', async ({ page }) => {
+    // MOCK_SERIES now has 2 entries
+    await expect(page.locator('.series-card')).toHaveCount(2);
+  });
+
+  test('shows second series name (Youth Series)', async ({ page }) => {
+    await expect(page.locator('.series-card').nth(1)).toContainText('Youth Series');
+  });
+
+  test('shows second series book title', async ({ page }) => {
+    // Template renders "Based on {title}" — author is not displayed separately
+    await expect(page.locator('.series-card').nth(1)).toContainText('Steps to Christ');
+  });
 });
