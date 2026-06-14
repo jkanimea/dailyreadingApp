@@ -120,6 +120,20 @@ jobs:
           chmod 600 /tmp/deploy_key
           SSH_OPTS="-i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
 
+          # Pre-flight: verify SSH port is reachable before wasting retry attempts
+          echo "Testing SSH connectivity to ${{ vars.PRODUCTION_HOST }}:22 ..."
+          if ! timeout 35 ssh $SSH_OPTS ${{ vars.SSH_USER }}@${{ vars.PRODUCTION_HOST }} "echo 'SSH OK'" 2>&1; then
+            echo "ERROR: Cannot reach ${{ vars.PRODUCTION_HOST }} on port 22."
+            echo "Possible causes:"
+            echo "  1. VPS is offline or SSH daemon is not running"
+            echo "  2. Firewall / security group is blocking port 22 from GitHub Actions IPs"
+            echo "  3. The SSH_USER or SSH_KEY secret is wrong"
+            echo ""
+            echo "GitHub Actions uses IPs from: https://api.github.com/meta (hooks key)"
+            echo "Run on VPS: sudo ufw status  (or iptables -L) to check firewall rules"
+            exit 1
+          fi
+
           for attempt in 1 2 3; do
             echo "Attempt $attempt: syncing deploy files..."
             rsync -avz --timeout=300 -e "ssh $SSH_OPTS" \
