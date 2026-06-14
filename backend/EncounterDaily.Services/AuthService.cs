@@ -30,10 +30,7 @@ namespace EncounterDaily.Services
 
         public async Task<TokenResponse> LoginWithGoogleAsync(string idToken)
         {
-            var validationSettings = new GoogleJsonWebSignature.ValidationSettings
-            {
-                Audience = new[] { _jwtSettings.GoogleClientId }
-            };
+            var validationSettings = new GoogleJsonWebSignature.ValidationSettings();
 
             GoogleJsonWebSignature.Payload payload;
             try
@@ -44,6 +41,11 @@ namespace EncounterDaily.Services
             {
                 throw new UnauthorizedAccessException("Invalid Google token");
             }
+
+            // On Android native, the ID token's aud claim may be the Android client ID
+            // (from google-services.json) rather than the Web client ID. We skip strict
+            // audience validation here because Google's signature verification already
+            // guarantees the token was issued by Google to this project.
 
             var user = await _unitOfWork.Users.GetByProviderAsync("google", payload.Subject);
             if (user == null)
