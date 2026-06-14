@@ -1,0 +1,210 @@
+import type { Page, Route } from '@playwright/test';
+import type { Series } from '../../src/app/core/models/series.model';
+import type { ReadingDetail } from '../../src/app/core/models/reading.model';
+import type { ProgressDto } from '../../src/app/core/models/progress.model';
+import type { BookmarkDto } from '../../src/app/core/models/bookmark.model';
+import type { JournalEntryDto } from '../../src/app/core/models/journal-entry.model';
+import type { SearchResultDto } from '../../src/app/core/models/search-result.model';
+import type { PagedResult } from '../../src/app/core/models/paged-result.model';
+import type { AppLogDto, PagedLogsResult } from '../../src/app/core/models/log.model';
+
+// ── Series ────────────────────────────────────────────────────────────────────
+export const MOCK_SERIES: Series[] = [
+  {
+    id: 1,
+    name: 'Daily Devotional',
+    shortName: 'Daily',
+    description: 'A year-long daily reading plan.',
+    seriesType: 1,
+    sortOrder: 1,
+    primaryBookId: 10,
+    primaryBook: { id: 10, title: 'Oswald Chambers', author: 'Oswald Chambers' },
+  },
+];
+
+// ── Reading Detail ─────────────────────────────────────────────────────────────
+export const MOCK_READING_DETAIL: ReadingDetail = {
+  id: 101,
+  seriesId: 1,
+  seriesName: 'Daily Devotional',
+  month: 6,
+  day: 14,
+  bibleReading: 'John 3:16',
+  primaryBookPageRange: '170-172',
+  hasSecondaryReading: false,
+  sortOrder: 165,
+  fullTextBible: 'For God so loved the world...',
+  fullTextPrimary: 'Today\'s devotional text for June 14th. '.repeat(30),
+};
+
+// ── Progress ──────────────────────────────────────────────────────────────────
+export const MOCK_PROGRESS: ProgressDto[] = [
+  {
+    readingId: 100,
+    seriesId: 1,
+    isCompleted: true,
+    completedAt: '2026-06-13T10:00:00Z',
+    month: 6,
+    day: 13,
+    bibleReading: 'John 3:15',
+    notes: 'Great reading yesterday.',
+  },
+];
+
+// ── Bookmarks ─────────────────────────────────────────────────────────────────
+export const MOCK_BOOKMARKS: BookmarkDto[] = [
+  {
+    id: 1,
+    readingId: 100,
+    seriesId: 1,
+    bookmarkedAt: '2026-06-13T08:00:00Z',
+    month: 6,
+    day: 13,
+    bibleReading: 'John 3:15',
+  },
+];
+
+// ── Journal ───────────────────────────────────────────────────────────────────
+export const MOCK_JOURNAL: JournalEntryDto[] = [
+  {
+    readingId: 100,
+    seriesId: 1,
+    seriesName: 'Daily Devotional',
+    month: 6,
+    day: 13,
+    bibleReading: 'John 3:15',
+    primaryBookPageRange: '168-170',
+    isCompleted: true,
+    completedAt: '2026-06-13T10:00:00Z',
+    notes: 'Great reading yesterday.',
+  },
+];
+
+// ── Search ────────────────────────────────────────────────────────────────────
+export const MOCK_SEARCH_RESULTS: PagedResult<SearchResultDto> = {
+  items: [
+    {
+      id: 101,
+      seriesId: 1,
+      seriesName: 'Daily Devotional',
+      month: 6,
+      day: 14,
+      bibleReading: 'John 3:16',
+      fullTextPrimary: 'For God so loved the world that he gave his only Son.',
+      sortOrder: 165,
+    },
+  ],
+  totalCount: 1,
+  page: 1,
+  pageSize: 20,
+  totalPages: 1,
+};
+
+// ── Admin Logs ────────────────────────────────────────────────────────────────
+export const MOCK_LOGS: PagedLogsResult = {
+  items: [
+    {
+      id: 1051,
+      level: 'error',
+      message: 'HTTP 401 GET /api/v1/series/1',
+      source: 'AuthInterceptor',
+      origin: 'client',
+      createdAt: '2026-06-13T21:01:57Z',
+    } as AppLogDto,
+  ],
+  totalCount: 1,
+  page: 1,
+  pageSize: 50,
+  totalPages: 1,
+};
+
+// ── Route registration helper ─────────────────────────────────────────────────
+export async function mockAllRoutes(page: Page): Promise<void> {
+  // Block external SDKs that 404 in CI (gap #6)
+  await page.route('https://accounts.google.com/**', (r: Route) => r.abort());
+  await page.route('https://connect.facebook.net/**', (r: Route) => r.abort());
+
+  // Series
+  await page.route('**/api/v1/series', (r: Route) =>
+    r.fulfill({ json: MOCK_SERIES })
+  );
+  await page.route('**/api/v1/series/1', (r: Route) =>
+    r.fulfill({ json: MOCK_SERIES[0] })
+  );
+  await page.route('**/api/v1/series/1/config', (r: Route) =>
+    r.fulfill({ json: { id: 1, name: 'Daily Devotional', shortName: 'Daily', hasSecondaryReading: false, primaryBookName: 'Oswald Chambers', totalReadings: 365 } })
+  );
+
+  // Today's reading
+  await page.route('**/api/v1/reading/series/1/today**', (r: Route) =>
+    r.fulfill({ json: MOCK_READING_DETAIL })
+  );
+
+  // Reading by ID — basic and full (gap: /reading/101/full?translation=KJV)
+  await page.route('**/api/v1/reading/101', (r: Route) =>
+    r.fulfill({ json: MOCK_READING_DETAIL })
+  );
+  await page.route('**/api/v1/reading/101/full**', (r: Route) =>
+    r.fulfill({ json: MOCK_READING_DETAIL })
+  );
+
+  // Calendar month readings
+  await page.route('**/api/v1/reading/series/1/month/**', (r: Route) =>
+    r.fulfill({ json: [MOCK_READING_DETAIL] })
+  );
+
+  // Progress — register broad catch-all FIRST, specific routes LAST
+  // Playwright matches last-registered route first, so specific routes below override the catch-all.
+  await page.route('**/api/v1/progress/series/**', (r: Route) =>
+    r.fulfill({ json: MOCK_PROGRESS })
+  );
+  await page.route('**/api/v1/progress/series/1/journal', (r: Route) =>
+    r.fulfill({ json: MOCK_JOURNAL })
+  );
+  await page.route('**/api/v1/progress/series/1/completed-count', (r: Route) =>
+    r.fulfill({ json: 100 })
+  );
+  await page.route('**/api/v1/progress/series/1/streak', (r: Route) =>
+    r.fulfill({ json: 3 })
+  );
+  await page.route('**/api/v1/progress/series/1/percentage', (r: Route) =>
+    r.fulfill({ json: 27.4 })
+  );
+  await page.route('**/api/v1/progress/101/complete', (r: Route) =>
+    r.fulfill({ status: 200, json: {} })
+  );
+  await page.route('**/api/v1/progress/101/uncomplete', (r: Route) =>
+    r.fulfill({ status: 200, json: {} })
+  );
+
+  // Bookmarks
+  await page.route('**/api/v1/bookmarks', (r: Route) => {
+    if (r.request().method() === 'GET') {
+      return r.fulfill({ json: MOCK_BOOKMARKS });
+    }
+    return r.continue();
+  });
+  await page.route('**/api/v1/bookmarks/**', (r: Route) => {
+    const method = r.request().method();
+    if (method === 'POST') {
+      return r.fulfill({ status: 201, json: { id: 2, readingId: 101, seriesId: 1, bookmarkedAt: new Date().toISOString(), month: 6, day: 14, bibleReading: 'John 3:16' } });
+    }
+    if (method === 'DELETE') {
+      return r.fulfill({ status: 200, json: {} });
+    }
+    return r.continue();
+  });
+
+  // Search — endpoint is /search not /reading/search
+  await page.route('**/api/v1/search**', (r: Route) =>
+    r.fulfill({ json: MOCK_SEARCH_RESULTS })
+  );
+
+  // Admin logs
+  await page.route('**/api/v1/logs**', (r: Route) => {
+    if (r.request().method() === 'POST') {
+      return r.fulfill({ status: 200, json: { received: 1 } });
+    }
+    return r.fulfill({ json: MOCK_LOGS });
+  });
+}

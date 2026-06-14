@@ -29,8 +29,34 @@ jobs:
           npm ci --legacy-peer-deps
           npm test -- --no-coverage
 
-  build:
+  e2e-tests:
     needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with: { node-version: '${{ env.NODE_VERSION }}' }
+      - name: Install dependencies
+        run: cd frontend && npm ci --legacy-peer-deps
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: playwright-${{ runner.os }}-
+      - name: Install Playwright browsers
+        run: cd frontend && npx playwright install chromium --with-deps
+      - name: Run E2E tests
+        run: cd frontend && npm run e2e:ci
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-deploy-run${{ github.run_number }}
+          path: frontend/playwright-report/
+
+  build:
+    needs: [test, e2e-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

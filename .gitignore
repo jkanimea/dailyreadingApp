@@ -70,6 +70,12 @@ yarn-error.log
 testem.log
 /typings
 
+# Playwright E2E artifacts (gap #8)
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/playwright/.cache/
+/frontend/blob-report/
+
 # System files
 .DS_Store
 Thumbs.db
