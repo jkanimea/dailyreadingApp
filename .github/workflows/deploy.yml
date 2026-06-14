@@ -122,6 +122,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "deploy/*"
           target: "/opt/encounter-daily"
+          timeout: 120s
+          command_timeout: 30m
 
       - name: Sync frontend to VPS
         uses: appleboy/scp-action@v0.1.7
@@ -131,6 +133,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           source: "frontend/www/*"
           target: "/opt/encounter-daily/frontend/www"
+          timeout: 120s
+          command_timeout: 30m
 
       - name: Fix frontend path and deploy
         uses: appleboy/ssh-action@v0.1.3
