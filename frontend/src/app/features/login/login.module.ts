@@ -279,6 +279,7 @@ export class LoginPage implements OnDestroy {
 
       if (Capacitor.isNativePlatform()) {
         // Native Android/iOS — use native Google Sign-In plugin
+        await GoogleAuth.initialize();
         const user = await GoogleAuth.signIn();
         const idToken = user?.authentication?.idToken;
         if (!idToken) throw new Error('Google sign-in failed — no ID token returned.');

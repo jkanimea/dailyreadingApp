@@ -39,13 +39,17 @@ npx cap sync android
 # Inject google-services.json for native Google Sign-In
 if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
     echo "Injecting google-services.json..."
-    echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+    printf '%s\n' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
 
     # Add Google services Gradle plugin to project-level build.gradle
-    sed -i "s|dependencies {|dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'|" android/build.gradle
+    if ! grep -q 'google-services' android/build.gradle 2>/dev/null; then
+        sed -i "s|dependencies {|dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'|" android/build.gradle
+    fi
 
     # Apply Google services plugin in app-level build.gradle
-    echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+    if ! grep -q 'google-services' android/app/build.gradle 2>/dev/null; then
+        echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+    fi
 else
     echo "WARNING: GOOGLE_SERVICES_JSON not set — native Google Sign-In will not work"
 fi
