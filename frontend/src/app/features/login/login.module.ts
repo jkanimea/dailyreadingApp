@@ -8,7 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { environment } from '../../../environments/environment';
 import { Capacitor } from '@capacitor/core';
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
+import { SocialLogin } from '@capgo/capacitor-social-login';
 
 @Component({
   template: `
@@ -185,6 +185,7 @@ export class LoginPage implements OnDestroy {
 
   private googleInitialized = false;
   private facebookInitialized = false;
+  private socialLoginInitialized = false;
 
   // Bridge for the async Google credential callback → current promise
   private googleCredResolve?: (cred: string) => void;
@@ -204,6 +205,9 @@ export class LoginPage implements OnDestroy {
     this.facebookInitialized = false;
     this.initGoogle().catch(() => {});
     this.initFacebook().catch(() => {});
+    if (Capacitor.isNativePlatform()) {
+      this.initSocialLogin().catch(() => {});
+    }
   }
 
   private async initGoogle(): Promise<void> {
@@ -257,6 +261,19 @@ export class LoginPage implements OnDestroy {
     } catch (e: unknown) { this.loggingService.error('LoginPage', 'initFacebook', String(e)); /* will show error on button click */ }
   }
 
+  private async initSocialLogin(): Promise<void> {
+    if (this.socialLoginInitialized) return;
+    try {
+      await SocialLogin.initialize({
+        google: {
+          webClientId: '868571551367-kkm4ggn0d9cc457k6s0p9rhoipq1bkio.apps.googleusercontent.com',
+          mode: 'online'
+        }
+      });
+      this.socialLoginInitialized = true;
+    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initSocialLogin', String(e)); }
+  }
+
   async continueAsGuest(): Promise<void> {
     this.loading = true;
     this.error = undefined;
@@ -278,10 +295,10 @@ export class LoginPage implements OnDestroy {
       let credential: string;
 
       if (Capacitor.isNativePlatform()) {
-        // Native Android/iOS — use native Google Sign-In plugin
-        await GoogleAuth.initialize();
-        const user = await GoogleAuth.signIn();
-        const idToken = user?.authentication?.idToken;
+        // Native Android/iOS — use @capgo/capacitor-social-login
+        const res = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+        if (res.result.responseType !== 'online') throw new Error('Google sign-in failed — unexpected offline response.');
+        const idToken = res.result.idToken;
         if (!idToken) throw new Error('Google sign-in failed — no ID token returned.');
         credential = idToken;
       } else {
