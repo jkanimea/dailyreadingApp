@@ -206,11 +206,15 @@ body {
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;');
       },
-      shareJournal() {
-        if (!navigator.share) return;
+      async shareJournal() {
         const selected = this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId));
         if (selected.length === 0) return;
-        navigator.share({ title: `My Reading Journal — ${this.seriesName}`, text: this.buildShareText(selected), url: window.location.href });
+        const text = this.buildShareText(selected);
+        if (navigator.share) {
+          await navigator.share({ title: `My Reading Journal — ${this.seriesName}`, text });
+        } else {
+          await navigator.clipboard.writeText(text);
+        }
       },
       buildShareText(selected: JournalEntryDto[]) {
         const lines: string[] = [`My Reading Journal — ${this.seriesName}`, ''];
@@ -576,11 +580,16 @@ body {
 
   // ─── Share ────────────────────────────────────────────────────────────
 
-  it('shareJournal should not throw when navigator.share is undefined', () => {
+  it('shareJournal should not throw when navigator.share is undefined (falls back to clipboard)', async () => {
     Object.defineProperty(navigator, 'share', { value: undefined, configurable: true });
     component.canShare = false;
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: jest.fn().mockResolvedValue(undefined) },
+      configurable: true
+    });
+    component.ionViewWillEnter();
 
-    expect(() => component.shareJournal()).not.toThrow();
+    await expect(component.shareJournal()).resolves.not.toThrow();
   });
 
   it('shareJournal should not share when no entries are selected', () => {

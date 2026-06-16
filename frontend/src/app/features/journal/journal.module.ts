@@ -65,11 +65,13 @@ import { firstValueFrom } from 'rxjs';
             <ion-icon [name]="allSelected ? 'checkbox-outline' : 'square-outline'" slot="start"></ion-icon>
             {{ allSelected ? 'Deselect All' : 'Select All' }}
           </ion-button>
-          <ion-button fill="outline" (click)="printJournal()">
-            <ion-icon name="print-outline" slot="start"></ion-icon>
-            Print
-          </ion-button>
-          @if (canShare) {
+          @if (!isAndroid) {
+            <ion-button fill="outline" (click)="printJournal()">
+              <ion-icon name="print-outline" slot="start"></ion-icon>
+              Print
+            </ion-button>
+          }
+          @if (isAndroid || canShare) {
             <ion-button fill="outline" (click)="shareJournal()" [disabled]="selectedCount === 0">
               <ion-icon name="share-outline" slot="start"></ion-icon>
               Share{{ selectedCount > 0 ? ' (' + selectedCount + ')' : '' }}
@@ -254,6 +256,7 @@ class JournalPage {
   allExpanded = false;
   allSelected = true;
   canShare = !!navigator.share;
+  isAndroid = Capacitor.getPlatform() === 'android';
   summarizingStates = new Map<number, boolean>();
   expandedEntries = new Set<number>();
   selectedEntryIds = new Set<number>();
@@ -470,15 +473,24 @@ body {
   }
 
   async shareJournal(): Promise<void> {
-    if (!navigator.share) return;
     const selected = this.entries.filter(e => this.selectedEntryIds.has(e.readingId));
     if (selected.length === 0) return;
 
     const text = this.buildShareText(selected);
-    await navigator.share({
-      title: `My Reading Journal — ${this.seriesName}`,
-      text
-    });
+    if (navigator.share) {
+      await navigator.share({
+        title: `My Reading Journal — ${this.seriesName}`,
+        text
+      });
+    } else {
+      await navigator.clipboard.writeText(text);
+      const alert = await this.alertCtrl.create({
+        header: 'Copied to Clipboard',
+        message: 'Journal entries have been copied to your clipboard. You can paste them anywhere.',
+        buttons: ['OK']
+      });
+      await alert.present();
+    }
   }
 
   private buildShareText(selected: JournalEntryDto[]): string {

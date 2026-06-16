@@ -28,8 +28,8 @@ BEGIN
         (3, N'Christ Our Redemption', N'cor', N'Daily readings from Patriarchs and Prophets', 3, 4, NULL, 3, GETUTCDATE()),
         (4, N'Christ Our Hope', N'coh', N'Daily readings from Prophets and Kings', 4, 5, NULL, 4, GETUTCDATE());
     SET IDENTITY_INSERT Series OFF;
-    PRINT ''Inserted 4 series'';
+    PRINT 'Inserted 4 series';
 END
 ELSE
-    PRINT ''Series already seeded'';
+    PRINT 'Series already seeded';
 
