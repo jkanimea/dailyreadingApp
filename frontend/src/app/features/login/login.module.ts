@@ -268,6 +268,9 @@ export class LoginPage implements OnDestroy {
         google: {
           webClientId: '868571551367-kkm4ggn0d9cc457k6s0p9rhoipq1bkio.apps.googleusercontent.com',
           mode: 'online'
+        },
+        facebook: {
+          appId: '1510105297476514'
         }
       });
       this.socialLoginInitialized = true;
@@ -357,25 +360,35 @@ export class LoginPage implements OnDestroy {
     this.loading = true;
     this.error = undefined;
     try {
-      if (!this.facebookInitialized) await this.initFacebook();
-      const { FB } = window;
-      if (!FB) {
-        throw new Error('Facebook Sign-In unavailable. Please refresh and try again.');
+      let credential: string;
+
+      if (Capacitor.isNativePlatform()) {
+        // Native Android/iOS — use @capgo/capacitor-social-login
+        if (!this.socialLoginInitialized) await this.initSocialLogin();
+        const res = await SocialLogin.login({ provider: 'facebook', options: { permissions: ['public_profile'] } });
+        const token = res.result.accessToken?.token;
+        if (!token) throw new Error('Facebook sign-in failed — no access token.');
+        credential = token;
+      } else {
+        // Web browser — use Facebook JS SDK popup flow
+        if (!this.facebookInitialized) await this.initFacebook();
+        const { FB } = window;
+        if (!FB) {
+          throw new Error('Facebook Sign-In unavailable. Please refresh and try again.');
+        }
+
+        credential = await new Promise<string>((resolve, reject) => {
+          FB.login((response: FacebookLoginResponse) => {
+            if (response?.authResponse?.accessToken) {
+              resolve(response.authResponse.accessToken);
+            } else {
+              reject(new Error('Facebook login was cancelled.'));
+            }
+          }, { scope: 'public_profile' });
+        });
       }
 
-      // FB.login() must be called within a user-gesture handler — SDK is pre-loaded
-      // so this runs synchronously within the button click event.
-      const accessToken = await new Promise<string>((resolve, reject) => {
-        FB.login((response: FacebookLoginResponse) => {
-          if (response?.authResponse?.accessToken) {
-            resolve(response.authResponse.accessToken);
-          } else {
-            reject(new Error('Facebook login was cancelled.'));
-          }
-        }, { scope: 'public_profile' });
-      });
-
-      const res = await firstValueFrom(this.authService.login('facebook', accessToken));
+      const res = await firstValueFrom(this.authService.login('facebook', credential));
       if (res) {
         await this.authService.storeTokens(res);
         this.router.navigate(['/series']);
