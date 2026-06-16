@@ -23,7 +23,7 @@ export default defineConfig({
   ],
   // Auto-start ng serve before tests, reuse if already running locally (gap #13)
   webServer: {
-    command: 'npx ng serve --configuration e2e --port 4200',
+    command: 'node scripts/git-version.mjs && npx ng serve --configuration e2e --port 4200',
     url: 'http://localhost:4200',
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,

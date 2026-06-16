@@ -7,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { environment } from '../../../environments/environment';
+import { appVersion } from '../../../environments/version';
 import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
 
@@ -52,7 +53,7 @@ import { SocialLogin } from '@capgo/capacitor-social-login';
           </div>
         }
 
-        <p class="version-text">v0.1.0</p>
+        <p class="version-text">v{{ version }}</p>
       </div>
 
       <div #gBtnHost class="g-btn-host" aria-hidden="true"></div>
@@ -177,6 +178,7 @@ export class LoginPage implements OnDestroy {
   private authService = inject(AuthService);
   private loggingService = inject(LoggingService);
 
+  version = appVersion;
   loading = false;
   error?: string;
   bypassAuth = environment.bypassAuth;

@@ -176,8 +176,8 @@ export const MOCK_USER: UserDto = {
 };
 
 function makeFakeJwt(payload: Record<string, unknown>): string {
-  const header = Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64');
-  const body = Buffer.from(JSON.stringify(payload)).toString('base64');
+  const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
+  const body = btoa(JSON.stringify(payload));
   return `${header}.${body}.fake-signature`;
 }
 
@@ -212,6 +212,16 @@ export async function mockAllRoutes(page: Page): Promise<void> {
   await page.route('**/api/v1/auth/me', (r: Route) =>
     r.fulfill({ json: MOCK_USER })
   );
+  await page.route('**/api/v1/auth/google', (r: Route) => {
+    if (r.request().method() !== 'POST') return r.continue();
+    const fakeJwt = makeFakeJwt({ nameid: '1', email: 'test@example.com', unique_name: 'Test User', provider: 'google', role: 'User' });
+    return r.fulfill({ json: { accessToken: fakeJwt, refreshToken: 'fake-refresh-token', expiresIn: 3600, user: MOCK_USER } });
+  });
+  await page.route('**/api/v1/auth/facebook', (r: Route) => {
+    if (r.request().method() !== 'POST') return r.continue();
+    const fakeJwt = makeFakeJwt({ nameid: '1', email: 'test@example.com', unique_name: 'Test User', provider: 'facebook', role: 'User' });
+    return r.fulfill({ json: { accessToken: fakeJwt, refreshToken: 'fake-refresh-token', expiresIn: 3600, user: MOCK_USER } });
+  });
 
   // Series
   await page.route('**/api/v1/series', (r: Route) =>
