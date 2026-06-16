@@ -8,6 +8,7 @@ import { PreferencesService } from '../../core/services/preferences.service';
 import { SeriesService } from '../../core/services/series.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { JournalEntryDto } from '../../core/models/journal-entry.model';
+import { Capacitor } from '@capacitor/core';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -336,7 +337,7 @@ class JournalPage {
     this.selectedCount = this.selectedEntryIds.size;
   }
 
-  printJournal(): void {
+  async printJournal(): Promise<void> {
     const selected = this.selectedCount > 0
       ? this.entries.filter(e => this.selectedEntryIds.has(e.readingId))
       : this.entries;
@@ -350,7 +351,22 @@ class JournalPage {
     printWindow.focus();
 
     printWindow.onafterprint = () => printWindow.close();
-    setTimeout(() => printWindow.print(), 300);
+    setTimeout(async () => {
+      try {
+        printWindow.print();
+      } catch {
+        printWindow.close();
+        const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+        const alert = await this.alertCtrl.create({
+          header: 'Unable to Print',
+          message: isAndroid
+            ? 'Printing is not available on this device. Please use the Share option or access the web app to print.'
+            : 'Printing failed. Please try again or use the Share option.',
+          buttons: ['OK']
+        });
+        await alert.present();
+      }
+    }, 300);
   }
 
   private buildPrintHtml(entries: JournalEntryDto[]): string {

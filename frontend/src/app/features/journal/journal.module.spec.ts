@@ -82,7 +82,7 @@ describe('JournalPage', () => {
         }
         this.selectedCount = this.selectedEntryIds.size;
       },
-      printJournal() {
+      async printJournal() {
         const selected = this.selectedCount > 0
           ? this.entries.filter((e: JournalEntryDto) => this.selectedEntryIds.has(e.readingId))
           : this.entries;
@@ -96,7 +96,16 @@ describe('JournalPage', () => {
         printWindow.focus();
 
         printWindow.onafterprint = () => printWindow.close();
-        setTimeout(() => printWindow.print(), 300);
+        await new Promise<void>((resolve) => {
+          setTimeout(() => {
+            try {
+              printWindow.print();
+            } catch {
+              printWindow.close();
+            }
+            resolve();
+          }, 300);
+        });
       },
       buildPrintHtml(entries: JournalEntryDto[]) {
         const lines: string[] = [];
@@ -456,13 +465,13 @@ body {
     expect(html).toContain('.journal-card { break-inside: avoid; }');
   });
 
-  it('printJournal should open print window with buildPrintHtml content', () => {
+  it('printJournal should open print window with buildPrintHtml content', async () => {
     const mockDoc = { write: jest.fn(), close: jest.fn() };
     const mockWin: any = { document: mockDoc, focus: jest.fn(), close: jest.fn(), onafterprint: null, print: jest.fn() };
     const openSpy = jest.spyOn(window, 'open').mockReturnValue(mockWin);
     component.ionViewWillEnter();
 
-    component.printJournal();
+    await component.printJournal();
 
     expect(openSpy).toHaveBeenCalledWith('', '_blank');
     expect(mockDoc.write).toHaveBeenCalledWith(expect.stringContaining('<!DOCTYPE html>'));
@@ -472,34 +481,47 @@ body {
     expect(mockWin.onafterprint).toBeInstanceOf(Function);
   });
 
-  it('printJournal should not print when there are no entries', () => {
+  it('printJournal should not print when there are no entries', async () => {
     const openSpy = jest.spyOn(window, 'open');
     component.entries = [];
     component.selectedCount = 0;
 
-    component.printJournal();
+    await component.printJournal();
 
     expect(openSpy).not.toHaveBeenCalled();
   });
 
-  it('printJournal should not print when window.open returns null', () => {
+  it('printJournal should not print when window.open returns null', async () => {
     jest.spyOn(window, 'open').mockReturnValue(null);
     const writeSpy = jest.fn();
     component.ionViewWillEnter();
 
-    component.printJournal();
+    await component.printJournal();
 
     // Should not throw; silently bails out
   });
 
-  it('printJournal should close print window on afterprint', () => {
+  it('printJournal should close print window when print() throws (e.g. no printer on Android)', async () => {
+    const mockDoc = { write: jest.fn(), close: jest.fn() };
+    const closeFn = jest.fn();
+    const mockWin: any = { document: mockDoc, focus: jest.fn(), close: closeFn, onafterprint: null, print: jest.fn(() => { throw new Error('print failed'); }) };
+    jest.spyOn(window, 'open').mockReturnValue(mockWin);
+    component.ionViewWillEnter();
+
+    await component.printJournal();
+
+    await new Promise(process.nextTick);
+    expect(closeFn).toHaveBeenCalled();
+  });
+
+  it('printJournal should close print window on afterprint', async () => {
     const mockDoc = { write: jest.fn(), close: jest.fn() };
     const closeFn = jest.fn();
     const mockWin: any = { document: mockDoc, focus: jest.fn(), close: closeFn, onafterprint: null, print: jest.fn() };
     jest.spyOn(window, 'open').mockReturnValue(mockWin);
     component.ionViewWillEnter();
 
-    component.printJournal();
+    await component.printJournal();
 
     mockWin.onafterprint();
     expect(closeFn).toHaveBeenCalled();
