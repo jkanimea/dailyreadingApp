@@ -343,28 +343,39 @@ class JournalPage {
       : this.entries;
     if (selected.length === 0) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('style', 'position:absolute;width:0;height:0;border:0;visibility:hidden;');
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!doc) {
+      document.body.removeChild(iframe);
+      return;
+    }
 
-    printWindow.document.write(this.buildPrintHtml(selected));
-    printWindow.document.close();
-    printWindow.focus();
+    doc.open();
+    doc.write(this.buildPrintHtml(selected));
+    doc.close();
+    iframe.contentWindow?.focus();
 
-    printWindow.onafterprint = () => printWindow.close();
-    setTimeout(async () => {
+    const cleanup = () => {
+      try { document.body.removeChild(iframe); } catch { /* already removed */ }
+    };
+
+    iframe.contentWindow!.onafterprint = cleanup;
+    setTimeout(() => {
       try {
-        printWindow.print();
+        iframe.contentWindow!.print();
+        setTimeout(cleanup, 1000);
       } catch {
-        printWindow.close();
+        cleanup();
         const isAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
-        const alert = await this.alertCtrl.create({
+        this.alertCtrl.create({
           header: 'Unable to Print',
           message: isAndroid
             ? 'Printing is not available on this device. Please use the Share option or access the web app to print.'
             : 'Printing failed. Please try again or use the Share option.',
           buttons: ['OK']
-        });
-        await alert.present();
+        }).then(a => a.present());
       }
     }, 300);
   }

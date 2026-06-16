@@ -88,20 +88,32 @@ describe('JournalPage', () => {
           : this.entries;
         if (selected.length === 0) return;
 
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('style', 'position:absolute;width:0;height:0;border:0;visibility:hidden;');
+        document.body.appendChild(iframe);
+        const doc = iframe.contentDocument || iframe.contentWindow?.document;
+        if (!doc) {
+          document.body.removeChild(iframe);
+          return;
+        }
 
-        printWindow.document.write(this.buildPrintHtml(selected));
-        printWindow.document.close();
-        printWindow.focus();
+        doc.open();
+        doc.write(this.buildPrintHtml(selected));
+        doc.close();
+        iframe.contentWindow?.focus();
 
-        printWindow.onafterprint = () => printWindow.close();
+        const cleanup = () => {
+          try { document.body.removeChild(iframe); } catch { /* already removed */ }
+        };
+
+        iframe.contentWindow!.onafterprint = cleanup;
         await new Promise<void>((resolve) => {
           setTimeout(() => {
             try {
-              printWindow.print();
+              iframe.contentWindow!.print();
+              setTimeout(cleanup, 1000);
             } catch {
-              printWindow.close();
+              cleanup();
             }
             resolve();
           }, 300);
@@ -409,7 +421,7 @@ body {
     expect(component.isExpanded(3)).toBe(true);
   });
 
-  // ─── Print (new-window approach) ──────────────────────────────────────
+  // ─── Print (hidden-iframe approach) ──────────────────────────────────
 
   it('buildPrintHtml should produce valid HTML document with all entries', () => {
     component.ionViewWillEnter();
@@ -465,66 +477,101 @@ body {
     expect(html).toContain('.journal-card { break-inside: avoid; }');
   });
 
-  it('printJournal should open print window with buildPrintHtml content', async () => {
-    const mockDoc = { write: jest.fn(), close: jest.fn() };
-    const mockWin: any = { document: mockDoc, focus: jest.fn(), close: jest.fn(), onafterprint: null, print: jest.fn() };
-    const openSpy = jest.spyOn(window, 'open').mockReturnValue(mockWin);
+  it('printJournal should create hidden iframe, write content, and call print', async () => {
+    jest.useFakeTimers();
+    const mockPrint = jest.fn();
+    const mockDoc = { open: jest.fn(), write: jest.fn(), close: jest.fn() };
+    const mockWin: any = { document: mockDoc, focus: jest.fn(), print: mockPrint };
+    const mockIframe: any = {
+      contentDocument: mockDoc,
+      contentWindow: mockWin,
+      setAttribute: jest.fn()
+    };
+    const createSpy = jest.spyOn(document, 'createElement').mockReturnValue(mockIframe);
+    const appendSpy = jest.spyOn(document.body, 'appendChild').mockReturnValue(mockIframe);
+    jest.spyOn(document.body, 'removeChild').mockReturnValue(mockIframe);
     component.ionViewWillEnter();
 
-    await component.printJournal();
+    component.printJournal();
+    jest.runAllTimers();
+    // flush microtasks so the promise chain completes
+    await Promise.resolve();
 
-    expect(openSpy).toHaveBeenCalledWith('', '_blank');
+    expect(createSpy).toHaveBeenCalledWith('iframe');
+    expect(appendSpy).toHaveBeenCalledWith(mockIframe);
+    expect(mockDoc.open).toHaveBeenCalled();
     expect(mockDoc.write).toHaveBeenCalledWith(expect.stringContaining('<!DOCTYPE html>'));
     expect(mockDoc.write).toHaveBeenCalledWith(expect.stringContaining('My Reading Journal — Christ The Way'));
     expect(mockDoc.close).toHaveBeenCalled();
     expect(mockWin.focus).toHaveBeenCalled();
     expect(mockWin.onafterprint).toBeInstanceOf(Function);
+    expect(mockPrint).toHaveBeenCalled();
+    jest.useRealTimers();
   });
 
   it('printJournal should not print when there are no entries', async () => {
-    const openSpy = jest.spyOn(window, 'open');
+    const createSpy = jest.spyOn(document, 'createElement');
     component.entries = [];
     component.selectedCount = 0;
 
     await component.printJournal();
 
-    expect(openSpy).not.toHaveBeenCalled();
+    expect(createSpy).not.toHaveBeenCalled();
   });
 
-  it('printJournal should not print when window.open returns null', async () => {
-    jest.spyOn(window, 'open').mockReturnValue(null);
-    const writeSpy = jest.fn();
+  it('printJournal should bail out when iframe has no contentDocument', async () => {
+    const removeSpy = jest.spyOn(document.body, 'removeChild').mockReturnValue({} as any);
+    const mockIframe: any = {
+      contentDocument: null,
+      contentWindow: null,
+      setAttribute: jest.fn()
+    };
+    jest.spyOn(document, 'createElement').mockReturnValue(mockIframe);
+    jest.spyOn(document.body, 'appendChild').mockReturnValue(mockIframe);
     component.ionViewWillEnter();
 
     await component.printJournal();
 
-    // Should not throw; silently bails out
+    expect(removeSpy).toHaveBeenCalledWith(mockIframe);
   });
 
-  it('printJournal should close print window when print() throws (e.g. no printer on Android)', async () => {
-    const mockDoc = { write: jest.fn(), close: jest.fn() };
-    const closeFn = jest.fn();
-    const mockWin: any = { document: mockDoc, focus: jest.fn(), close: closeFn, onafterprint: null, print: jest.fn(() => { throw new Error('print failed'); }) };
-    jest.spyOn(window, 'open').mockReturnValue(mockWin);
+  it('printJournal should clean up iframe when print() throws (e.g. no printer on Android)', async () => {
+    const mockPrint = jest.fn(() => { throw new Error('print failed'); });
+    const mockDoc = { open: jest.fn(), write: jest.fn(), close: jest.fn() };
+    const mockWin: any = { document: mockDoc, focus: jest.fn(), print: mockPrint };
+    const mockIframe: any = {
+      contentDocument: mockDoc,
+      contentWindow: mockWin,
+      setAttribute: jest.fn()
+    };
+    const removeSpy = jest.spyOn(document.body, 'removeChild').mockReturnValue(mockIframe);
+    jest.spyOn(document, 'createElement').mockReturnValue(mockIframe);
+    jest.spyOn(document.body, 'appendChild').mockReturnValue(mockIframe);
     component.ionViewWillEnter();
 
     await component.printJournal();
 
-    await new Promise(process.nextTick);
-    expect(closeFn).toHaveBeenCalled();
+    expect(removeSpy).toHaveBeenCalledWith(mockIframe);
   });
 
-  it('printJournal should close print window on afterprint', async () => {
-    const mockDoc = { write: jest.fn(), close: jest.fn() };
-    const closeFn = jest.fn();
-    const mockWin: any = { document: mockDoc, focus: jest.fn(), close: closeFn, onafterprint: null, print: jest.fn() };
-    jest.spyOn(window, 'open').mockReturnValue(mockWin);
+  it('printJournal should clean up iframe on afterprint', async () => {
+    const mockPrint = jest.fn();
+    const mockDoc = { open: jest.fn(), write: jest.fn(), close: jest.fn() };
+    const mockWin: any = { document: mockDoc, focus: jest.fn(), print: mockPrint };
+    const mockIframe: any = {
+      contentDocument: mockDoc,
+      contentWindow: mockWin,
+      setAttribute: jest.fn()
+    };
+    const removeSpy = jest.spyOn(document.body, 'removeChild').mockReturnValue(mockIframe);
+    jest.spyOn(document, 'createElement').mockReturnValue(mockIframe);
+    jest.spyOn(document.body, 'appendChild').mockReturnValue(mockIframe);
     component.ionViewWillEnter();
 
     await component.printJournal();
 
     mockWin.onafterprint();
-    expect(closeFn).toHaveBeenCalled();
+    expect(removeSpy).toHaveBeenCalledWith(mockIframe);
   });
 
   // ─── Share ────────────────────────────────────────────────────────────
