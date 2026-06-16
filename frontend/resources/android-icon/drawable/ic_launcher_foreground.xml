@@ -5,21 +5,36 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group>
-        <!-- Book cover -->
+        <!-- Drop shadow behind book -->
+        <path
+            android:fillColor="#1A000000"
+            android:pathData="M58,28 Q44,28 24,38 Q24,90 44,90 L64,90 Q84,90 84,38 Q80,28 58,28 Z" />
+
+        <!-- Left page -->
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M26,30 L82,30 C84.2,30 86,31.8 86,34 L86,78 C86,80.2 84.2,82 82,82 L26,82 C23.8,82 22,80.2 22,78 L22,34 C22,31.8 23.8,30 26,30 Z" />
-        <!-- Book spine -->
+            android:pathData="M54,26 C30,26 22,33 22,38 L22,80 C22,85 30,88 54,84 Z" />
+        <!-- Right page -->
+        <path
+            android:fillColor="#FAFAFA"
+            android:pathData="M54,26 C78,26 86,33 86,38 L86,80 C86,85 78,88 54,84 Z" />
+        <!-- Center crease -->
         <path
             android:fillColor="#00000000"
-            android:pathData="M30,30 L30,82"
-            android:strokeWidth="2.5"
+            android:pathData="M54,26 L54,84"
+            android:strokeWidth="1"
             android:strokeColor="#D0D0D0" />
-        <!-- Page lines -->
+        <!-- Page lines - left (follow page angle) -->
         <path
             android:fillColor="#00000000"
-            android:pathData="M36,40 L78,40 M36,48 L78,48 M36,56 L78,56 M36,64 L78,64 M36,72 L78,72"
-            android:strokeWidth="1.5"
+            android:pathData="M32,40 L50,42 M30,48 L50,50 M28,56 L50,58 M30,64 L50,66 M32,72 L50,74"
+            android:strokeWidth="1"
+            android:strokeColor="#E0E0E0" />
+        <!-- Page lines - right (follow page angle) -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M58,42 L76,40 M58,50 L78,48 M58,58 L80,56 M58,66 L78,64 M58,74 L76,72"
+            android:strokeWidth="1"
             android:strokeColor="#E0E0E0" />
     </group>
 </vector>
