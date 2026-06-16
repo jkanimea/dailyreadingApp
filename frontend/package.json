@@ -15,7 +15,8 @@
     "test:coverage": "jest --coverage",
     "lint": "ng lint",
     "e2e": "playwright test",
-    "e2e:ci": "playwright test --reporter=github"
+    "e2e:ci": "playwright test --reporter=github",
+    "prepare:android": "node scripts/copy-android-icon.mjs"
   },
   "private": true,
   "dependencies": {

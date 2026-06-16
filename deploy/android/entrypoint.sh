@@ -36,14 +36,8 @@ echo "Syncing Capacitor..."
 npx cap copy android
 npx cap sync android
 
-# Copy custom adaptive icon (reading book vector drawable)
-ICON_SRC="$FRONTEND_DIR/resources/android-icon"
-ICON_DST="android/app/src/main/res"
-if [ -d "$ICON_SRC" ]; then
-    echo "Copying custom app icon..."
-    cp -r "$ICON_SRC/drawable" "$ICON_DST/"
-    cp -r "$ICON_SRC/mipmap-anydpi-v26" "$ICON_DST/"
-fi
+# Copy custom adaptive icon (reading book vector drawable) + generate PNG fallbacks
+node "$FRONTEND_DIR/scripts/copy-android-icon.mjs"
 
 # Patch MainActivity.java for @capgo/capacitor-social-login
 MAIN_ACTIVITY="android/app/src/main/java/com/dailyreading/app/MainActivity.java"
