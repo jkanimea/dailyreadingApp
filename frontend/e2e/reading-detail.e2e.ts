@@ -45,39 +45,26 @@ test.describe('Reading detail', () => {
   });
 
   test('marks reading complete after scrolling', async ({ page }) => {
-    // Use Angular dev-mode API to set readingSeen directly, bypassing shadow DOM scroll constraints
+    // Scroll ion-content to bottom to trigger readingSeen flag (same approach as test #4)
     await page.evaluate(() => {
-      const ng = (window as any).ng;
-      if (!ng) return;
-      // Walk all elements to find the one with readingSeen property
-      const all = document.querySelectorAll('*');
-      for (const el of Array.from(all)) {
-        try {
-          const comp = ng.getComponent(el);
-          if (comp && 'readingSeen' in comp) {
-            comp.readingSeen = true;
-            ng.applyChanges(comp);
-            break;
-          }
-        } catch { /* not a component */ }
+      const content = document.querySelector('ion-content');
+      if (content) {
+        (content as any).scrollToBottom(0);
+        const el = content.shadowRoot?.querySelector('.inner-scroll') ?? content;
+        el.dispatchEvent(new CustomEvent('ionScroll', {
+          bubbles: true,
+          detail: { scrollTop: 9999 }
+        }));
       }
     });
     await page.waitForTimeout(300);
 
     const checkbox = page.locator('.complete-section ion-checkbox');
     await expect(checkbox).toBeVisible({ timeout: 3000 });
-    // Use evaluate to dispatch ionChange directly (Ionic shadow DOM can swallow Playwright clicks)
-    await page.evaluate(() => {
-      const cb = document.querySelector('.complete-section ion-checkbox');
-      if (cb) {
-        cb.dispatchEvent(new CustomEvent('ionChange', {
-          bubbles: true,
-          detail: { checked: true }
-        }));
-      }
-    });
-    await page.waitForTimeout(500);
-    await expect(page.locator('ion-badge.completed-badge')).toBeVisible();
+    // Click the checkbox label text which Ionic turns into a toggle interaction
+    await page.locator('.complete-section').getByText('I have read this passage').click();
+    await page.waitForTimeout(1000);
+    await expect(page.locator('ion-badge.completed-badge')).toBeVisible({ timeout: 5000 });
   });
 });
 
