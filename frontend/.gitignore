@@ -53,9 +53,6 @@ yarn-error.log
 .history/*
 
 
-# Generated version
-/src/environments/version.ts
-
 # Miscellaneous
 /.angular
 /.angular/cache
