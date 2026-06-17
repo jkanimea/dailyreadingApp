@@ -36,5 +36,17 @@
             android:pathData="M58,42 L76,40 M58,50 L78,48 M58,58 L80,56 M58,66 L78,64 M58,74 L76,72"
             android:strokeWidth="1"
             android:strokeColor="#E0E0E0" />
+        <!-- Cross shadow (behind) -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M55,17 L55,37 M48,23 L62,23"
+            android:strokeWidth="2.5"
+            android:strokeColor="#1A000000" />
+        <!-- Cross bookmark -->
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M54,16 L54,36 M47,22 L61,22"
+            android:strokeWidth="2.5"
+            android:strokeColor="#D4AF37" />
     </group>
 </vector>

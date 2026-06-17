@@ -125,7 +125,4 @@ for (const d of DENSITIES) {
   writeFileSync(join(dstDir, 'ic_launcher_round.png'), png);
 }
 
-console.log('Syncing Capacitor...');
-execSync('npx cap sync android', { cwd: ROOT, stdio: 'inherit' });
-
 console.log('Done. Rebuild the APK to see the new icon.');
