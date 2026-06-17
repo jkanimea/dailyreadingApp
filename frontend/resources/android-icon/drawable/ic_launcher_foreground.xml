@@ -5,48 +5,31 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <group>
-        <!-- Drop shadow behind book -->
+        <!-- Book shadow -->
         <path
-            android:fillColor="#1A000000"
-            android:pathData="M58,28 Q44,28 24,38 Q24,90 44,90 L64,90 Q84,90 84,38 Q80,28 58,28 Z" />
-
+            android:fillColor="#2B000000"
+            android:pathData="M54,24 C28,24 16,34 16,42 L16,84 C16,92 28,96 54,92 C80,96 92,92 92,84 L92,42 C92,34 80,24 54,24 Z" />
         <!-- Left page -->
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M54,26 C30,26 22,33 22,38 L22,80 C22,85 30,88 54,84 Z" />
+            android:pathData="M54,28 C30,28 20,36 20,44 L20,84 C20,90 30,94 54,90 Z" />
         <!-- Right page -->
         <path
-            android:fillColor="#FAFAFA"
-            android:pathData="M54,26 C78,26 86,33 86,38 L86,80 C86,85 78,88 54,84 Z" />
-        <!-- Center crease -->
+            android:fillColor="#F5F5F5"
+            android:pathData="M54,28 C78,28 88,36 88,44 L88,84 C88,90 78,94 54,90 Z" />
+        <!-- Center spine -->
         <path
-            android:fillColor="#00000000"
-            android:pathData="M54,26 L54,84"
-            android:strokeWidth="1"
+            android:fillColor="#D0D0D0"
+            android:pathData="M54,28 L54,90"
+            android:strokeWidth="1.5"
             android:strokeColor="#D0D0D0" />
-        <!-- Page lines - left (follow page angle) -->
+        <!-- Cross vertical -->
         <path
-            android:fillColor="#00000000"
-            android:pathData="M32,40 L50,42 M30,48 L50,50 M28,56 L50,58 M30,64 L50,66 M32,72 L50,74"
-            android:strokeWidth="1"
-            android:strokeColor="#E0E0E0" />
-        <!-- Page lines - right (follow page angle) -->
+            android:fillColor="#D4AF37"
+            android:pathData="M50,8 L58,8 L58,34 L50,34 Z" />
+        <!-- Cross horizontal -->
         <path
-            android:fillColor="#00000000"
-            android:pathData="M58,42 L76,40 M58,50 L78,48 M58,58 L80,56 M58,66 L78,64 M58,74 L76,72"
-            android:strokeWidth="1"
-            android:strokeColor="#E0E0E0" />
-        <!-- Cross shadow (behind) -->
-        <path
-            android:fillColor="#00000000"
-            android:pathData="M55,17 L55,37 M48,23 L62,23"
-            android:strokeWidth="2.5"
-            android:strokeColor="#1A000000" />
-        <!-- Cross bookmark -->
-        <path
-            android:fillColor="#00000000"
-            android:pathData="M54,16 L54,36 M47,22 L61,22"
-            android:strokeWidth="2.5"
-            android:strokeColor="#D4AF37" />
+            android:fillColor="#D4AF37"
+            android:pathData="M42,18 L66,18 L66,26 L42,26 Z" />
     </group>
 </vector>

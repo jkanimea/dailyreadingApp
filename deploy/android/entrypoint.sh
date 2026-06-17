@@ -31,13 +31,14 @@ if [ ! -d "$FRONTEND_DIR/android" ]; then
     npx cap add android
 fi
 
-# Sync web build to native project
+# Copy custom adaptive icon (reading book vector drawable) + generate PNG fallbacks
+echo "Copying custom Android icons..."
+node "$FRONTEND_DIR/scripts/copy-android-icon.mjs"
+
+# Sync web build to native project (icons are already in place)
 echo "Syncing Capacitor..."
 npx cap copy android
 npx cap sync android
-
-# Copy custom adaptive icon (reading book vector drawable) + generate PNG fallbacks
-node "$FRONTEND_DIR/scripts/copy-android-icon.mjs"
 
 # Patch MainActivity.java for @capgo/capacitor-social-login
 MAIN_ACTIVITY="android/app/src/main/java/com/dailyreading/app/MainActivity.java"
