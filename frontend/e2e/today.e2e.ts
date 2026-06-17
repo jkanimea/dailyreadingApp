@@ -19,9 +19,9 @@ test.describe('Today page', () => {
     await expect(page.getByText('170-172')).toBeVisible();
   });
 
-  test('shows series name in header', async ({ page }) => {
-    // Header title includes series name: "Today — Daily Devotional"
-    await expect(page.locator('ion-title')).toContainText('Daily Devotional');
+  test('shows series name in reading meta', async ({ page }) => {
+    // Series name now in .meta-series beside the date
+    await expect(page.locator('.meta-series')).toContainText('Daily Devotional');
   });
 
   test('shows formatted date', async ({ page }) => {
