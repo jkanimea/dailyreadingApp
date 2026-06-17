@@ -67,9 +67,9 @@ interface BibleSection {
           <!-- Header info row -->
           <div class="reading-meta">
             <div class="meta-primary">
-              <span class="meta-series">{{ seriesName }}</span>
-              <span class="meta-sep">·</span>
               <span class="meta-date">{{ formatDate(detail.month, detail.day) }}</span>
+              <span class="meta-sep">·</span>
+              <span class="meta-series">{{ seriesName }}</span>
             </div>
             <div class="meta-actions">
               @if (completed) {
@@ -246,20 +246,22 @@ interface BibleSection {
       flex-wrap: wrap;
     }
     .meta-series {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--ion-color-medium);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
     .meta-sep {
-      font-size: 13px;
+      font-size: 15px;
       color: var(--ion-color-step-300, #ccc);
     }
     .meta-date {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--ion-text-color);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ion-color-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     .translation-segment {
       margin-bottom: 12px;

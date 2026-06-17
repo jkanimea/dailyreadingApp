@@ -11,6 +11,10 @@ const ANDROID_RES = join(ROOT, 'android', 'app', 'src', 'main', 'res');
 const WHITE = [0xFF, 0xFF, 0xFF, 0xFF];
 const GOLD  = [0xD4, 0xAF, 0x37, 0xFF];
 const SPINE = [0xC0, 0xC0, 0xC0, 0xFF];
+const CRISP = [0xFF, 0xF8, 0xDC, 0xFF]; // cream pages
+const BROWN = [0x5D, 0x40, 0x37, 0xFF]; // leather cover
+const RED   = [0xC6, 0x28, 0x28, 0xFF]; // bookmark
+const SHADOW = [0x2B, 0x00, 0x00, 0x00];
 
 const DENSITIES = [
   { dir: 'mipmap-mdpi', size: 48 },
@@ -68,43 +72,61 @@ function makePng(raw, width, height) {
 }
 
 function drawForeground(size) {
-  const raw = Buffer.alloc(size * size * 4);
+  const raw = Buffer.alloc(size * size * 4, 0);
   const S = size / 108;
-  const bookL = Math.round(20 * S);
-  const bookR = Math.round(88 * S);
-  const bookT = Math.round(32 * S);
-  const bookB = Math.round(88 * S);
-  const mid = Math.round(54 * S);
-  const cvL = Math.round(50 * S);
-  const cvR = Math.round(58 * S);
-  const cvT = Math.round(12 * S);
-  const cvB = Math.round(36 * S);
-  const chL = Math.round(42 * S);
-  const chR = Math.round(66 * S);
-  const chT = Math.round(20 * S);
-  const chB = Math.round(28 * S);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const off = (y * size + x) * 4;
-      if (x >= cvL && x < cvR && y >= cvT && y < cvB) {
-        raw[off] = GOLD[0]; raw[off + 1] = GOLD[1]; raw[off + 2] = GOLD[2]; raw[off + 3] = GOLD[3];
-        continue;
+  const covL = Math.round(24 * S);
+  const covR = Math.round(84 * S);
+  const covT = Math.round(22 * S);
+  const covB = Math.round(92 * S);
+  const pgL  = Math.round(26 * S);
+  const pgR  = Math.round(82 * S);
+  const pgT  = Math.round(24 * S);
+  const pgB  = Math.round(88 * S);
+  const spineX = Math.round(34 * S);
+  const bandT = Math.round(50 * S);
+  const bandB = Math.round(56 * S);
+  const bmL  = Math.round(48 * S);
+  const bmR  = Math.round(60 * S);
+  const bmT  = Math.round(88 * S);
+  const bmB  = Math.round(98 * S);
+  const bmV  = Math.round(54 * S);
+  const bmVy = Math.round(94 * S);
+  function setPx(x, y, color) {
+    if (x < 0 || x >= size || y < 0 || y >= size) return;
+    const off = (y * size + x) * 4;
+    raw[off] = color[0]; raw[off + 1] = color[1]; raw[off + 2] = color[2]; raw[off + 3] = color[3];
+  }
+  // Shadow
+  for (let y = covT; y < covB; y++) {
+    for (let x = covL; x < covR; x++) {
+      setPx(x + 2, y + 2, SHADOW);
+    }
+  }
+  // Cover / pages / spine
+  for (let y = covT; y < covB; y++) {
+    for (let x = covL; x < covR; x++) {
+      if (x >= pgL && x < pgR && y >= pgT && y < pgB) {
+        setPx(x, y, (x >= spineX - 1 && x <= spineX) ? SPINE : CRISP);
+      } else {
+        setPx(x, y, BROWN);
       }
-      if (x >= chL && x < chR && y >= chT && y < chB) {
-        raw[off] = GOLD[0]; raw[off + 1] = GOLD[1]; raw[off + 2] = GOLD[2]; raw[off + 3] = GOLD[3];
-        continue;
-      }
-      if (x >= bookL && x < bookR && y >= bookT && y < bookB) {
-        const leftPage = x < mid - 1;
-        const rightPage = x >= mid + 1;
-        if (leftPage || rightPage) {
-          raw[off] = WHITE[0]; raw[off + 1] = WHITE[1]; raw[off + 2] = WHITE[2]; raw[off + 3] = WHITE[3];
-        } else {
-          raw[off] = SPINE[0]; raw[off + 1] = SPINE[1]; raw[off + 2] = SPINE[2]; raw[off + 3] = SPINE[3];
-        }
-        continue;
-      }
-      raw[off] = 0; raw[off + 1] = 0; raw[off + 2] = 0; raw[off + 3] = 0;
+    }
+  }
+  // Band
+  for (let y = bandT; y < bandB; y++) {
+    for (let x = covL; x < covR; x++) {
+      setPx(x, y, GOLD);
+    }
+  }
+  // Bookmark (below cover, with V-notch)
+  for (let y = bmT; y < bmB; y++) {
+    for (let x = bmL; x < bmR; x++) {
+      const inV = y >= bmVy && (
+        x < bmV
+          ? (x - bmL) < (bmV - bmL) * (bmB - y) / (bmB - bmVy)
+          : (bmR - x - 1) < (bmR - bmV) * (bmB - y) / (bmB - bmVy)
+      );
+      if (!inV) setPx(x, y, RED);
     }
   }
   return raw;
@@ -184,4 +206,4 @@ for (const d of DENSITIES) {
   console.log(`  ${d.dir} — 3 PNGs (${d.size}x${d.size})`);
 }
 
-console.log('\nDone. APK will now use the custom book+cross icon.\n');
+console.log('\nDone. APK will now use the custom journal/notebook icon.\n');

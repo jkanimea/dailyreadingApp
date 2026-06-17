@@ -10,7 +10,12 @@ import { SharedModule } from '../../shared/shared.module';
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>More</ion-title>
+        <ion-title>
+          <div class="header-title">
+            <ion-icon name="apps-outline" class="header-icon"></ion-icon>
+            <span>More</span>
+          </div>
+        </ion-title>
         <ion-buttons slot="end">
           <app-avatar-btn></app-avatar-btn>
         </ion-buttons>
@@ -46,6 +51,8 @@ import { SharedModule } from '../../shared/shared.module';
     </ion-content>
   `,
   styles: [`
+    .header-title { display: flex; align-items: center; gap: 8px; }
+    .header-icon { font-size: 18px; flex-shrink: 0; }
     .more-grid {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
