@@ -44,7 +44,7 @@ export const MOCK_READING_DETAIL: ReadingDetail = {
   primaryBookPageRange: '170-172',
   hasSecondaryReading: false,
   sortOrder: 165,
-  fullTextBible: 'For God so loved the world...',
+  fullTextBible: 'John 3:16\n\nFor God so loved the world...',
   fullTextPrimary: 'Today\'s devotional text for June 14th. '.repeat(30),
 };
 

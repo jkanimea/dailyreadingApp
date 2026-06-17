@@ -85,17 +85,13 @@ interface BibleSection {
             <div class="section-card">
               <div class="section-header" (click)="bibleExpanded = !bibleExpanded">
                 <ion-icon [name]="bibleExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
-                <span class="section-header-title">Bible Reading: {{ detail.bibleReading }}</span>
+                <span class="section-header-title">Bible Reading</span>
               </div>
               @if (bibleExpanded) {
                 <div class="section-body">
-                  <ion-segment [value]="translation" (ionChange)="onBibleTranslationChange($event)" class="translation-segment">
-                    <ion-segment-button value="KJV">KJV</ion-segment-button>
-                    <ion-segment-button value="ASV">ASV</ion-segment-button>
-                    <ion-segment-button value="WEB">WEB</ion-segment-button>
-                  </ion-segment>
                   @if (bibleSections.length > 0) {
                     @for (section of bibleSections; track section.title) {
+                      <div class="bible-section-title">{{ section.title }}</div>
                       <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
                     }
                   } @else {
@@ -295,6 +291,15 @@ interface BibleSection {
       line-height: 1.8;
       padding-left: 12px;
       border-left: 3px solid var(--ion-color-primary);
+    }
+    .bible-section-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--ion-color-primary);
+      margin: 12px 0 4px;
+    }
+    .bible-section-title:first-child {
+      margin-top: 0;
     }
     .empty-bible-text {
       text-align: center;

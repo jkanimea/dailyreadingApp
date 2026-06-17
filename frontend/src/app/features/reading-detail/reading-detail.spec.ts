@@ -309,7 +309,7 @@ describe('ReadingDetailPage', () => {
       component.detail = { ...mockDetail, fullTextBible: '' };
       fixture.detectChanges();
       const headers: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-header-title'));
-      const bibleHeader = headers.find((h: HTMLElement) => h.textContent?.includes('Acts 13:3'));
+      const bibleHeader = headers.find((h: HTMLElement) => h.textContent?.includes('Bible Reading'));
       expect(bibleHeader).toBeTruthy();
       expect(fixture.nativeElement.querySelector('.bible-section-title')).toBeFalsy();
     }));
@@ -332,7 +332,7 @@ describe('ReadingDetailPage', () => {
       expect(el?.textContent).toContain('Christ The Church');
     }));
 
-    it('should render bible text directly without duplicate section headings', fakeAsync(() => {
+    it('should render bible text with section titles', fakeAsync(() => {
       component.detail = {
         ...mockDetail,
         fullTextBible: 'Matthew 9:18-31\n\n18 While he spake\n\nMark 5:21-43\n\n21 And when Jesus'
@@ -340,16 +340,19 @@ describe('ReadingDetailPage', () => {
       fixture.detectChanges();
       const sectionCards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-card'));
       const bibleCard = sectionCards.find((c: HTMLElement) =>
-        c.querySelector('.section-header-title')?.textContent?.includes('Acts 13:3')
+        c.querySelector('.section-header-title')?.textContent?.includes('Bible Reading')
       );
+      const sectionTitles = bibleCard?.querySelectorAll('.bible-section-title') ?? [];
+      expect(sectionTitles.length).toBe(2);
+      expect(sectionTitles[0].textContent).toContain('Matthew 9:18-31');
+      expect(sectionTitles[1].textContent).toContain('Mark 5:21-43');
       const texts = bibleCard?.querySelectorAll('.bible-text') ?? [];
       expect(texts.length).toBe(2);
       expect(texts[0].textContent).toContain('18 While he spake');
       expect(texts[1].textContent).toContain('21 And when Jesus');
-      expect(bibleCard?.querySelector('.bible-section-title')).toBeFalsy();
     }));
 
-    it('should render a .bible-text per section', fakeAsync(() => {
+    it('should render a .bible-section-title and .bible-text per section', fakeAsync(() => {
       component.detail = {
         ...mockDetail,
         fullTextBible: 'Matthew 9:18-31\n\n18 While he spake\n\nMark 5:21-43\n\n21 And when Jesus'
@@ -357,8 +360,12 @@ describe('ReadingDetailPage', () => {
       fixture.detectChanges();
       const sectionCards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-card'));
       const bibleCard = sectionCards.find((c: HTMLElement) =>
-        c.querySelector('.section-header-title')?.textContent?.includes('Acts 13:3')
+        c.querySelector('.section-header-title')?.textContent?.includes('Bible Reading')
       );
+      const sectionTitles = bibleCard?.querySelectorAll('.bible-section-title') ?? [];
+      expect(sectionTitles.length).toBe(2);
+      expect(sectionTitles[0].textContent).toContain('Matthew 9:18-31');
+      expect(sectionTitles[1].textContent).toContain('Mark 5:21-43');
       const texts = bibleCard?.querySelectorAll('.bible-text') ?? [];
       expect(texts.length).toBe(2);
       expect(texts[0].textContent).toContain('18 While he spake');
@@ -399,7 +406,7 @@ describe('ReadingDetailPage', () => {
         component.detail = mockDetail;
         fixture.detectChanges();
         const headers = getSectionHeaders(fixture.nativeElement);
-        const bibleHeader = headers.find(h => h.textContent?.includes('Acts 13:3'));
+        const bibleHeader = headers.find(h => h.textContent?.includes('Bible Reading'));
         expect(bibleHeader).toBeTruthy();
         expect(bibleHeader!.querySelector('.section-chevron')).toBeTruthy();
       }));
@@ -449,7 +456,7 @@ describe('ReadingDetailPage', () => {
         fixture.detectChanges();
         const sectionCards: HTMLElement[] = Array.from(fixture.nativeElement.querySelectorAll('.section-card'));
         const bibleCard = sectionCards.find((c: HTMLElement) =>
-          c.querySelector('.section-header-title')?.textContent?.includes('Acts 13:3')
+          c.querySelector('.section-header-title')?.textContent?.includes('Bible Reading')
         );
         expect(bibleCard?.querySelector('.section-body')).toBeFalsy();
       }));
@@ -458,7 +465,7 @@ describe('ReadingDetailPage', () => {
         component.detail = mockDetail;
         fixture.detectChanges();
         const headers = getSectionHeaders(fixture.nativeElement);
-        const bibleHeader = headers.find(h => h.textContent?.includes('Acts 13:3'))!;
+        const bibleHeader = headers.find(h => h.textContent?.includes('Bible Reading'))!;
         expect(component.bibleExpanded).toBe(true);
         bibleHeader.click();
         expect(component.bibleExpanded).toBe(false);

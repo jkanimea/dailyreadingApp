@@ -9,7 +9,7 @@ test.describe('Reading detail', () => {
   });
 
   test('displays bible reading reference', async ({ page }) => {
-    await expect(page.getByText('John 3:16')).toBeVisible();
+    await expect(page.locator('.bible-section-title')).toContainText('John 3:16');
   });
 
   test('displays reading body text', async ({ page }) => {

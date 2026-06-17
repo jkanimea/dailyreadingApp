@@ -12,7 +12,7 @@ test.describe('Today page', () => {
   });
 
   test('shows bible reading reference', async ({ page }) => {
-    await expect(page.getByText('John 3:16')).toBeVisible();
+    await expect(page.locator('.bible-section-title')).toContainText('John 3:16');
   });
 
   test('shows page range for primary book', async ({ page }) => {
@@ -41,9 +41,11 @@ test.describe('Today page', () => {
   });
 
   test('bible reading section is visible and expandable', async ({ page }) => {
-    // Section header with bible reference
+    // Section header
     await expect(page.locator('.section-header').first()).toBeVisible();
-    await expect(page.locator('.section-header').first()).toContainText('John 3:16');
+    await expect(page.locator('.section-header').first()).toContainText('Bible Reading');
+    // Bible section title inside body
+    await expect(page.locator('.bible-section-title')).toContainText('John 3:16');
   });
 
   test('complete checkbox is visible on today page (no scroll gate)', async ({ page }) => {

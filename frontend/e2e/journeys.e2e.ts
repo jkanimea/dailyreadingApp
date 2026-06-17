@@ -48,8 +48,8 @@ test.describe('User journeys', () => {
     await page.locator('.result-card').first().click();
     await expect(page).toHaveURL(/\/reading\/101|\/tabs\/reading\/101/);
 
-    // Reading detail shows bible reference from mock
-    await expect(page.locator('app-reading-detail').getByText('John 3:16')).toBeVisible();
+    // Reading detail shows bible reference inside section body
+    await expect(page.locator('app-reading-detail .bible-section-title')).toContainText('John 3:16');
   });
 
   // ── Today → Settings → back ──────────────────────────────────────────────────
