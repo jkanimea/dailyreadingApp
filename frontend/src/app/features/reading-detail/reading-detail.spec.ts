@@ -325,11 +325,11 @@ describe('ReadingDetailPage', () => {
       expect(companionEl.textContent).toContain('Companion');
     });
 
-    it('should show series name in ion-title', fakeAsync(() => {
+    it('should show series name in reading meta', fakeAsync(() => {
       component.detail = mockDetail;
       fixture.detectChanges();
-      const el: HTMLElement = fixture.nativeElement.querySelector('ion-title');
-      expect(el.textContent).toContain('Christ The Church');
+      const el: HTMLElement = fixture.nativeElement.querySelector('.meta-series');
+      expect(el?.textContent).toContain('Christ The Church');
     }));
 
     it('should render bible text directly without duplicate section headings', fakeAsync(() => {
