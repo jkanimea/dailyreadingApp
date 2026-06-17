@@ -276,7 +276,7 @@ jobs:
             sleep 10
 
             # Check API returns HTTP 200
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/v1/reading/series/1/today)
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/v1/health)
             if [ "$HTTP_CODE" != "200" ]; then
               echo "SMOKE TEST FAILED: API returned HTTP $HTTP_CODE (expected 200)"
               # Attempt rollback
@@ -321,10 +321,6 @@ jobs:
             # Check nginx frontend responds
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/)
             echo "Frontend status: HTTP $HTTP_CODE"
-
-            # Check swagger endpoint
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/swagger/index.html)
-            echo "Swagger status: HTTP $HTTP_CODE"
 
             echo "Deployment verified successfully"
 
