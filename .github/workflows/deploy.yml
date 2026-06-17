@@ -141,7 +141,7 @@ jobs:
           docker push ghcr.io/jkanimea/encounter-daily-api:production-latest
 
       - name: Setup SSH agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }}
 
