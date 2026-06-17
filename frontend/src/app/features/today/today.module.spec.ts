@@ -166,4 +166,13 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
     expect(egwCard?.querySelector('.bible-text')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.text-unavailable')).toBeFalsy();
   });
+
+  it('bible-text should render with font-size bound to --reading-font-size', () => {
+    component.detail = mockDetail;
+    component.bibleExpanded = true;
+    fixture.detectChanges();
+    const bibleText = fixture.nativeElement.querySelector('.bible-text');
+    expect(bibleText).toBeTruthy();
+    expect(bibleText.textContent).toContain('And when they had fasted');
+  });
 });

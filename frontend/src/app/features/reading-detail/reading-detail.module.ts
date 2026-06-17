@@ -277,7 +277,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
     .bible-text {
       font-style: italic;
       color: var(--bible-text-color, var(--ion-color-medium));
-      font-size: 13px;
+      font-size: var(--reading-font-size);
       line-height: 1.8;
       white-space: pre-line;
       padding-left: 12px;
@@ -322,7 +322,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
     }
     .egw-text {
       line-height: 1.9;
-      font-size: 13px;
+      font-size: var(--reading-font-size);
     }
     .para-ref {
       display: inline-block;

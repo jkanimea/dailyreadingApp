@@ -70,6 +70,27 @@ describe('PreferencesService', () => {
     });
   });
 
+  it('setFontSize small should set --app-font-size to 14px', (done) => {
+    service.setFontSize('small').then(() => {
+      expect(document.documentElement.style.getPropertyValue('--app-font-size')).toBe('14px');
+      done();
+    });
+  });
+
+  it('setFontSize medium should set --app-font-size to 17px', (done) => {
+    service.setFontSize('medium').then(() => {
+      expect(document.documentElement.style.getPropertyValue('--app-font-size')).toBe('17px');
+      done();
+    });
+  });
+
+  it('setFontSize large should set --app-font-size to 22px', (done) => {
+    service.setFontSize('large').then(() => {
+      expect(document.documentElement.style.getPropertyValue('--app-font-size')).toBe('22px');
+      done();
+    });
+  });
+
   it('should restore saved theme from storage', async () => {
     storage.get = jest.fn().mockImplementation((key: string) => {
       if (key === 'prefs_theme') return Promise.resolve('dark');

@@ -621,6 +621,17 @@ describe('ReadingDetailPage', () => {
         (component as any).load();
         expect(component.readingSeen).toBe(false);
       }));
+
+      it('bible-text and egw-text should render with --reading-font-size', fakeAsync(() => {
+        component.detail = mockDetail;
+        component.bibleExpanded = true;
+        component.egwExpanded = true;
+        tick();
+        fixture.detectChanges();
+        const bibleText = fixture.nativeElement.querySelector('.bible-text');
+        expect(bibleText).toBeTruthy();
+        expect(bibleText.textContent).toContain('And when they had fasted');
+      }));
     });
   });
 });

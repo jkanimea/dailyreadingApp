@@ -285,7 +285,7 @@ interface BibleSection {
     }
     .bible-text {
       font-style: italic;
-      font-size: 13px;
+      font-size: var(--reading-font-size);
       white-space: pre-line;
       line-height: 1.8;
       padding-left: 12px;
@@ -321,7 +321,7 @@ interface BibleSection {
       white-space: pre-wrap;
     }
     .egw-text {
-      font-size: 13px;
+      font-size: var(--reading-font-size);
       line-height: 1.7;
     }
     .section-header {

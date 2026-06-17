@@ -245,5 +245,14 @@ describe('ReadingDetailPage — notes', () => {
       expect(component.notes).toBe('Replaced summary');
       expect(mockProgressService.saveNotes).toHaveBeenCalledWith(5, 'Replaced summary');
     });
+
+    it('bible-text should render with font-size using --reading-font-size', () => {
+      component.detail = mockDetail;
+      component.bibleExpanded = true;
+      fixture.detectChanges();
+      const bibleText = fixture.nativeElement.querySelector('.bible-text');
+      expect(bibleText).toBeTruthy();
+      expect(bibleText.textContent).toContain('And when they had fasted');
+    });
   });
 });
