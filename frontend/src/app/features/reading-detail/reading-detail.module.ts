@@ -59,9 +59,9 @@ import { firstValueFrom, Subscription } from 'rxjs';
           <!-- Header info row -->
           <div class="reading-meta">
             <div class="meta-primary">
-              <span class="meta-series">{{ detail.seriesName }}</span>
-              <span class="meta-sep">·</span>
               <span class="meta-date">{{ formatDate(detail.month, detail.day) }}</span>
+              <span class="meta-sep">·</span>
+              <span class="meta-series">{{ detail.seriesName }}</span>
             </div>
             <div class="meta-actions">
               @if (completed) {
@@ -237,20 +237,18 @@ import { firstValueFrom, Subscription } from 'rxjs';
       flex-wrap: wrap;
     }
     .meta-series {
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--ion-color-medium);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
     .meta-sep {
-      font-size: 13px;
+      font-size: 15px;
       color: var(--ion-color-step-300, #ccc);
     }
     .meta-date {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--ion-color-primary);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ion-color-medium);
     }
     .translation-segment {
       margin-bottom: 12px;
@@ -279,7 +277,7 @@ import { firstValueFrom, Subscription } from 'rxjs';
     .bible-text {
       font-style: italic;
       color: var(--bible-text-color, var(--ion-color-medium));
-      font-size: var(--reading-font-size, 15px);
+      font-size: 13px;
       line-height: 1.8;
       white-space: pre-line;
       padding-left: 12px;
@@ -318,13 +316,13 @@ import { firstValueFrom, Subscription } from 'rxjs';
     }
     .section-header-title,
     .egw-heading {
-      font-size: 18px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--ion-color-primary);
     }
     .egw-text {
       line-height: 1.9;
-      font-size: var(--reading-font-size, 15px);
+      font-size: 13px;
     }
     .para-ref {
       display: inline-block;
@@ -354,10 +352,10 @@ import { firstValueFrom, Subscription } from 'rxjs';
       padding: 16px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.04);
       border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
+      font-size: 14px;
     }
     .complete-section ion-checkbox {
       --size: 22px;
-      font-size: 15px;
       font-weight: 500;
     }
     .journal-section {

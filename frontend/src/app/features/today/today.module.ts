@@ -249,8 +249,6 @@ interface BibleSection {
       font-size: 15px;
       font-weight: 600;
       color: var(--ion-color-medium);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
     .meta-sep {
       font-size: 15px;
@@ -260,8 +258,6 @@ interface BibleSection {
       font-size: 15px;
       font-weight: 600;
       color: var(--ion-color-medium);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
     .translation-segment {
       margin-bottom: 12px;
@@ -289,6 +285,7 @@ interface BibleSection {
     }
     .bible-text {
       font-style: italic;
+      font-size: 13px;
       white-space: pre-line;
       line-height: 1.8;
       padding-left: 12px;
@@ -324,7 +321,7 @@ interface BibleSection {
       white-space: pre-wrap;
     }
     .egw-text {
-      font-size: 15px;
+      font-size: 13px;
       line-height: 1.7;
     }
     .section-header {
@@ -344,7 +341,7 @@ interface BibleSection {
     }
     .section-header-title,
     .egw-heading {
-      font-size: 18px;
+      font-size: 14px;
       font-weight: 700;
       color: var(--ion-color-primary);
     }
@@ -373,6 +370,7 @@ interface BibleSection {
       padding: 16px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.04);
       border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
+      font-size: 14px;
     }
     .journal-section {
       background: var(--card-bg, var(--ion-background-color));
