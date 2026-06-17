@@ -116,7 +116,7 @@ jobs:
   #        ./deploy/deploy.sh staging
 
   deploy-production:
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     needs: [build]
     runs-on: ubuntu-latest
     environment:
@@ -140,11 +140,19 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker push ghcr.io/jkanimea/encounter-daily-api:production-latest
 
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Add VPS host key to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ vars.PRODUCTION_HOST }} >> ~/.ssh/known_hosts
+
       - name: Sync files to VPS
         run: |
-          echo "${{ secrets.SSH_KEY }}" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-          SSH_OPTS="-i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30"
+          SSH_OPTS="-o ConnectTimeout=30"
 
           # Pre-flight: verify SSH port is reachable before wasting retry attempts
           echo "Testing SSH connectivity to ${{ vars.PRODUCTION_HOST }}:22 ..."
@@ -176,28 +184,41 @@ jobs:
 
       - name: Deploy on VPS
         uses: appleboy/ssh-action@v0.1.3
+        env:
+          SA_PASSWORD: ${{ secrets.SA_PASSWORD }}
+          JWT_RSA_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         with:
           host: ${{ vars.PRODUCTION_HOST }}
           username: ${{ vars.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          envs: SA_PASSWORD, JWT_RSA_PRIVATE_KEY, GOOGLE_CLIENT_ID, FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, DEEPSEEK_API_KEY
           script: |
             cd /opt/encounter-daily
 
             # Clean up old build artifacts that could interfere
             rm -rf android 2>/dev/null || true
 
-            cat > .env <<'ENVEOF'
-            SA_PASSWORD="${{ secrets.SA_PASSWORD }}"
-            JWT_RSA_PRIVATE_KEY="${{ secrets.JWT_RSA_PRIVATE_KEY }}"
+            # Save current image for rollback
+            ROLLBACK_IMAGE=$(podman inspect --format '{{.Image}}' encounter-daily-api 2>/dev/null || echo "")
+
+            # Write .env with restricted permissions
+            cat > .env <<ENVEOF
+            SA_PASSWORD="$SA_PASSWORD"
+            JWT_RSA_PRIVATE_KEY="$JWT_RSA_PRIVATE_KEY"
             ASPNETCORE_ENVIRONMENT=Production
             BYPASS_AUTH=false
-            JWT__GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}"
-            OAUTH__GOOGLE__CLIENTID="${{ secrets.GOOGLE_CLIENT_ID }}"
-            OAUTH__FACEBOOK__APPID="${{ secrets.FACEBOOK_APP_ID }}"
-            OAUTH__FACEBOOK__APPSECRET="${{ secrets.FACEBOOK_APP_SECRET }}"
-            DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}"
+            JWT__GOOGLE_CLIENT_ID="$GOOGLE_CLIENT_ID"
+            OAUTH__GOOGLE__CLIENTID="$GOOGLE_CLIENT_ID"
+            OAUTH__FACEBOOK__APPID="$FACEBOOK_APP_ID"
+            OAUTH__FACEBOOK__APPSECRET="$FACEBOOK_APP_SECRET"
+            DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
             API_IMAGE_TAG=production-latest
             ENVEOF
+            chmod 600 .env
 
             # Remove old pod/containers (both root and jkanimea), pull latest image
             sudo podman pod rm -f encounter-pod 2>/dev/null || true
@@ -240,7 +261,7 @@ jobs:
               -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
               -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
               -e DevMode__BypassAuth="$BYPASS_AUTH" \
-              -e Ai__DeepSeekApiKey="${{ secrets.DEEPSEEK_API_KEY }}" \
+              -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" \
               ghcr.io/jkanimea/encounter-daily-api:production-latest
 
             # Start nginx
@@ -250,10 +271,62 @@ jobs:
               -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
               docker.io/nginx:alpine
 
-            # Health check
-            sleep 5
-            curl -sf http://localhost:5000/api/v1/reading/series/1/today > /dev/null \
-              && echo "API healthy" || echo "Warning: API health check failed"
+            # Smoke test — verify the deployment with multiple checks
+            echo "Running smoke tests..."
+            sleep 10
+
+            # Check API returns HTTP 200
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/v1/reading/series/1/today)
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "SMOKE TEST FAILED: API returned HTTP $HTTP_CODE (expected 200)"
+              # Attempt rollback
+              if [ -n "$ROLLBACK_IMAGE" ]; then
+                echo "Rolling back to $ROLLBACK_IMAGE..."
+                podman pod rm -f encounter-pod 2>/dev/null || true
+                sleep 2
+                podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000
+                podman run -d --pod encounter-pod --name encounter-daily-sql \
+                  -e ACCEPT_EULA=Y \
+                  -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
+                  -e MSSQL_PID=Express \
+                  -v sql-data:/var/opt/mssql \
+                  mcr.microsoft.com/mssql/server:2022-latest
+                for i in $(seq 1 30); do
+                  podman exec encounter-daily-sql /opt/mssql-tools18/bin/sqlcmd \
+                    -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
+                  sleep 2
+                done
+                podman run -d --pod encounter-pod --name encounter-daily-api \
+                  -e ASPNETCORE_ENVIRONMENT="$ASPNETCORE_ENVIRONMENT" \
+                  -e ASPNETCORE_URLS=http://+:5000 \
+                  -e ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=EncounterDaily;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True;" \
+                  -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
+                  -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
+                  -e DevMode__BypassAuth="$BYPASS_AUTH" \
+                  -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" \
+                  "$ROLLBACK_IMAGE"
+                podman run -d --pod encounter-pod --name encounter-daily-nginx \
+                  -v /opt/encounter-daily/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
+                  -v /opt/encounter-daily/ssl:/etc/nginx/ssl:ro \
+                  -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
+                  docker.io/nginx:alpine
+                echo "Rollback complete — previous image restored"
+              else
+                echo "No previous image to roll back to. Production remains down."
+              fi
+              exit 1
+            fi
+            echo "API health check passed (HTTP $HTTP_CODE)"
+
+            # Check nginx frontend responds
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/)
+            echo "Frontend status: HTTP $HTTP_CODE"
+
+            # Check swagger endpoint
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/swagger/index.html)
+            echo "Swagger status: HTTP $HTTP_CODE"
+
+            echo "Deployment verified successfully"
 
   android-apk:
     if: github.ref == 'refs/heads/main'
