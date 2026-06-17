@@ -21,7 +21,10 @@ import { firstValueFrom, Subscription } from 'rxjs';
           <ion-back-button defaultHref="/tabs/today" text=""></ion-back-button>
         </ion-buttons>
         <ion-title>
-          {{ detail?.seriesName ?? 'Reading' }}
+          <div class="header-title">
+            <ion-icon name="book-outline" class="header-icon"></ion-icon>
+            <span>Reading</span>
+          </div>
         </ion-title>
         <ion-buttons slot="end">
           <ion-button (click)="goToSettings()">
@@ -56,6 +59,8 @@ import { firstValueFrom, Subscription } from 'rxjs';
           <!-- Header info row -->
           <div class="reading-meta">
             <div class="meta-primary">
+              <span class="meta-series">{{ detail.seriesName }}</span>
+              <span class="meta-sep">·</span>
               <span class="meta-date">{{ formatDate(detail.month, detail.day) }}</span>
             </div>
             <div class="meta-actions">
@@ -72,10 +77,15 @@ import { firstValueFrom, Subscription } from 'rxjs';
             <div class="section-card">
               <div class="section-header" (click)="bibleExpanded = !bibleExpanded">
                 <ion-icon [name]="bibleExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
-                <span class="section-header-title">{{ detail.bibleReading }}</span>
+                <span class="section-header-title">Bible Reading: {{ detail.bibleReading }}</span>
               </div>
               @if (bibleExpanded) {
                 <div class="section-body">
+                  <ion-segment [value]="translation" (ionChange)="onBibleTranslationChange($event)" class="translation-segment">
+                    <ion-segment-button value="KJV">KJV</ion-segment-button>
+                    <ion-segment-button value="ASV">ASV</ion-segment-button>
+                    <ion-segment-button value="WEB">WEB</ion-segment-button>
+                  </ion-segment>
                   @if (bibleSections.length > 0) {
                     @for (section of bibleSections; track section.title) {
                       <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
@@ -210,6 +220,8 @@ import { firstValueFrom, Subscription } from 'rxjs';
   `,
   standalone: false,
   styles: [`
+    .header-title { display: flex; align-items: center; gap: 8px; }
+    .header-icon { font-size: 18px; flex-shrink: 0; }
     .reading-content {
       display: flex;
       flex-direction: column;
@@ -223,14 +235,30 @@ import { firstValueFrom, Subscription } from 'rxjs';
       gap: 8px;
     }
     .meta-primary {
-      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .meta-series {
+      font-size: 13px;
       font-weight: 600;
-      color: var(--ion-text-color);
-      line-height: 1.4;
+      color: var(--ion-color-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .meta-sep {
+      font-size: 13px;
+      color: var(--ion-color-step-300, #ccc);
     }
     .meta-date {
+      font-size: 18px;
       font-weight: 700;
       color: var(--ion-color-primary);
+    }
+    .translation-segment {
+      margin-bottom: 12px;
+      --background: var(--ion-color-step-50, #f0f0f0);
     }
     .meta-actions {
       display: flex;
@@ -648,6 +676,15 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     }
 
     return segments.length > 0 ? segments : [{ text, isRef: false }];
+  }
+
+  async onBibleTranslationChange(event: CustomEvent): Promise<void> {
+    const t = event.detail.value as BibleTranslation;
+    this.translation = t;
+    await this.prefs.setTranslation(t);
+    if (this.detail?.id) {
+      await this.loadDetail(this.detail.id, t);
+    }
   }
 
   async onSeedBible(): Promise<void> {

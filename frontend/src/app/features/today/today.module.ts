@@ -29,7 +29,7 @@ interface BibleSection {
         <ion-title>
           <div class="header-title">
             <ion-icon name="sunny-outline" class="header-icon"></ion-icon>
-            <span>Today — {{ seriesName }}</span>
+            <span>Today</span>
           </div>
         </ion-title>
         <ion-buttons slot="end">
@@ -66,7 +66,11 @@ interface BibleSection {
         <div class="reading-content">
           <!-- Header info row -->
           <div class="reading-meta">
-            <div class="meta-date">{{ formatDate(detail.month, detail.day) }}</div>
+            <div class="meta-primary">
+              <span class="meta-series">{{ seriesName }}</span>
+              <span class="meta-sep">·</span>
+              <span class="meta-date">{{ formatDate(detail.month, detail.day) }}</span>
+            </div>
             <div class="meta-actions">
               @if (completed) {
                 <ion-badge color="success" class="completed-badge">
@@ -81,10 +85,15 @@ interface BibleSection {
             <div class="section-card">
               <div class="section-header" (click)="bibleExpanded = !bibleExpanded">
                 <ion-icon [name]="bibleExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
-                <span class="section-header-title">{{ detail.bibleReading }}</span>
+                <span class="section-header-title">Bible Reading: {{ detail.bibleReading }}</span>
               </div>
               @if (bibleExpanded) {
                 <div class="section-body">
+                  <ion-segment [value]="translation" (ionChange)="onBibleTranslationChange($event)" class="translation-segment">
+                    <ion-segment-button value="KJV">KJV</ion-segment-button>
+                    <ion-segment-button value="ASV">ASV</ion-segment-button>
+                    <ion-segment-button value="WEB">WEB</ion-segment-button>
+                  </ion-segment>
                   @if (bibleSections.length > 0) {
                     @for (section of bibleSections; track section.title) {
                       <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
@@ -234,10 +243,31 @@ interface BibleSection {
       flex-wrap: wrap;
       gap: 8px;
     }
+    .meta-primary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .meta-series {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ion-color-medium);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .meta-sep {
+      font-size: 13px;
+      color: var(--ion-color-step-300, #ccc);
+    }
     .meta-date {
       font-size: 18px;
       font-weight: 700;
       color: var(--ion-text-color);
+    }
+    .translation-segment {
+      margin-bottom: 12px;
+      --background: var(--ion-color-step-50, #f0f0f0);
     }
     .meta-actions {
       display: flex;
@@ -491,6 +521,13 @@ export class TodayPage {
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
+  }
+
+  async onBibleTranslationChange(event: CustomEvent): Promise<void> {
+    const t = event.detail.value as BibleTranslation;
+    this.translation = t;
+    await this.prefs.setTranslation(t);
+    await this.loadDetail(this.readingId, t);
   }
 
   async onSeedBible(): Promise<void> {
