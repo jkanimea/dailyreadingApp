@@ -18,7 +18,7 @@ interface ParaSegment {
   isBibleRef: boolean;
 }
 
-const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:[1-3]\s)?[A-Za-z]+\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
+const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:(?:[1-3]\s)?[A-Za-z]+\.?\s+)?\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
 
 interface BibleSection {
   title: string;

@@ -70,12 +70,16 @@ namespace EncounterDaily.Services
         };
 
         private static readonly Regex BibleRefRegex = new(
-            @"(\d\s+)?([A-Za-z]+)\s+(\d+):(\d+)(?:-(\d+))?",
+            @"(\d\s+)?([A-Za-z]+)\.?\s+(\d+):(\d+)(?:-(\d+))?",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static readonly Regex ChapterOnlyRefRegex = new(
-            @"(\d\s+)?([A-Za-z]+)\s+(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)",
+            @"(\d\s+)?([A-Za-z]+)\.?\s+(\d+(?:-\d+)?(?:,\d+(?:-\d+)?)*)",
             RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex ContinuationRefRegex = new(
+            @"^(\d+):(\d+)(?:-(\d+))?$",
+            RegexOptions.Compiled);
 
         public ReadingService(IUnitOfWork unitOfWork) : base(unitOfWork) { }
 
@@ -173,6 +177,7 @@ namespace EncounterDaily.Services
                 return response;
 
             var parts = refs.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string? lastBookName = null;
 
             foreach (var part in parts)
             {
@@ -181,6 +186,8 @@ namespace EncounterDaily.Services
                 var verseMatch = BibleRefRegex.Match(part);
                 if (verseMatch.Success)
                 {
+                    lastBookName = (verseMatch.Groups[1].Success ? verseMatch.Groups[1].Value.Trim() + " " : "") + verseMatch.Groups[2].Value;
+
                     await CollectVerseRef(verseMatch, group.Verses, translation);
 
                     var remaining = part.Substring(verseMatch.Length);
@@ -190,12 +197,11 @@ namespace EncounterDaily.Services
                         var rangeMatch = Regex.Match(cp, @"^(\d+)(?:-(\d+))?$");
                         if (!rangeMatch.Success) continue;
 
-                        var bookName = (verseMatch.Groups[1].Success ? verseMatch.Groups[1].Value.Trim() + " " : "") + verseMatch.Groups[2].Value;
                         var chapter = short.Parse(verseMatch.Groups[3].Value);
                         var startVerse = short.Parse(rangeMatch.Groups[1].Value);
                         var endVerse = rangeMatch.Groups[2].Success ? short.Parse(rangeMatch.Groups[2].Value) : startVerse;
 
-                        await LookupVerseRange(bookName, chapter, startVerse, endVerse, group.Verses, translation);
+                        await LookupVerseRange(lastBookName, chapter, startVerse, endVerse, group.Verses, translation);
                     }
 
                     if (group.Verses.Count > 0)
@@ -203,9 +209,28 @@ namespace EncounterDaily.Services
                     continue;
                 }
 
+                if (lastBookName != null)
+                {
+                    var contMatch = ContinuationRefRegex.Match(part);
+                    if (contMatch.Success)
+                    {
+                        var chapter = short.Parse(contMatch.Groups[1].Value);
+                        var startVerse = short.Parse(contMatch.Groups[2].Value);
+                        var endVerse = contMatch.Groups[3].Success ? short.Parse(contMatch.Groups[3].Value) : startVerse;
+
+                        await LookupVerseRange(lastBookName, chapter, startVerse, endVerse, group.Verses, translation);
+
+                        if (group.Verses.Count > 0)
+                            response.Groups.Add(group);
+                        continue;
+                    }
+                }
+
                 var chapterMatch = ChapterOnlyRefRegex.Match(part);
                 if (chapterMatch.Success)
                 {
+                    lastBookName = (chapterMatch.Groups[1].Success ? chapterMatch.Groups[1].Value.Trim() + " " : "") + chapterMatch.Groups[2].Value;
+
                     await CollectChapterRef(chapterMatch, group.Verses, translation);
                     if (group.Verses.Count > 0)
                         response.Groups.Add(group);

@@ -272,6 +272,24 @@ describe('ReadingDetailPage', () => {
       ]);
     });
 
+    it('should handle abbreviated book name with period like Matt. 11:1-11', () => {
+      const result = component.getParagraphSegments('Read Matt. 11:1-11 for context');
+      expect(result).toEqual([
+        { text: 'Read ', isRef: false, isBibleRef: false },
+        { text: 'Matt. 11:1-11', isRef: false, isBibleRef: true },
+        { text: ' for context', isRef: false, isBibleRef: false }
+      ]);
+    });
+
+    it('should handle continuation refs without book name after semicolon', () => {
+      const result = component.getParagraphSegments('See Matt. 11:1-11; 14:1-11 together');
+      expect(result).toEqual([
+        { text: 'See ', isRef: false, isBibleRef: false },
+        { text: 'Matt. 11:1-11; 14:1-11', isRef: false, isBibleRef: true },
+        { text: ' together', isRef: false, isBibleRef: false }
+      ]);
+    });
+
     it('should handle numbered book names like 1 Corinthians 13:4', () => {
       const result = component.getParagraphSegments('Love is patient, 1 Corinthians 13:4 says');
       expect(result).toEqual([

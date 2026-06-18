@@ -12,7 +12,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom, Subscription } from 'rxjs';
 
-const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:[1-3]\s)?[A-Za-z]+\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
+const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:(?:[1-3]\s)?[A-Za-z]+\.?\s+)?\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
 
 @Component({
   selector: 'app-reading-detail',

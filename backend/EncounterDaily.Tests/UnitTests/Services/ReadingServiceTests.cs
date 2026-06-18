@@ -611,6 +611,78 @@ namespace EncounterDaily.Tests.UnitTests.Services
             result.Groups[3].Verses.Select(v => v.Verse).Should().BeEquivalentTo(new[] { 11, 12, 13 });
         }
 
+        [Fact]
+        public async Task LookupBibleVersesAsync_ShouldHandleAbbreviatedBookNameWithPeriod_Matt()
+        {
+            var dbId = Guid.NewGuid().ToString();
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(dbId).Options);
+
+            ctx.Set<BibleBook>().Add(new BibleBook { Id = 40, Name = "Matthew", Abbreviation = "matt" });
+            ctx.Set<BibleVerse>().AddRange(
+                new BibleVerse { BookId = 40, Chapter = 11, Verse = 1, Text = "And it came to pass." },
+                new BibleVerse { BookId = 40, Chapter = 11, Verse = 2, Text = "Now when John had heard." },
+                new BibleVerse { BookId = 40, Chapter = 14, Verse = 1, Text = "At that time Herod." }
+            );
+            await ctx.SaveChangesAsync();
+
+            SetupBibleRepos(ctx);
+
+            var result = await _service.LookupBibleVersesAsync("Matt. 11:1-2");
+            result.Groups.Should().HaveCount(1);
+            result.Groups[0].Reference.Should().Be("Matt. 11:1-2");
+            result.Groups[0].Verses.Should().HaveCount(2);
+            result.Groups[0].Verses[0].Book.Should().Be("Matthew");
+            result.Groups[0].Verses[0].Verse.Should().Be(1);
+            result.Groups[0].Verses[1].Verse.Should().Be(2);
+        }
+
+        [Fact]
+        public async Task LookupBibleVersesAsync_ShouldInheritBookNameAfterSemicolonContinuation()
+        {
+            var dbId = Guid.NewGuid().ToString();
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(dbId).Options);
+
+            ctx.Set<BibleBook>().AddRange(
+                new BibleBook { Id = 40, Name = "Matthew", Abbreviation = "matt" },
+                new BibleBook { Id = 41, Name = "Mark", Abbreviation = "mark" },
+                new BibleBook { Id = 42, Name = "Luke", Abbreviation = "luke" }
+            );
+            ctx.Set<BibleVerse>().AddRange(
+                new BibleVerse { BookId = 40, Chapter = 11, Verse = 1, Text = "Matthew 11:1." },
+                new BibleVerse { BookId = 40, Chapter = 11, Verse = 10, Text = "Matthew 11:10." },
+                new BibleVerse { BookId = 40, Chapter = 11, Verse = 11, Text = "Matthew 11:11." },
+                new BibleVerse { BookId = 40, Chapter = 14, Verse = 1, Text = "Matthew 14:1." },
+                new BibleVerse { BookId = 40, Chapter = 14, Verse = 11, Text = "Matthew 14:11." },
+                new BibleVerse { BookId = 41, Chapter = 6, Verse = 17, Text = "Mark 6:17." },
+                new BibleVerse { BookId = 42, Chapter = 7, Verse = 19, Text = "Luke 7:19." }
+            );
+            await ctx.SaveChangesAsync();
+
+            SetupBibleRepos(ctx);
+
+            var result = await _service.LookupBibleVersesAsync("Matt. 11:1-11; 14:1-11; Mark 6:17-17; Luke 7:19-19");
+            result.Groups.Should().HaveCount(4);
+            result.Groups[0].Reference.Should().Be("Matt. 11:1-11");
+            result.Groups[0].Verses.Should().HaveCount(3);
+            result.Groups[0].Verses[0].Book.Should().Be("Matthew");
+            result.Groups[0].Verses.Select(v => v.Verse).Should().BeEquivalentTo(new[] { 1, 10, 11 });
+
+            result.Groups[1].Reference.Should().Be("14:1-11");
+            result.Groups[1].Verses.Should().HaveCount(2);
+            result.Groups[1].Verses[0].Book.Should().Be("Matthew");
+            result.Groups[1].Verses.Select(v => v.Verse).Should().BeEquivalentTo(new[] { 1, 11 });
+
+            result.Groups[2].Reference.Should().Be("Mark 6:17-17");
+            result.Groups[2].Verses.Should().HaveCount(1);
+            result.Groups[2].Verses[0].Book.Should().Be("Mark");
+
+            result.Groups[3].Reference.Should().Be("Luke 7:19-19");
+            result.Groups[3].Verses.Should().HaveCount(1);
+            result.Groups[3].Verses[0].Book.Should().Be("Luke");
+        }
+
         private void SetupBibleRepos(AppDbContext ctx)
         {
             var mockBibleBookRepo = new Mock<IRepository<BibleBook>>();
