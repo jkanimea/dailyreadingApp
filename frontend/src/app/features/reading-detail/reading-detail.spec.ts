@@ -221,18 +221,93 @@ describe('ReadingDetailPage', () => {
 
     it('should return single segment when no references', () => {
       const result = component.getParagraphSegments('Plain text');
-      expect(result).toEqual([{ text: 'Plain text', isRef: false }]);
+      expect(result).toEqual([{ text: 'Plain text', isRef: false, isBibleRef: false }]);
     });
 
     it('should split text by paragraph references like [1.1]', () => {
       const result = component.getParagraphSegments('Some text [1.1] more [2.3] end');
       expect(result).toEqual([
-        { text: 'Some text ', isRef: false },
-        { text: '[1.1]', isRef: true },
-        { text: ' more ', isRef: false },
-        { text: '[2.3]', isRef: true },
-        { text: ' end', isRef: false }
+        { text: 'Some text ', isRef: false, isBibleRef: false },
+        { text: '[1.1]', isRef: true, isBibleRef: false },
+        { text: ' more ', isRef: false, isBibleRef: false },
+        { text: '[2.3]', isRef: true, isBibleRef: false },
+        { text: ' end', isRef: false, isBibleRef: false }
       ]);
+    });
+
+    it('should identify Bible references like John 3:16', () => {
+      const result = component.getParagraphSegments('Read John 3:16 for context');
+      expect(result).toEqual([
+        { text: 'Read ', isRef: false, isBibleRef: false },
+        { text: 'John 3:16', isRef: false, isBibleRef: true },
+        { text: ' for context', isRef: false, isBibleRef: false }
+      ]);
+    });
+
+    it('should identify multiple Bible references in one paragraph', () => {
+      const result = component.getParagraphSegments('See John 3:16 and Romans 5:8');
+      expect(result).toEqual([
+        { text: 'See ', isRef: false, isBibleRef: false },
+        { text: 'John 3:16', isRef: false, isBibleRef: true },
+        { text: ' and ', isRef: false, isBibleRef: false },
+        { text: 'Romans 5:8', isRef: false, isBibleRef: true }
+      ]);
+    });
+
+    it('should handle comma-separated Bible references', () => {
+      const result = component.getParagraphSegments('Read John 3:16-18, 20 for context');
+      expect(result).toEqual([
+        { text: 'Read ', isRef: false, isBibleRef: false },
+        { text: 'John 3:16-18, 20', isRef: false, isBibleRef: true },
+        { text: ' for context', isRef: false, isBibleRef: false }
+      ]);
+    });
+
+    it('should handle semicolon-separated Bible references', () => {
+      const result = component.getParagraphSegments('See John 3:16; Romans 5:8 together');
+      expect(result).toEqual([
+        { text: 'See ', isRef: false, isBibleRef: false },
+        { text: 'John 3:16; Romans 5:8', isRef: false, isBibleRef: true },
+        { text: ' together', isRef: false, isBibleRef: false }
+      ]);
+    });
+
+    it('should handle numbered book names like 1 Corinthians 13:4', () => {
+      const result = component.getParagraphSegments('Love is patient, 1 Corinthians 13:4 says');
+      expect(result).toEqual([
+        { text: 'Love is patient, ', isRef: false, isBibleRef: false },
+        { text: '1 Corinthians 13:4', isRef: false, isBibleRef: true },
+        { text: ' says', isRef: false, isBibleRef: false }
+      ]);
+    });
+
+    it('should mix EGW refs and Bible refs together', () => {
+      const result = component.getParagraphSegments('Text [1.1] with John 3:16 here');
+      expect(result).toEqual([
+        { text: 'Text ', isRef: false, isBibleRef: false },
+        { text: '[1.1]', isRef: true, isBibleRef: false },
+        { text: ' with ', isRef: false, isBibleRef: false },
+        { text: 'John 3:16', isRef: false, isBibleRef: true },
+        { text: ' here', isRef: false, isBibleRef: false }
+      ]);
+    });
+  });
+
+  describe('onBibleRefClick', () => {
+    it('should navigate to bible-verses page with encoded refs', () => {
+      component.onBibleRefClick('John 3:16');
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bible-verses'],
+        { queryParams: { refs: 'John%203%3A16' } }
+      );
+    });
+
+    it('should encode semicolons in refs', () => {
+      component.onBibleRefClick('John 3:16; Romans 5:8');
+      expect(mockRouter.navigate).toHaveBeenCalledWith(
+        ['/bible-verses'],
+        { queryParams: { refs: 'John%203%3A16%3B%20Romans%205%3A8' } }
+      );
     });
   });
 
@@ -632,6 +707,46 @@ describe('ReadingDetailPage', () => {
         expect(bibleText).toBeTruthy();
         expect(bibleText.textContent).toContain('And when they had fasted');
       }));
+
+      it('should render .bible-ref spans when EGW text contains Bible references', fakeAsync(() => {
+        component.detail = { ...mockDetail, fullTextPrimary: 'Read John 3:16 for context' };
+        component.egwExpanded = true;
+        tick();
+        fixture.detectChanges();
+        const refSpans = fixture.nativeElement.querySelectorAll('.bible-ref');
+        expect(refSpans.length).toBe(1);
+        expect(refSpans[0].textContent).toBe('John 3:16');
+      }));
+
+      it('should render multiple .bible-ref spans for multiple Bible references in EGW text', fakeAsync(() => {
+        component.detail = { ...mockDetail, fullTextPrimary: 'See John 3:16 and Romans 5:8' };
+        component.egwExpanded = true;
+        tick();
+        fixture.detectChanges();
+        const refSpans = fixture.nativeElement.querySelectorAll('.bible-ref');
+        expect(refSpans.length).toBe(2);
+        expect(refSpans[0].textContent).toBe('John 3:16');
+        expect(refSpans[1].textContent).toBe('Romans 5:8');
+      }));
+
+      it('should render .bible-ref in companion secondary reading text', async () => {
+        component.detail = {
+          ...mockDetail,
+          hasSecondaryReading: true,
+          fullTextSecondary: 'See Acts 2:38 for more',
+          secondaryBookPageRange: 'AA 50-55'
+        };
+        component.secondaryExpanded = true;
+        fixture.detectChanges();
+        const deferBlocks = await fixture.getDeferBlocks();
+        if (deferBlocks.length > 0) {
+          await deferBlocks[0].render(DeferBlockState.Complete);
+        }
+        fixture.detectChanges();
+        const refSpans = fixture.nativeElement.querySelectorAll('.bible-ref');
+        expect(refSpans.length).toBe(1);
+        expect(refSpans[0].textContent).toBe('Acts 2:38');
+      });
     });
   });
 });

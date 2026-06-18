@@ -30,6 +30,11 @@ const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
+    path: 'bible-verses',
+    loadChildren: () => import('./features/bible-verses/bible-verses.module').then(m => m.BibleVersesModule),
+    canActivate: [AuthGuard]
+  },
+  {
     path: 'settings',
     loadChildren: () => import('./features/settings/settings.module').then(m => m.SettingsModule),
     canActivate: [AuthGuard]

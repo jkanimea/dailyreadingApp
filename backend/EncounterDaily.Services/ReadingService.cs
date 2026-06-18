@@ -165,6 +165,101 @@ namespace EncounterDaily.Services
             };
         }
 
+        public async Task<BibleLookupResponse> LookupBibleVersesAsync(string refs, string translation = "KJV")
+        {
+            var response = new BibleLookupResponse { Reference = refs };
+
+            if (string.IsNullOrWhiteSpace(refs))
+                return response;
+
+            var parts = refs.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            foreach (var part in parts)
+            {
+                var verseMatch = BibleRefRegex.Match(part);
+                if (verseMatch.Success)
+                {
+                    await CollectVerseRef(verseMatch, response.Verses, translation);
+                    continue;
+                }
+
+                var chapterMatch = ChapterOnlyRefRegex.Match(part);
+                if (chapterMatch.Success)
+                {
+                    await CollectChapterRef(chapterMatch, response.Verses, translation);
+                }
+            }
+
+            return response;
+        }
+
+        private async Task CollectVerseRef(Match match, List<BibleVerseDto> result, string translation = "KJV")
+        {
+            var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
+            var chapter = short.Parse(match.Groups[3].Value);
+            var verseNum = short.Parse(match.Groups[4].Value);
+
+            if (!RefAbbrevToFullName.TryGetValue(bookName, out var fullName))
+                return;
+
+            try
+            {
+                var book = await _unitOfWork.Repository<BibleBook>()
+                    .Query()
+                    .Where(b => b.Name == fullName)
+                    .FirstOrDefaultAsync();
+
+                if (book == null)
+                    return;
+
+                var endVerse = match.Groups[5].Success ? short.Parse(match.Groups[5].Value) : verseNum;
+
+                var found = await _unitOfWork.Repository<BibleVerse>()
+                    .Query()
+                    .Where(v => v.BookId == book.Id && v.Translation == translation && v.Chapter == chapter && v.Verse >= verseNum && v.Verse <= endVerse)
+                    .OrderBy(v => v.Verse)
+                    .Select(v => new BibleVerseDto { Book = fullName, Chapter = (int)v.Chapter, Verse = (int)v.Verse, Text = v.Text })
+                    .ToListAsync();
+
+                result.AddRange(found);
+            }
+            catch { }
+        }
+
+        private async Task CollectChapterRef(Match match, List<BibleVerseDto> result, string translation = "KJV")
+        {
+            var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
+            var chapterSpec = match.Groups[3].Value;
+
+            if (!RefAbbrevToFullName.TryGetValue(bookName, out var fullName))
+                return;
+
+            try
+            {
+                var book = await _unitOfWork.Repository<BibleBook>()
+                    .Query()
+                    .Where(b => b.Name == fullName)
+                    .FirstOrDefaultAsync();
+
+                if (book == null)
+                    return;
+
+                foreach (var (chapterStart, chapterEnd) in ParseChapterSpecs(chapterSpec))
+                {
+                    var found = await _unitOfWork.Repository<BibleVerse>()
+                        .Query()
+                        .Where(v => v.BookId == book.Id && v.Translation == translation && v.Chapter >= chapterStart && v.Chapter <= chapterEnd)
+                        .OrderBy(v => v.Chapter)
+                        .ThenBy(v => v.Verse)
+                        .Select(v => new BibleVerseDto { Book = fullName, Chapter = (int)v.Chapter, Verse = (int)v.Verse, Text = v.Text })
+                        .ToListAsync();
+
+                    result.AddRange(found);
+                }
+            }
+            catch { }
+        }
+
         private async Task<string> LookupBibleTextAsync(string? bibleReading, string translation = "KJV")
         {
             if (string.IsNullOrWhiteSpace(bibleReading))

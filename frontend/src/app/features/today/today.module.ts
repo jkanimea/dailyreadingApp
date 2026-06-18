@@ -15,7 +15,10 @@ import { firstValueFrom } from 'rxjs';
 interface ParaSegment {
   text: string;
   isRef: boolean;
+  isBibleRef: boolean;
 }
+
+const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:[1-3]\s)?[A-Za-z]+\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
 
 interface BibleSection {
   title: string;
@@ -125,6 +128,8 @@ interface BibleSection {
                     @for (seg of getParagraphSegments(detail.fullTextPrimary); track $index) {
                       @if (seg.isRef) {
                         <span class="para-ref">{{ seg.text }}</span>
+                      } @else if (seg.isBibleRef) {
+                        <span class="bible-ref" (click)="onBibleRefClick(seg.text)">{{ seg.text }}</span>
                       } @else {
                         <span>{{ seg.text }}</span>
                       }
@@ -153,6 +158,8 @@ interface BibleSection {
                         <span class="egw-text">
                           @if (seg.isRef) {
                             <span class="para-ref">{{ seg.text }}</span>
+                          } @else if (seg.isBibleRef) {
+                            <span class="bible-ref" (click)="onBibleRefClick(seg.text)">{{ seg.text }}</span>
                           } @else {
                             <span>{{ seg.text }}</span>
                           }
@@ -323,6 +330,17 @@ interface BibleSection {
     .egw-text {
       font-size: var(--reading-font-size);
       line-height: 1.7;
+    }
+    .bible-ref {
+      color: var(--ion-color-primary);
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 2px;
+    }
+    .bible-ref:hover {
+      color: var(--ion-color-primary-shade);
     }
     .section-header {
       display: flex;
@@ -517,15 +535,36 @@ export class TodayPage {
 
   getParagraphSegments(text: string | undefined | null): ParaSegment[] {
     if (!text) return [];
-    const parts = text.split(/(\[[\d.]+,\s*[\d.]+\])/);
-    return parts.map(p => ({
-      text: p,
-      isRef: /^\[[\d.]+,\s*[\d.]+\]$/.test(p)
-    }));
+    const segments: ParaSegment[] = [];
+    const egwParts = text.split(/(\[[\d.]+(?:,\s*[\d.]+)?\])/);
+    for (const part of egwParts) {
+      if (/^\[[\d.]+(?:,\s*[\d.]+)?\]$/.test(part)) {
+        segments.push({ text: part, isRef: true, isBibleRef: false });
+      } else {
+        bibleRefRe.lastIndex = 0;
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
+        while ((match = bibleRefRe.exec(part)) !== null) {
+          if (match.index > lastIndex) {
+            segments.push({ text: part.slice(lastIndex, match.index), isRef: false, isBibleRef: false });
+          }
+          segments.push({ text: match[0], isRef: false, isBibleRef: true });
+          lastIndex = match.index + match[0].length;
+        }
+        if (lastIndex < part.length) {
+          segments.push({ text: part.slice(lastIndex), isRef: false, isBibleRef: false });
+        }
+      }
+    }
+    return segments;
   }
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
+  }
+
+  onBibleRefClick(refs: string): void {
+    this.router.navigate(['/bible-verses'], { queryParams: { refs: encodeURIComponent(refs) } });
   }
 
   async onBibleTranslationChange(event: CustomEvent): Promise<void> {

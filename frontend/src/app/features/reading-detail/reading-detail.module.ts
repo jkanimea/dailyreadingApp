@@ -12,6 +12,8 @@ import { ActivatedRoute } from '@angular/router';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom, Subscription } from 'rxjs';
 
+const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:[1-3]\s)?[A-Za-z]+\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
+
 @Component({
   selector: 'app-reading-detail',
   template: `
@@ -117,6 +119,8 @@ import { firstValueFrom, Subscription } from 'rxjs';
                     @for (seg of getParagraphSegments(detail.fullTextPrimary); track $index) {
                       @if (seg.isRef) {
                         <span class="para-ref">{{ seg.text }}</span>
+                      } @else if (seg.isBibleRef) {
+                        <span class="bible-ref" (click)="onBibleRefClick(seg.text)">{{ seg.text }}</span>
                       } @else {
                         <span>{{ seg.text }}</span>
                       }
@@ -144,6 +148,8 @@ import { firstValueFrom, Subscription } from 'rxjs';
                       @for (seg of getParagraphSegments(detail.fullTextSecondary); track $index) {
                         @if (seg.isRef) {
                           <span class="para-ref">{{ seg.text }}</span>
+                        } @else if (seg.isBibleRef) {
+                          <span class="bible-ref" (click)="onBibleRefClick(seg.text)">{{ seg.text }}</span>
                         } @else {
                           <span>{{ seg.text }}</span>
                         }
@@ -323,6 +329,17 @@ import { firstValueFrom, Subscription } from 'rxjs';
     .egw-text {
       line-height: 1.9;
       font-size: var(--reading-font-size);
+    }
+    .bible-ref {
+      color: var(--ion-color-primary);
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 2px;
+    }
+    .bible-ref:hover {
+      color: var(--ion-color-primary-shade);
     }
     .para-ref {
       display: inline-block;
@@ -528,6 +545,10 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     this.router.navigate(['/settings']);
   }
 
+  onBibleRefClick(refs: string): void {
+    this.router.navigate(['/bible-verses'], { queryParams: { refs: encodeURIComponent(refs) } });
+  }
+
   goToProgress(): void {
     this.router.navigate(['/progress']);
   }
@@ -659,26 +680,54 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     return sections;
   }
 
-  getParagraphSegments(text: string | null | undefined): { text: string; isRef: boolean }[] {
+  getParagraphSegments(text: string | null | undefined): { text: string; isRef: boolean; isBibleRef: boolean }[] {
     if (!text) return [];
-    const segments: { text: string; isRef: boolean }[] = [];
+    const segments: { text: string; isRef: boolean; isBibleRef: boolean }[] = [];
+
+    // First split by EGW paragraph refs
+    const egwParts: { text: string; isRef: boolean }[] = [];
     let lastIndex = 0;
     let match: RegExpExecArray | null;
     this.paraRefRegex.lastIndex = 0;
 
     while ((match = this.paraRefRegex.exec(text)) !== null) {
       if (match.index > lastIndex) {
-        segments.push({ text: text.slice(lastIndex, match.index), isRef: false });
+        egwParts.push({ text: text.slice(lastIndex, match.index), isRef: false });
       }
-      segments.push({ text: match[0], isRef: true });
+      egwParts.push({ text: match[0], isRef: true });
       lastIndex = match.index + match[0].length;
     }
 
     if (lastIndex < text.length) {
-      segments.push({ text: text.slice(lastIndex), isRef: false });
+      egwParts.push({ text: text.slice(lastIndex), isRef: false });
     }
 
-    return segments.length > 0 ? segments : [{ text, isRef: false }];
+    if (egwParts.length === 0) {
+      egwParts.push({ text, isRef: false });
+    }
+
+    // Then split non-ref parts by Bible references
+    for (const part of egwParts) {
+      if (part.isRef) {
+        segments.push({ text: part.text, isRef: true, isBibleRef: false });
+      } else {
+        bibleRefRe.lastIndex = 0;
+        let bibLast = 0;
+        let bibMatch: RegExpExecArray | null;
+        while ((bibMatch = bibleRefRe.exec(part.text)) !== null) {
+          if (bibMatch.index > bibLast) {
+            segments.push({ text: part.text.slice(bibLast, bibMatch.index), isRef: false, isBibleRef: false });
+          }
+          segments.push({ text: bibMatch[0], isRef: false, isBibleRef: true });
+          bibLast = bibMatch.index + bibMatch[0].length;
+        }
+        if (bibLast < part.text.length) {
+          segments.push({ text: part.text.slice(bibLast), isRef: false, isBibleRef: false });
+        }
+      }
+    }
+
+    return segments;
   }
 
   async onBibleTranslationChange(event: CustomEvent): Promise<void> {
