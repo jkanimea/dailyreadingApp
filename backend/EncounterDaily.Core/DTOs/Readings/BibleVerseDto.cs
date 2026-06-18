@@ -8,9 +8,15 @@ namespace EncounterDaily.Core.DTOs.Readings
         public string Text { get; set; } = string.Empty;
     }
 
-    public class BibleLookupResponse
+    public class BibleVerseGroup
     {
         public string Reference { get; set; } = string.Empty;
         public List<BibleVerseDto> Verses { get; set; } = new();
+    }
+
+    public class BibleLookupResponse
+    {
+        public string Reference { get; set; } = string.Empty;
+        public List<BibleVerseGroup> Groups { get; set; } = new();
     }
 }

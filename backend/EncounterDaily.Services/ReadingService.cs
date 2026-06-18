@@ -176,29 +176,48 @@ namespace EncounterDaily.Services
 
             foreach (var part in parts)
             {
+                var group = new BibleVerseGroup { Reference = part };
+
                 var verseMatch = BibleRefRegex.Match(part);
                 if (verseMatch.Success)
                 {
-                    await CollectVerseRef(verseMatch, response.Verses, translation);
+                    await CollectVerseRef(verseMatch, group.Verses, translation);
+
+                    var remaining = part.Substring(verseMatch.Length);
+                    var commaParts = remaining.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    foreach (var cp in commaParts)
+                    {
+                        var rangeMatch = Regex.Match(cp, @"^(\d+)(?:-(\d+))?$");
+                        if (!rangeMatch.Success) continue;
+
+                        var bookName = (verseMatch.Groups[1].Success ? verseMatch.Groups[1].Value.Trim() + " " : "") + verseMatch.Groups[2].Value;
+                        var chapter = short.Parse(verseMatch.Groups[3].Value);
+                        var startVerse = short.Parse(rangeMatch.Groups[1].Value);
+                        var endVerse = rangeMatch.Groups[2].Success ? short.Parse(rangeMatch.Groups[2].Value) : startVerse;
+
+                        await LookupVerseRange(bookName, chapter, startVerse, endVerse, group.Verses, translation);
+                    }
+
+                    if (group.Verses.Count > 0)
+                        response.Groups.Add(group);
                     continue;
                 }
 
                 var chapterMatch = ChapterOnlyRefRegex.Match(part);
                 if (chapterMatch.Success)
                 {
-                    await CollectChapterRef(chapterMatch, response.Verses, translation);
+                    await CollectChapterRef(chapterMatch, group.Verses, translation);
+                    if (group.Verses.Count > 0)
+                        response.Groups.Add(group);
                 }
             }
 
             return response;
         }
 
-        private async Task CollectVerseRef(Match match, List<BibleVerseDto> result, string translation = "KJV")
+        private async Task LookupVerseRange(string bookName, short chapter, short startVerse, short endVerse,
+            List<BibleVerseDto> result, string translation)
         {
-            var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
-            var chapter = short.Parse(match.Groups[3].Value);
-            var verseNum = short.Parse(match.Groups[4].Value);
-
             if (!RefAbbrevToFullName.TryGetValue(bookName, out var fullName))
                 return;
 
@@ -212,11 +231,10 @@ namespace EncounterDaily.Services
                 if (book == null)
                     return;
 
-                var endVerse = match.Groups[5].Success ? short.Parse(match.Groups[5].Value) : verseNum;
-
                 var found = await _unitOfWork.Repository<BibleVerse>()
                     .Query()
-                    .Where(v => v.BookId == book.Id && v.Translation == translation && v.Chapter == chapter && v.Verse >= verseNum && v.Verse <= endVerse)
+                    .Where(v => v.BookId == book.Id && v.Translation == translation && v.Chapter == chapter
+                        && v.Verse >= startVerse && v.Verse <= endVerse)
                     .OrderBy(v => v.Verse)
                     .Select(v => new BibleVerseDto { Book = fullName, Chapter = (int)v.Chapter, Verse = (int)v.Verse, Text = v.Text })
                     .ToListAsync();
@@ -224,6 +242,16 @@ namespace EncounterDaily.Services
                 result.AddRange(found);
             }
             catch { }
+        }
+
+        private async Task CollectVerseRef(Match match, List<BibleVerseDto> result, string translation = "KJV")
+        {
+            var bookName = (match.Groups[1].Success ? match.Groups[1].Value.Trim() + " " : "") + match.Groups[2].Value;
+            var chapter = short.Parse(match.Groups[3].Value);
+            var verseNum = short.Parse(match.Groups[4].Value);
+            var endVerse = match.Groups[5].Success ? short.Parse(match.Groups[5].Value) : verseNum;
+
+            await LookupVerseRange(bookName, chapter, verseNum, endVerse, result, translation);
         }
 
         private async Task CollectChapterRef(Match match, List<BibleVerseDto> result, string translation = "KJV")

@@ -5,7 +5,12 @@ export interface BibleVerseDto {
   text: string;
 }
 
-export interface BibleLookupResponse {
+export interface BibleVerseGroup {
   reference: string;
   verses: BibleVerseDto[];
+}
+
+export interface BibleLookupResponse {
+  reference: string;
+  groups: BibleVerseGroup[];
 }

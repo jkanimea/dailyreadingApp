@@ -43,14 +43,16 @@ import { firstValueFrom } from 'rxjs';
       @if (result && !loading) {
         <div class="ref-header">{{ result.reference }}</div>
 
-        @for (v of result.verses; track $index) {
+        @for (g of result.groups; track $index) {
           <div class="verse-card">
-            <div class="verse-ref">{{ v.book }} {{ v.chapter }}:{{ v.verse }}</div>
-            <div class="verse-text">{{ v.text }}</div>
+            <div class="verse-ref">{{ g.reference }}</div>
+            @for (v of g.verses; track $index) {
+              <div class="verse-text">{{ v.verse }} {{ v.text }}</div>
+            }
           </div>
         }
 
-        @if (result.verses.length === 0) {
+        @if (result.groups.length === 0) {
           <div class="error-state">
             <ion-icon name="alert-circle-outline" size="large" color="medium"></ion-icon>
             <p>No verses found for this reference.</p>
@@ -91,7 +93,9 @@ import { firstValueFrom } from 'rxjs';
       font-size: var(--reading-font-size, 15px);
       line-height: 1.7;
       color: var(--ion-text-color);
-      font-style: italic;
+    }
+    .verse-text + .verse-text {
+      margin-top: 8px;
     }
   `]
 })

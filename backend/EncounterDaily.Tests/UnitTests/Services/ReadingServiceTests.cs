@@ -502,5 +502,124 @@ namespace EncounterDaily.Tests.UnitTests.Services
 
             result.FullTextPrimary.Should().Be("Sample text from Desire of Ages pages 388-390. This is placeholder content for the daily reading.");
         }
+
+        [Fact]
+        public async Task LookupBibleVersesAsync_ShouldReturnSingleVerse()
+        {
+            var dbId = Guid.NewGuid().ToString();
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(dbId).Options);
+
+            ctx.Set<BibleBook>().Add(new BibleBook { Id = 43, Name = "John", Abbreviation = "john" });
+            ctx.Set<BibleVerse>().Add(new BibleVerse { BookId = 43, Chapter = 3, Verse = 16, Text = "For God so loved the world." });
+            await ctx.SaveChangesAsync();
+
+            SetupBibleRepos(ctx);
+
+            var result = await _service.LookupBibleVersesAsync("John 3:16");
+            result.Groups.Should().HaveCount(1);
+            result.Groups[0].Reference.Should().Be("John 3:16");
+            result.Groups[0].Verses.Should().HaveCount(1);
+            result.Groups[0].Verses[0].Verse.Should().Be(16);
+            result.Groups[0].Verses[0].Text.Should().Be("For God so loved the world.");
+        }
+
+        [Fact]
+        public async Task LookupBibleVersesAsync_ShouldReturnVerseRangeInOneGroup()
+        {
+            var dbId = Guid.NewGuid().ToString();
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(dbId).Options);
+
+            ctx.Set<BibleBook>().Add(new BibleBook { Id = 45, Name = "Romans", Abbreviation = "rom" });
+            ctx.Set<BibleVerse>().AddRange(
+                new BibleVerse { BookId = 45, Chapter = 10, Verse = 11, Text = "For the scripture saith." },
+                new BibleVerse { BookId = 45, Chapter = 10, Verse = 12, Text = "For there is no difference." },
+                new BibleVerse { BookId = 45, Chapter = 10, Verse = 13, Text = "For whosoever shall call." }
+            );
+            await ctx.SaveChangesAsync();
+
+            SetupBibleRepos(ctx);
+
+            var result = await _service.LookupBibleVersesAsync("Romans 10:11-13");
+            result.Groups.Should().HaveCount(1);
+            result.Groups[0].Reference.Should().Be("Romans 10:11-13");
+            result.Groups[0].Verses.Should().HaveCount(3);
+            result.Groups[0].Verses.Select(v => v.Verse).Should().BeEquivalentTo(new[] { 11, 12, 13 });
+        }
+
+        [Fact]
+        public async Task LookupBibleVersesAsync_ShouldHandleCommaSeparatedVerses()
+        {
+            var dbId = Guid.NewGuid().ToString();
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(dbId).Options);
+
+            ctx.Set<BibleBook>().Add(new BibleBook { Id = 44, Name = "Acts", Abbreviation = "acts" });
+            ctx.Set<BibleVerse>().AddRange(
+                new BibleVerse { BookId = 44, Chapter = 17, Verse = 26, Text = "God made the world." },
+                new BibleVerse { BookId = 44, Chapter = 17, Verse = 27, Text = "That they should seek the Lord." }
+            );
+            await ctx.SaveChangesAsync();
+
+            SetupBibleRepos(ctx);
+
+            var result = await _service.LookupBibleVersesAsync("Acts 17:26, 27");
+            result.Groups.Should().HaveCount(1);
+            result.Groups[0].Reference.Should().Be("Acts 17:26, 27");
+            result.Groups[0].Verses.Should().HaveCount(2);
+            result.Groups[0].Verses[0].Verse.Should().Be(26);
+            result.Groups[0].Verses[1].Verse.Should().Be(27);
+        }
+
+        [Fact]
+        public async Task LookupBibleVersesAsync_ShouldGroupMultipleSemicolonRefs()
+        {
+            var dbId = Guid.NewGuid().ToString();
+            using var ctx = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(dbId).Options);
+
+            ctx.Set<BibleBook>().AddRange(
+                new BibleBook { Id = 44, Name = "Acts", Abbreviation = "acts" },
+                new BibleBook { Id = 48, Name = "Galatians", Abbreviation = "gal" },
+                new BibleBook { Id = 20, Name = "Proverbs", Abbreviation = "prov" },
+                new BibleBook { Id = 45, Name = "Romans", Abbreviation = "rom" }
+            );
+            ctx.Set<BibleVerse>().AddRange(
+                new BibleVerse { BookId = 44, Chapter = 17, Verse = 26, Text = "God made the world." },
+                new BibleVerse { BookId = 44, Chapter = 17, Verse = 27, Text = "That they should seek." },
+                new BibleVerse { BookId = 48, Chapter = 3, Verse = 28, Text = "There is neither Jew nor Greek." },
+                new BibleVerse { BookId = 20, Chapter = 22, Verse = 2, Text = "The rich and poor meet together." },
+                new BibleVerse { BookId = 45, Chapter = 10, Verse = 11, Text = "For the scripture saith." },
+                new BibleVerse { BookId = 45, Chapter = 10, Verse = 12, Text = "For there is no difference." },
+                new BibleVerse { BookId = 45, Chapter = 10, Verse = 13, Text = "For whosoever shall call." }
+            );
+            await ctx.SaveChangesAsync();
+
+            SetupBibleRepos(ctx);
+
+            var result = await _service.LookupBibleVersesAsync("Acts 17:26, 27; Galatians 3:28; Proverbs 22:2; Romans 10:11-13");
+            result.Groups.Should().HaveCount(4);
+            result.Groups[0].Verses.Should().HaveCount(2);
+            result.Groups[0].Verses[0].Verse.Should().Be(26);
+            result.Groups[0].Verses[1].Verse.Should().Be(27);
+            result.Groups[1].Verses.Should().HaveCount(1);
+            result.Groups[1].Verses[0].Verse.Should().Be(28);
+            result.Groups[2].Verses.Should().HaveCount(1);
+            result.Groups[2].Verses[0].Verse.Should().Be(2);
+            result.Groups[3].Verses.Should().HaveCount(3);
+            result.Groups[3].Verses.Select(v => v.Verse).Should().BeEquivalentTo(new[] { 11, 12, 13 });
+        }
+
+        private void SetupBibleRepos(AppDbContext ctx)
+        {
+            var mockBibleBookRepo = new Mock<IRepository<BibleBook>>();
+            mockBibleBookRepo.Setup(r => r.Query()).Returns(ctx.Set<BibleBook>());
+            _mockUow.Setup(u => u.Repository<BibleBook>()).Returns(mockBibleBookRepo.Object);
+
+            var mockBibleVerseRepo = new Mock<IRepository<BibleVerse>>();
+            mockBibleVerseRepo.Setup(r => r.Query()).Returns(ctx.Set<BibleVerse>());
+            _mockUow.Setup(u => u.Repository<BibleVerse>()).Returns(mockBibleVerseRepo.Object);
+        }
     }
 }
