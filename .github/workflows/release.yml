@@ -39,6 +39,10 @@ jobs:
         run: npx cap sync android
         working-directory: frontend
 
+      - name: Generate Android icons
+        run: node scripts/copy-android-icon.mjs
+        working-directory: frontend
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
