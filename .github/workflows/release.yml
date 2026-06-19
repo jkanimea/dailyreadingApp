@@ -8,9 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -23,15 +20,19 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        working-directory: frontend
 
       - name: Build web app
         run: npm run build
+        working-directory: frontend
 
       - name: Add Android platform
         run: npx cap add android
+        working-directory: frontend
 
       - name: Sync Capacitor
         run: npx cap sync android
+        working-directory: frontend
 
       - uses: actions/setup-java@v4
         with:
@@ -40,10 +41,10 @@ jobs:
 
       - name: Build APK
         run: ./gradlew assembleDebug
-        working-directory: android
+        working-directory: frontend/android
 
       - uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+          files: frontend/android/app/build/outputs/apk/debug/app-debug.apk
           generate_release_notes: true
