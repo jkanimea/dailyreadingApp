@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.dailyreading.app',
-  appName: 'Daily Reading',
+  appName: 'Encounter Daily',
   webDir: 'www',
   plugins: {}
 };

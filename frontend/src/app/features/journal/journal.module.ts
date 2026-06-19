@@ -19,7 +19,7 @@ import { firstValueFrom } from 'rxjs';
         <ion-title>
           <div class="header-title">
             <ion-icon name="book-outline" class="header-book-icon"></ion-icon>
-            <span class="header-title-text">Journal — {{ seriesName || 'Daily Reading' }}</span>
+            <span class="header-title-text">Journal — {{ seriesName || 'Encounter Daily' }}</span>
           </div>
         </ion-title>
         <ion-buttons slot="end">
