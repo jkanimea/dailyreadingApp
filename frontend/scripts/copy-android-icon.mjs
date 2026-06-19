@@ -6,6 +6,10 @@ import sharp from 'sharp';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 const LOGO_SRC = join(ROOT, '..', 'assets', 'Logo.png');
+
+// Fallback: try from repo root
+const altLogo = join(process.cwd(), '..', 'assets', 'Logo.png');
+const logoPath = existsSync(LOGO_SRC) ? LOGO_SRC : (existsSync(altLogo) ? altLogo : null);
 const ANDROID_RES = join(ROOT, 'android', 'app', 'src', 'main', 'res');
 
 const DENSITIES = [
@@ -23,19 +27,20 @@ async function generateIcons() {
     process.exit(1);
   }
 
-  if (!existsSync(LOGO_SRC)) {
-    console.log('Logo source not found: ' + LOGO_SRC);
+  if (!logoPath) {
+    console.log('Logo source not found at:\n  ' + LOGO_SRC + '\n  ' + altLogo);
+    console.log('CWD: ' + process.cwd());
     process.exit(1);
   }
 
-  console.log('Generating Android icons from ' + LOGO_SRC + '...\n');
+  console.log('Generating Android icons from ' + logoPath + '...\n');
 
   // Adaptive icon foreground + legacy icons at each density
   for (const d of DENSITIES) {
     const dstDir = join(ANDROID_RES, d.dir);
     if (!existsSync(dstDir)) mkdirSync(dstDir, { recursive: true });
 
-    const resized = await sharp(LOGO_SRC)
+    const resized = await sharp(logoPath)
       .resize(d.size, d.size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer();
@@ -49,7 +54,7 @@ async function generateIcons() {
   // Play Store icon (512x512)
   const storeDir = join(ROOT, 'android', 'play-store-icon');
   if (!existsSync(storeDir)) mkdirSync(storeDir, { recursive: true });
-  const storeIcon = await sharp(LOGO_SRC)
+  const storeIcon = await sharp(logoPath)
     .resize(512, 512, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
     .png()
     .toBuffer();
