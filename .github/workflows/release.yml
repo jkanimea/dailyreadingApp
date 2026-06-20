@@ -55,7 +55,14 @@ jobs:
         working-directory: frontend/android
 
       - uses: softprops/action-gh-release@v2
+        id: create_release
         with:
           name: Release ${{ github.ref_name }}
           files: frontend/android/app/build/outputs/apk/debug/app-debug.apk
           generate_release_notes: true
+
+      - name: Print download URL
+        run: |
+          echo "✅ APK ready!"
+          echo "📱 Download: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/app-debug.apk"
+          echo "📦 Release page: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
