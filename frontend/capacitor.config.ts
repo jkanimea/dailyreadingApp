@@ -4,7 +4,10 @@ const config: CapacitorConfig = {
   appId: 'com.dailyreading.app',
   appName: 'Encounter Daily',
   webDir: 'www',
-  plugins: {}
+  plugins: {},
+  server: {
+    androidScheme: 'https'
+  }
 };
 
 export default config;
