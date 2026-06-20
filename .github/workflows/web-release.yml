@@ -1,69 +1,26 @@
-name: Deploy Pipeline
+name: Web Release
 
 on:
   push:
-    branches: [develop, main]
+    branches: [main, develop]
 
 permissions:
   contents: read
   packages: write
 
-env:
-  DOTNET_VERSION: 10.0.x
-  NODE_VERSION: 24.x
-
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
-        with: { dotnet-version: '${{ env.DOTNET_VERSION }}' }
-      - uses: actions/setup-node@v6
-        with: { node-version: '${{ env.NODE_VERSION }}' }
-      - name: Run backend tests
-        run: dotnet test backend/ --filter "Category=Unit"
-      - name: Run frontend tests
-        run: |
-          cd frontend
-          npm ci --legacy-peer-deps
-          npm test -- --no-coverage
-
-  e2e-tests:
-    needs: [test]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with: { node-version: '${{ env.NODE_VERSION }}' }
-      - name: Install dependencies
-        run: cd frontend && npm ci --legacy-peer-deps
-      - name: Cache Playwright browsers
-        uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
-          restore-keys: playwright-${{ runner.os }}-
-      - name: Install Playwright browsers
-        run: cd frontend && npx playwright install chromium --with-deps
-      - name: Run E2E tests
-        run: cd frontend && npm run e2e:ci
-      - name: Upload Playwright report on failure
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report-deploy-run${{ github.run_number }}
-          path: frontend/playwright-report/
+  tests:
+    uses: ./.github/workflows/ci.yml
 
   build:
-    needs: [test, e2e-tests]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-dotnet@v5
-        with: { dotnet-version: '${{ env.DOTNET_VERSION }}' }
+        with: { dotnet-version: 10.0.x }
       - uses: actions/setup-node@v6
-        with: { node-version: '${{ env.NODE_VERSION }}' }
+        with: { node-version: 24.x }
       - name: Build .NET API
         run: dotnet publish backend/EncounterDaily.API/EncounterDaily.API.csproj -c Release -o publish/api
       - name: Build Angular app
@@ -78,42 +35,6 @@ jobs:
           path: |
             publish/
             frontend/www/
-
-  # ─── Staging deployment (for testers before production) ───
-  # Uncomment when you have testers ready:
-  #
-  #deploy-staging:
-  #  if: github.ref == 'refs/heads/develop'
-  #  needs: [build]
-  #  runs-on: ubuntu-latest
-  #  environment:
-  #    name: staging
-  #    url: https://${{ vars.STAGING_HOST }}
-  #  steps:
-  #    - uses: actions/checkout@v6
-  #    - uses: actions/setup-node@v6
-  #      with: { node-version: '${{ env.NODE_VERSION }}' }
-  #    - name: Install Podman
-  #      run: sudo apt-get update && sudo apt-get install -y podman podman-compose
-  #    - name: Authenticate with GHCR
-  #      run: echo "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin
-  #    - name: Deploy to staging VPS
-  #      env:
-  #        STAGING_HOST: ${{ vars.STAGING_HOST }}
-  #        SSH_USER: ${{ vars.SSH_USER }}
-  #        SSH_KEY: ${{ secrets.SSH_KEY }}
-  #        SA_PASSWORD: ${{ secrets.SA_PASSWORD }}
-  #        JWT_RSA_PRIVATE_KEY: ${{ secrets.JWT_RSA_PRIVATE_KEY }}
-  #        GHCR_USER: ${{ github.actor }}
-  #        GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #      run: |
-  #        mkdir -p ~/.ssh
-  #        echo "$SSH_KEY" > ~/.ssh/id_ed25519
-  #        chmod 600 ~/.ssh/id_ed25519
-  #        ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts
-  #        for ps1 in database/encounter/convert-*.ps1; do pwsh "$ps1" || true; done
-  #        for ps1 in deploy/scripts/convert-*.ps1; do pwsh "$ps1" || true; done
-  #        ./deploy/deploy.sh staging
 
   deploy-production:
     if: github.ref == 'refs/heads/main'
@@ -148,26 +69,16 @@ jobs:
       - name: Add VPS host key to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ vars.PRODUCTION_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Warning: could not scan host key — connectivity check will follow"
+          ssh-keyscan -H ${{ vars.PRODUCTION_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Warning: could not scan host key"
 
       - name: Sync files to VPS
         run: |
           SSH_OPTS="-o ConnectTimeout=30"
-
-          # Pre-flight: verify SSH port is reachable before wasting retry attempts
           echo "Testing SSH connectivity to ${{ vars.PRODUCTION_HOST }}:22 ..."
           if ! timeout 35 ssh $SSH_OPTS ${{ vars.SSH_USER }}@${{ vars.PRODUCTION_HOST }} "echo 'SSH OK'" 2>&1; then
             echo "ERROR: Cannot reach ${{ vars.PRODUCTION_HOST }} on port 22."
-            echo "Possible causes:"
-            echo "  1. VPS is offline or SSH daemon is not running"
-            echo "  2. Firewall / security group is blocking port 22 from GitHub Actions IPs"
-            echo "  3. The SSH_USER or SSH_KEY secret is wrong"
-            echo ""
-            echo "GitHub Actions uses IPs from: https://api.github.com/meta (hooks key)"
-            echo "Run on VPS: sudo ufw status  (or iptables -L) to check firewall rules"
             exit 1
           fi
-
           for attempt in 1 2 3; do
             echo "Attempt $attempt: syncing deploy files..."
             rsync -avz --timeout=300 -e "ssh $SSH_OPTS" \
@@ -179,7 +90,7 @@ jobs:
             echo "Attempt $attempt failed. Retrying in 30s..."
             sleep 30
           done
-          echo "All 3 attempts failed — check VPS connectivity."
+          echo "All 3 attempts failed."
           exit 1
 
       - name: Deploy on VPS
@@ -198,14 +109,8 @@ jobs:
           envs: SA_PASSWORD, JWT_RSA_PRIVATE_KEY, GOOGLE_CLIENT_ID, FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, DEEPSEEK_API_KEY
           script: |
             cd /opt/encounter-daily
-
-            # Clean up old build artifacts that could interfere
             rm -rf android 2>/dev/null || true
-
-            # Save current image for rollback
             ROLLBACK_IMAGE=$(podman inspect --format '{{.Image}}' encounter-daily-api 2>/dev/null || echo "")
-
-            # Write .env with restricted permissions
             cat > .env <<ENVEOF
             SA_PASSWORD="$SA_PASSWORD"
             JWT_RSA_PRIVATE_KEY="$JWT_RSA_PRIVATE_KEY"
@@ -219,41 +124,29 @@ jobs:
             API_IMAGE_TAG=production-latest
             ENVEOF
             chmod 600 .env
-
-            # Remove old pod/containers (both root and jkanimea), pull latest image
             sudo podman pod rm -f encounter-pod 2>/dev/null || true
             sleep 2
             podman pod rm -f encounter-pod 2>/dev/null || true
             podman pull ghcr.io/jkanimea/encounter-daily-api:production-latest
-
-            # Source .env so we can reference env vars directly
             set -a; source .env; set +a
-
-            # Create pod (shared network namespace — all containers use localhost)
             podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000 \
-              || { echo "Pod create failed — ports may be held by root. Retrying after sudo cleanup...";
+              || { echo "Pod create failed. Retrying after sudo cleanup...";
                    sudo podman pod rm -f encounter-pod 2>/dev/null || true;
                    sleep 2;
                    podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000 \
                      || { echo "FATAL: Could not create pod."; exit 1; }; }
-
-            # Start SQL
             podman run -d --pod encounter-pod --name encounter-daily-sql \
               -e ACCEPT_EULA=Y \
               -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
               -e MSSQL_PID=Express \
               -v sql-data:/var/opt/mssql \
               mcr.microsoft.com/mssql/server:2022-latest
-
-            # Wait for SQL to be healthy
             echo "Waiting for SQL Server..."
             for i in $(seq 1 30); do
               podman exec encounter-daily-sql /opt/mssql-tools18/bin/sqlcmd \
                 -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
               sleep 2
             done
-
-            # Start API
             podman run -d --pod encounter-pod --name encounter-daily-api \
               -e ASPNETCORE_ENVIRONMENT="$ASPNETCORE_ENVIRONMENT" \
               -e ASPNETCORE_URLS=http://+:5000 \
@@ -263,34 +156,24 @@ jobs:
               -e DevMode__BypassAuth="$BYPASS_AUTH" \
               -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" \
               ghcr.io/jkanimea/encounter-daily-api:production-latest
-
-            # Start nginx
             podman run -d --pod encounter-pod --name encounter-daily-nginx \
               -v /opt/encounter-daily/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
               -v /opt/encounter-daily/ssl:/etc/nginx/ssl:ro \
               -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
               docker.io/nginx:alpine
-
-            # Smoke test — verify the deployment with multiple checks
             echo "Running smoke tests..."
             sleep 10
-
-            # Check API returns HTTP 200
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/v1/health)
             if [ "$HTTP_CODE" != "200" ]; then
               echo "SMOKE TEST FAILED: API returned HTTP $HTTP_CODE (expected 200)"
-              # Attempt rollback
               if [ -n "$ROLLBACK_IMAGE" ]; then
                 echo "Rolling back to $ROLLBACK_IMAGE..."
                 podman pod rm -f encounter-pod 2>/dev/null || true
                 sleep 2
                 podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000
                 podman run -d --pod encounter-pod --name encounter-daily-sql \
-                  -e ACCEPT_EULA=Y \
-                  -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
-                  -e MSSQL_PID=Express \
-                  -v sql-data:/var/opt/mssql \
-                  mcr.microsoft.com/mssql/server:2022-latest
+                  -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$SA_PASSWORD" -e MSSQL_PID=Express \
+                  -v sql-data:/var/opt/mssql mcr.microsoft.com/mssql/server:2022-latest
                 for i in $(seq 1 30); do
                   podman exec encounter-daily-sql /opt/mssql-tools18/bin/sqlcmd \
                     -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
@@ -303,62 +186,19 @@ jobs:
                   -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
                   -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
                   -e DevMode__BypassAuth="$BYPASS_AUTH" \
-                  -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" \
-                  "$ROLLBACK_IMAGE"
+                  -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" "$ROLLBACK_IMAGE"
                 podman run -d --pod encounter-pod --name encounter-daily-nginx \
                   -v /opt/encounter-daily/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
                   -v /opt/encounter-daily/ssl:/etc/nginx/ssl:ro \
                   -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
                   docker.io/nginx:alpine
-                echo "Rollback complete — previous image restored"
+                echo "Rollback complete"
               else
-                echo "No previous image to roll back to. Production remains down."
+                echo "No previous image. Production remains down."
               fi
               exit 1
             fi
             echo "API health check passed (HTTP $HTTP_CODE)"
-
-            # Check nginx frontend responds
             HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/)
             echo "Frontend status: HTTP $HTTP_CODE"
-
             echo "Deployment verified successfully"
-
-  android-apk:
-    if: github.ref == 'refs/heads/main'
-    needs: [deploy-production]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Build Android builder image
-        run: docker build -t android-builder -f deploy/android/Containerfile .
-      - name: Write keystore
-        run: |
-          printf '%s\n' "${{ secrets.KEYSTORE }}" | tr -d '[:space:]' | base64 -d > /tmp/encounter-daily-keystore.jks
-          test -s /tmp/encounter-daily-keystore.jks || { echo "ERROR: Keystore decode produced empty file — check the KEYSTORE secret is valid base64"; exit 1; }
-          echo "Keystore written: $(wc -c < /tmp/encounter-daily-keystore.jks) bytes"
-      - name: Build signed APK
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
-        run: |
-          echo "KEYSTORE_PASSWORD length: ${#KEYSTORE_PASSWORD}"
-          echo "KEY_PASSWORD length: ${#KEY_PASSWORD}"
-          docker run --rm \
-            -v ${{ github.workspace }}/frontend:/app/frontend \
-            -v ${{ github.workspace }}/assets:/app/assets \
-            -v /tmp/encounter-daily-keystore.jks:/tmp/encounter-daily-keystore.jks:ro \
-            -v ${{ github.workspace }}/apk-output:/output \
-            -e API_URL=https://mg-encounter.com/api/v1 \
-            -e KEYSTORE_PATH=/tmp/encounter-daily-keystore.jks \
-            -e KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
-            -e KEY_PASSWORD="$KEY_PASSWORD" \
-            -e GOOGLE_SERVICES_JSON="$GOOGLE_SERVICES_JSON" \
-            -e VERSION=v$(git rev-list --count HEAD) \
-            android-builder
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: app-release-run${{ github.run_number }}
-          path: apk-output/

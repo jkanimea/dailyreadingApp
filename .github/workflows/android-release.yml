@@ -1,0 +1,58 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  tests:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: [tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build Android builder image
+        run: docker build -t android-builder -f deploy/android/Containerfile .
+
+      - name: Write keystore
+        run: |
+          printf '%s\n' "${{ secrets.KEYSTORE }}" | tr -d '[:space:]' | base64 -d > /tmp/encounter-daily-keystore.jks
+          test -s /tmp/encounter-daily-keystore.jks || { echo "ERROR: Keystore decode produced empty file"; exit 1; }
+          echo "Keystore written: $(wc -c < /tmp/encounter-daily-keystore.jks) bytes"
+
+      - name: Build signed APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          mkdir -p apk-output
+          docker run --rm \
+            -v ${{ github.workspace }}/frontend:/app/frontend \
+            -v ${{ github.workspace }}/apk-output:/output \
+            -v /tmp/encounter-daily-keystore.jks:/tmp/encounter-daily-keystore.jks:ro \
+            -e API_URL=https://mg-encounter.com/api/v1 \
+            -e KEYSTORE_PATH=/tmp/encounter-daily-keystore.jks \
+            -e KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
+            -e KEY_PASSWORD="$KEY_PASSWORD" \
+            -e GOOGLE_SERVICES_JSON="$GOOGLE_SERVICES_JSON" \
+            -e VERSION=${{ github.ref_name }} \
+            android-builder
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          files: apk-output/app-release.apk
+          generate_release_notes: true
+
+      - name: Print download URL
+        run: |
+          echo "APK ready!"
+          echo "Download: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/app-release.apk"
