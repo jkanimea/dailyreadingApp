@@ -21,7 +21,7 @@ import { SharedModule } from '../../shared/shared.module';
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
-    <ion-content class="ion-padding">
+    <ion-content>
       <div class="more-grid">
         <div class="more-item" routerLink="/search">
           <ion-icon name="search-outline"></ion-icon>
@@ -57,14 +57,16 @@ import { SharedModule } from '../../shared/shared.module';
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 14px;
-      padding: 8px 0;
+      padding-top: 4px;
     }
     .more-item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 8px;
-      padding: 24px 8px 20px;
+      justify-content: center;
+      gap: 10px;
+      padding: 20px 8px;
+      min-height: 110px;
       border-radius: 16px;
       background: var(--ion-color-step-50, #f5f5f5);
       cursor: pointer;
@@ -76,6 +78,8 @@ import { SharedModule } from '../../shared/shared.module';
     }
     .more-item ion-icon {
       font-size: 30px;
+      width: 30px;
+      height: 30px;
       color: var(--ion-color-primary);
     }
     .more-item span {
