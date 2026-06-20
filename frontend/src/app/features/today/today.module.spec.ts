@@ -462,6 +462,39 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       expect(component.readingSection).toBeNull();
     });
 
+    it('should auto-expand collapsed Bible section when toggleRead(\'bible\') is called', () => {
+      component.bibleExpanded = false;
+      component.toggleRead('bible');
+      expect(component.bibleExpanded).toBe(true);
+    });
+
+    it('should auto-expand collapsed EGW section when toggleRead(\'primary\') is called', () => {
+      component.egwExpanded = false;
+      component.toggleRead('primary');
+      expect(component.egwExpanded).toBe(true);
+    });
+
+    it('should auto-expand collapsed Companion section when toggleRead(\'secondary\') is called', () => {
+      component.secondaryExpanded = false;
+      component.toggleRead('secondary');
+      expect(component.secondaryExpanded).toBe(true);
+    });
+
+    it('should auto-expand collapsed Journal section when toggleRead(\'notes\') is called', () => {
+      component.showNotes = false;
+      component.toggleRead('notes');
+      expect(component.showNotes).toBe(true);
+    });
+
+    it('should keep already-expanded sections open when toggleRead is called', () => {
+      component.bibleExpanded = true;
+      component.egwExpanded = true;
+      component.secondaryExpanded = true;
+      component.showNotes = true;
+      component.toggleRead('bible');
+      expect(component.bibleExpanded).toBe(true);
+    });
+
     it('should stop TTS on ionViewWillLeave', () => {
       const stopSpy = jest.spyOn(component['ttsService'], 'stop');
       component.ionViewWillLeave();
@@ -508,12 +541,13 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       });
 
       it('should NOT stop TTS when expanding a collapsed section', () => {
+        component.egwExpanded = true;
         component.bibleExpanded = false;
-        component.toggleRead('bible');
+        component.toggleRead('primary');
         const stopSpy = jest.spyOn(component['ttsService'], 'stop');
         component.toggleSection('bible');
         expect(stopSpy).not.toHaveBeenCalled();
-        expect(component.readingSection).toBe('bible');
+        expect(component.readingSection).toBe('primary');
       });
 
       it('should stop TTS for primary section when collapsing EGW panel', () => {
@@ -566,12 +600,13 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       });
 
       it('should NOT stop TTS when expanding journal', () => {
+        component.bibleExpanded = true;
         component.showNotes = false;
-        component.toggleRead('notes');
+        component.toggleRead('bible');
         const stopSpy = jest.spyOn(component['ttsService'], 'stop');
         component.toggleNotes();
         expect(stopSpy).not.toHaveBeenCalled();
-        expect(component.readingSection).toBe('notes');
+        expect(component.readingSection).toBe('bible');
       });
 
       it('should toggle showNotes', () => {

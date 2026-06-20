@@ -626,6 +626,10 @@ export class TodayPage {
       return;
     }
     this.ttsService.stop();
+    if (section === 'bible') { this.bibleExpanded = true; }
+    else if (section === 'primary') { this.egwExpanded = true; }
+    else if (section === 'secondary') { this.secondaryExpanded = true; }
+    else if (section === 'notes') { this.showNotes = true; }
     this.readingSection = section;
 
     let text = '';
