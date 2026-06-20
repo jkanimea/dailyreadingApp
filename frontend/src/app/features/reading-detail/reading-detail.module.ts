@@ -11,6 +11,7 @@ import { LoggingService } from '../../core/services/logging.service';
 import { ActivatedRoute } from '@angular/router';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom, Subscription } from 'rxjs';
+import { TtsService } from '../../core/services/tts.service';
 
 const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:(?:[1-3]\s)?[A-Za-z]+\.?\s+)?\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
 
@@ -80,6 +81,7 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
               <div class="section-header" (click)="bibleExpanded = !bibleExpanded">
                 <ion-icon [name]="bibleExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
                 <span class="section-header-title">Bible Reading</span>
+                <ion-icon [name]="readingSection === 'bible' ? 'volume-mute-outline' : 'volume-high-outline'" class="audio-icon" (click)="$event.stopPropagation(); toggleRead('bible')"></ion-icon>
               </div>
               @if (bibleExpanded) {
                 <div class="section-body">
@@ -111,6 +113,7 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
             <div class="section-header" (click)="egwExpanded = !egwExpanded">
               <ion-icon [name]="egwExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
               <span class="egw-heading">{{ detail.primaryBookPageRange }}</span>
+              <ion-icon [name]="readingSection === 'primary' ? 'volume-mute-outline' : 'volume-high-outline'" class="audio-icon" (click)="$event.stopPropagation(); toggleRead('primary')"></ion-icon>
             </div>
             @if (egwExpanded) {
               <div class="section-body">
@@ -141,6 +144,7 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
                 <div class="section-header" (click)="secondaryExpanded = !secondaryExpanded">
                   <ion-icon [name]="secondaryExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
                   <span class="companion-heading">Companion: {{ detail.secondaryBookPageRange }}</span>
+                  <ion-icon [name]="readingSection === 'secondary' ? 'volume-mute-outline' : 'volume-high-outline'" class="audio-icon" (click)="$event.stopPropagation(); toggleRead('secondary')"></ion-icon>
                 </div>
                 @if (secondaryExpanded) {
                   <div class="section-body">
@@ -317,6 +321,14 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
       color: var(--ion-color-step-400, #bbb);
       flex-shrink: 0;
     }
+    .audio-icon {
+      margin-left: auto;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--ion-color-primary);
+      flex-shrink: 0;
+      padding: 4px;
+    }
     .section-body {
       margin-top: 12px;
     }
@@ -467,6 +479,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   private alertCtrl = inject(AlertController);
   private actionSheetCtrl = inject(ActionSheetController);
   private progressService = inject(ProgressService);
+  private ttsService = inject(TtsService);
   seriesList: Series[] = [];
   private routeSub?: Subscription;
   completed = false;
@@ -481,12 +494,19 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   secondaryExpanded = true;
   private notesDebounce?: ReturnType<typeof setTimeout>;
   readingSeen = false;
+  readingSection: string | null = null;
   @ViewChild('pageContent', { static: false }) content?: any;
 
   override ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     clearTimeout(this.notesDebounce);
+    this.ttsService.stop();
     super.ngOnDestroy();
+  }
+
+  ionViewWillLeave(): void {
+    this.ttsService.stop();
+    this.readingSection = null;
   }
 
   async toggleComplete(event: CustomEvent): Promise<void> {
@@ -547,6 +567,42 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
 
   onBibleRefClick(refs: string): void {
     this.router.navigate(['/bible-verses'], { queryParams: { refs: encodeURIComponent(refs) } });
+  }
+
+  toggleRead(section: 'bible' | 'primary' | 'secondary'): void {
+    if (this.readingSection === section) {
+      this.ttsService.stop();
+      this.readingSection = null;
+      return;
+    }
+    this.ttsService.stop();
+    this.readingSection = section;
+
+    let text = '';
+    if (section === 'bible') {
+      text = this.detail?.fullTextBible ?? '';
+    } else if (section === 'primary') {
+      text = this.getPlainText(this.detail?.fullTextPrimary);
+    } else if (section === 'secondary') {
+      text = this.getPlainText(this.detail?.fullTextSecondary);
+    }
+
+    if (text) {
+      this.ttsService.speak(text);
+    } else {
+      this.readingSection = null;
+    }
+  }
+
+  private getPlainText(text: string | undefined | null): string {
+    if (!text) return '';
+    const segments = this.getParagraphSegments(text);
+    return segments
+      .filter(s => !s.isRef && !s.isBibleRef)
+      .map(s => s.text)
+      .join('')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   goToProgress(): void {

@@ -94,6 +94,20 @@ describe('ReadingDetailPage', () => {
       ]
     }).compileComponents();
 
+    // Mock SpeechSynthesis for TtsService
+    class MockUtterance {
+      text: string;
+      rate = 1; pitch = 1; volume = 1;
+      onstart: any = null; onend: any = null; onerror: any = null;
+      onpause: any = null; onresume: any = null;
+      constructor(text: string) { this.text = text; }
+    }
+    (globalThis as any).SpeechSynthesisUtterance = MockUtterance;
+    Object.defineProperty(window, 'speechSynthesis', {
+      value: { speak: jest.fn(), cancel: jest.fn(), pause: jest.fn(), resume: jest.fn() },
+      configurable: true, writable: true,
+    });
+
     fixture = TestBed.createComponent(ReadingDetailPage);
     component = fixture.componentInstance;
   });
@@ -764,6 +778,114 @@ describe('ReadingDetailPage', () => {
         const refSpans = fixture.nativeElement.querySelectorAll('.bible-ref');
         expect(refSpans.length).toBe(1);
         expect(refSpans[0].textContent).toBe('Acts 2:38');
+      });
+    });
+
+    describe('audio read-aloud feature', () => {
+      beforeEach(() => {
+        component.detail = {
+          ...mockDetail,
+          fullTextBible: 'In the beginning God created the heavens and the earth.',
+          fullTextPrimary: 'Read John 3:16 for context. [1.1] Extra text.',
+          fullTextSecondary: 'Another passage.',
+        };
+        component.bibleExpanded = true;
+        component.egwExpanded = true;
+        component.secondaryExpanded = true;
+        fixture.detectChanges();
+      });
+
+      it('should render audio icon in Bible section header', () => {
+        const headers = fixture.nativeElement.querySelectorAll('.section-card');
+        const bibleIcon = headers[0].querySelector('.audio-icon');
+        expect(bibleIcon).toBeTruthy();
+        expect(bibleIcon.getAttribute('name')).toBe('volume-high-outline');
+      });
+
+      it('should render audio icon in EGW section header', () => {
+        const headers = fixture.nativeElement.querySelectorAll('.section-card');
+        const egwIcon = headers[1].querySelector('.audio-icon');
+        expect(egwIcon).toBeTruthy();
+      });
+
+      it('should render audio icon in companion section header', async () => {
+        const deferBlocks = await fixture.getDeferBlocks();
+        if (deferBlocks.length > 0) { await deferBlocks[0].render(DeferBlockState.Complete); }
+        fixture.detectChanges();
+        const headers = fixture.nativeElement.querySelectorAll('.section-card');
+        const companionIcon = headers[2].querySelector('.audio-icon');
+        expect(companionIcon).toBeTruthy();
+      });
+
+      it('should call toggleRead with bible when Bible audio icon clicked', () => {
+        const spy = jest.spyOn(component, 'toggleRead');
+        const headers = fixture.nativeElement.querySelectorAll('.section-card');
+        headers[0].querySelector('.audio-icon').click();
+        expect(spy).toHaveBeenCalledWith('bible');
+      });
+
+      it('should call toggleRead with primary when EGW audio icon clicked', () => {
+        const spy = jest.spyOn(component, 'toggleRead');
+        const headers = fixture.nativeElement.querySelectorAll('.section-card');
+        headers[1].querySelector('.audio-icon').click();
+        expect(spy).toHaveBeenCalledWith('primary');
+      });
+
+      it('should call toggleRead with secondary when companion audio icon clicked', async () => {
+        const deferBlocks = await fixture.getDeferBlocks();
+        if (deferBlocks.length > 0) { await deferBlocks[0].render(DeferBlockState.Complete); }
+        fixture.detectChanges();
+        const spy = jest.spyOn(component, 'toggleRead');
+        const headers = fixture.nativeElement.querySelectorAll('.section-card');
+        headers[2].querySelector('.audio-icon').click();
+        expect(spy).toHaveBeenCalledWith('secondary');
+      });
+
+      it('should read fullTextBible when toggleRead(\'bible\') is called', () => {
+        const speakSpy = jest.spyOn(component['ttsService'], 'speak');
+        component.toggleRead('bible');
+        expect(speakSpy).toHaveBeenCalledWith('In the beginning God created the heavens and the earth.');
+      });
+
+      it('should read EGW text without ref markers when toggleRead(\'primary\')', () => {
+        const speakSpy = jest.spyOn(component['ttsService'], 'speak');
+        component.toggleRead('primary');
+        expect(speakSpy).toHaveBeenCalledWith('Read for context. Extra text.');
+      });
+
+      it('should read companion text without refs when toggleRead(\'secondary\')', () => {
+        const speakSpy = jest.spyOn(component['ttsService'], 'speak');
+        component.toggleRead('secondary');
+        expect(speakSpy).toHaveBeenCalledWith('Another passage.');
+      });
+
+      it('should stop TTS and clear readingSection when clicking active section again', () => {
+        component.toggleRead('primary');
+        expect(component.readingSection).toBe('primary');
+        component.toggleRead('primary');
+        expect(component.readingSection).toBeNull();
+      });
+
+      it('should not crash toggleRead when text is empty', () => {
+        component.detail = { ...mockDetail, fullTextBible: '' };
+        component.toggleRead('bible');
+        expect(component.readingSection).toBeNull();
+      });
+
+      it('should stop TTS on ionViewWillLeave', () => {
+        const stopSpy = jest.spyOn(component['ttsService'], 'stop');
+        component.ionViewWillLeave();
+        expect(stopSpy).toHaveBeenCalled();
+        expect(component.readingSection).toBeNull();
+      });
+
+      it('should show mute icon when section is actively being read', () => {
+        component.toggleRead('primary');
+        fixture.detectChanges();
+        expect(component.readingSection).toBe('primary');
+        const headers = fixture.nativeElement.querySelectorAll('.section-card');
+        const egwIcon = headers[1].querySelector('.audio-icon');
+        expect(egwIcon.classList.contains('audio-icon')).toBe(true);
       });
     });
   });
