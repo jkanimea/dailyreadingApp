@@ -7,30 +7,31 @@ import sharp from 'sharp';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
 
-function findRepoRoot() {
-  try {
-    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8', stdio: 'pipe' }).trim();
-  } catch { return null; }
-}
-
 function findLogo() {
-  const candidates = [
-    join(ROOT, '..', 'assets', 'Logo.png'),
+  const tried = [];
+  // Walk up from script dir, checking each parent for assets/Logo.png
+  let dir = __dirname;
+  for (let i = 0; i < 10; i++) {
+    const p = join(dir, 'assets', 'Logo.png');
+    tried.push(p);
+    if (existsSync(p)) return { path: p, tried };
+    const parent = join(dir, '..');
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // Also try CWD-based paths as fallback
+  const cwdPaths = [
     join(process.cwd(), '..', 'assets', 'Logo.png'),
-    join(ROOT, 'assets', 'Logo.png'),
     join(process.cwd(), 'assets', 'Logo.png'),
   ];
-  const repoRoot = findRepoRoot();
-  if (repoRoot) {
-    candidates.push(join(repoRoot, 'assets', 'Logo.png'));
+  for (const p of cwdPaths) {
+    tried.push(p);
+    if (existsSync(p)) return { path: p, tried };
   }
-  for (const p of candidates) {
-    if (existsSync(p)) return p;
-  }
-  return null;
+  return { path: null, tried };
 }
 
-const logoPath = findLogo();
+const { path: logoPath, tried: triedPaths } = findLogo();
 const ANDROID_RES = join(ROOT, 'android', 'app', 'src', 'main', 'res');
 
 const DENSITIES = [
@@ -49,12 +50,7 @@ async function generateIcons() {
   }
 
   if (!logoPath) {
-    console.log('Logo source not found. Tried:\n  ' + [
-      join(ROOT, '..', 'assets', 'Logo.png'),
-      join(process.cwd(), '..', 'assets', 'Logo.png'),
-      join(ROOT, 'assets', 'Logo.png'),
-      join(process.cwd(), 'assets', 'Logo.png'),
-    ].join('\n  '));
+    console.log('Logo source not found. Tried:\n  ' + triedPaths.join('\n  '));
     console.log('CWD: ' + process.cwd());
     console.log('ROOT: ' + ROOT);
     process.exit(1);
