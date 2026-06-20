@@ -87,7 +87,7 @@ interface BibleSection {
           <!-- Bible reading card -->
           @if (detail.bibleReading) {
             <div class="section-card">
-              <div class="section-header" (click)="bibleExpanded = !bibleExpanded">
+              <div class="section-header" (click)="toggleSection('bible')">
                 <ion-icon [name]="bibleExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
                 <span class="section-header-title">Bible Reading</span>
                 <ion-icon [name]="readingSection === 'bible' ? 'volume-mute-outline' : 'volume-high-outline'" class="audio-icon" (click)="$event.stopPropagation(); toggleRead('bible')"></ion-icon>
@@ -119,7 +119,7 @@ interface BibleSection {
           <!-- Primary EGW reading card -->
           @if (detail.primaryBookPageRange) {
           <div class="section-card">
-            <div class="section-header" (click)="egwExpanded = !egwExpanded">
+            <div class="section-header" (click)="toggleSection('primary')">
               <ion-icon [name]="egwExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
               <span class="egw-heading">{{ detail.primaryBookPageRange }}</span>
               <ion-icon [name]="readingSection === 'primary' ? 'volume-mute-outline' : 'volume-high-outline'" class="audio-icon" (click)="$event.stopPropagation(); toggleRead('primary')"></ion-icon>
@@ -150,7 +150,7 @@ interface BibleSection {
           @defer {
             @if (detail.fullTextSecondary) {
               <div class="section-card reading-card">
-                <div class="section-header" (click)="secondaryExpanded = !secondaryExpanded">
+                <div class="section-header" (click)="toggleSection('secondary')">
                   <ion-icon [name]="secondaryExpanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
                   <span class="companion-heading">Companion: {{ detail.secondaryBookPageRange }}</span>
                   <ion-icon [name]="readingSection === 'secondary' ? 'volume-mute-outline' : 'volume-high-outline'" class="audio-icon" (click)="$event.stopPropagation(); toggleRead('secondary')"></ion-icon>
@@ -584,6 +584,24 @@ export class TodayPage {
 
   onBibleRefClick(refs: string): void {
     this.router.navigate(['/bible-verses'], { queryParams: { refs: encodeURIComponent(refs) } });
+  }
+
+  toggleSection(section: 'bible' | 'primary' | 'secondary'): void {
+    let wasExpanded: boolean;
+    if (section === 'bible') {
+      wasExpanded = this.bibleExpanded;
+      this.bibleExpanded = !this.bibleExpanded;
+    } else if (section === 'primary') {
+      wasExpanded = this.egwExpanded;
+      this.egwExpanded = !this.egwExpanded;
+    } else {
+      wasExpanded = this.secondaryExpanded;
+      this.secondaryExpanded = !this.secondaryExpanded;
+    }
+    if (wasExpanded && this.readingSection === section) {
+      this.ttsService.stop();
+      this.readingSection = null;
+    }
   }
 
   toggleRead(section: 'bible' | 'primary' | 'secondary'): void {

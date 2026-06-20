@@ -442,5 +442,72 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       const egwIcon = headers[1].querySelector('.audio-icon');
       expect(egwIcon.classList.contains('audio-icon')).toBe(true);
     });
+
+    describe('toggleSection — collapse stops audio', () => {
+      it('should toggle bible expanded state with toggleSection', () => {
+        component.bibleExpanded = true;
+        component.toggleSection('bible');
+        expect(component.bibleExpanded).toBe(false);
+        component.toggleSection('bible');
+        expect(component.bibleExpanded).toBe(true);
+      });
+
+      it('should stop TTS and clear readingSection when collapsing active section', () => {
+        component.bibleExpanded = true;
+        component.toggleRead('bible');
+        expect(component.readingSection).toBe('bible');
+        const stopSpy = jest.spyOn(component['ttsService'], 'stop');
+        component.toggleSection('bible');
+        expect(stopSpy).toHaveBeenCalled();
+        expect(component.readingSection).toBeNull();
+      });
+
+      it('should NOT stop TTS when collapsing a different section than the active one', () => {
+        component.bibleExpanded = true;
+        component.egwExpanded = true;
+        component.toggleRead('bible');
+        const stopSpy = jest.spyOn(component['ttsService'], 'stop');
+        component.toggleSection('primary');
+        expect(stopSpy).not.toHaveBeenCalled();
+        expect(component.readingSection).toBe('bible');
+      });
+
+      it('should NOT stop TTS when expanding a collapsed section', () => {
+        component.bibleExpanded = false;
+        component.toggleRead('bible');
+        const stopSpy = jest.spyOn(component['ttsService'], 'stop');
+        component.toggleSection('bible');
+        expect(stopSpy).not.toHaveBeenCalled();
+        expect(component.readingSection).toBe('bible');
+      });
+
+      it('should stop TTS for primary section when collapsing EGW panel', () => {
+        component.egwExpanded = true;
+        component.toggleRead('primary');
+        expect(component.readingSection).toBe('primary');
+        component.toggleSection('primary');
+        expect(component.readingSection).toBeNull();
+      });
+
+      it('should stop TTS for secondary section when collapsing companion panel', () => {
+        component.secondaryExpanded = true;
+        component.toggleRead('secondary');
+        expect(component.readingSection).toBe('secondary');
+        component.toggleSection('secondary');
+        expect(component.readingSection).toBeNull();
+      });
+
+      it('should stop TTS when collapsing Bible section header via click in template', () => {
+        component.bibleExpanded = true;
+        component.toggleRead('bible');
+        fixture.detectChanges();
+        const headers = fixture.nativeElement.querySelectorAll('.section-card');
+        const headerDiv = headers[0].querySelector('.section-header') as HTMLElement;
+        const stopSpy = jest.spyOn(component['ttsService'], 'stop');
+        headerDiv.click();
+        expect(stopSpy).toHaveBeenCalled();
+        expect(component.readingSection).toBeNull();
+      });
+    });
   });
 });
