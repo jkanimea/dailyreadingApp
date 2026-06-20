@@ -65,7 +65,7 @@ interface SeriesStats {
             </div>
             <div class="stats-info">
               <h3>{{ s.series.name }}</h3>
-              <p>{{ s.series.primaryBook?.title }}</p>
+              <p>{{ s.series.primaryBook.title }}</p>
             </div>
           </div>
           <div class="stats-body">
