@@ -1,15 +1,36 @@
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 import sharp from 'sharp';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const LOGO_SRC = join(ROOT, '..', 'assets', 'Logo.png');
 
-// Fallback: try from repo root
-const altLogo = join(process.cwd(), '..', 'assets', 'Logo.png');
-const logoPath = existsSync(LOGO_SRC) ? LOGO_SRC : (existsSync(altLogo) ? altLogo : null);
+function findRepoRoot() {
+  try {
+    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8', stdio: 'pipe' }).trim();
+  } catch { return null; }
+}
+
+function findLogo() {
+  const candidates = [
+    join(ROOT, '..', 'assets', 'Logo.png'),
+    join(process.cwd(), '..', 'assets', 'Logo.png'),
+    join(ROOT, 'assets', 'Logo.png'),
+    join(process.cwd(), 'assets', 'Logo.png'),
+  ];
+  const repoRoot = findRepoRoot();
+  if (repoRoot) {
+    candidates.push(join(repoRoot, 'assets', 'Logo.png'));
+  }
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
+const logoPath = findLogo();
 const ANDROID_RES = join(ROOT, 'android', 'app', 'src', 'main', 'res');
 
 const DENSITIES = [
@@ -28,14 +49,19 @@ async function generateIcons() {
   }
 
   if (!logoPath) {
-    console.log('Logo source not found at:\n  ' + LOGO_SRC + '\n  ' + altLogo);
+    console.log('Logo source not found. Tried:\n  ' + [
+      join(ROOT, '..', 'assets', 'Logo.png'),
+      join(process.cwd(), '..', 'assets', 'Logo.png'),
+      join(ROOT, 'assets', 'Logo.png'),
+      join(process.cwd(), 'assets', 'Logo.png'),
+    ].join('\n  '));
     console.log('CWD: ' + process.cwd());
+    console.log('ROOT: ' + ROOT);
     process.exit(1);
   }
 
   console.log('Generating Android icons from ' + logoPath + '...\n');
 
-  // Adaptive icon foreground + legacy icons at each density
   for (const d of DENSITIES) {
     const dstDir = join(ANDROID_RES, d.dir);
     if (!existsSync(dstDir)) mkdirSync(dstDir, { recursive: true });
@@ -51,7 +77,6 @@ async function generateIcons() {
     console.log(`  ${d.dir} — 3 PNGs (${d.size}x${d.size})`);
   }
 
-  // Play Store icon (512x512)
   const storeDir = join(ROOT, 'android', 'play-store-icon');
   if (!existsSync(storeDir)) mkdirSync(storeDir, { recursive: true });
   const storeIcon = await sharp(logoPath)
@@ -61,7 +86,6 @@ async function generateIcons() {
   writeFileSync(join(storeDir, 'play-store-icon.png'), storeIcon);
   console.log(`  play-store-icon.png — 512x512 (for Play Store listing)`);
 
-  // Adaptive icon XML
   const adaptiveDir = join(ANDROID_RES, 'mipmap-anydpi-v26');
   if (!existsSync(adaptiveDir)) mkdirSync(adaptiveDir, { recursive: true });
   writeFileSync(join(adaptiveDir, 'ic_launcher.xml'), `<?xml version="1.0" encoding="utf-8"?>
@@ -76,7 +100,6 @@ async function generateIcons() {
 </adaptive-icon>`);
   console.log('  mipmap-anydpi-v26 — adaptive icon XMLs');
 
-  // Background color
   const valuesDir = join(ANDROID_RES, 'values');
   if (!existsSync(valuesDir)) mkdirSync(valuesDir, { recursive: true });
   writeFileSync(
