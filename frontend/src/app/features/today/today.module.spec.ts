@@ -427,6 +427,41 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       expect(component.readingSection).toBeNull();
     });
 
+    it('should render audio icon in journal section when notes exist', () => {
+      const toggle = fixture.nativeElement.querySelector('.journal-toggle');
+      const icon = toggle.querySelector('.audio-icon');
+      expect(icon).toBeTruthy();
+      expect(icon.getAttribute('name')).toBe('volume-high-outline');
+    });
+
+    it('should NOT render audio icon in journal section when notes is empty', () => {
+      component.notes = '';
+      fixture.detectChanges();
+      const toggle = fixture.nativeElement.querySelector('.journal-toggle');
+      const icon = toggle?.querySelector('.audio-icon');
+      expect(icon).toBeFalsy();
+    });
+
+    it('should call toggleRead with notes when journal audio icon clicked', () => {
+      const spy = jest.spyOn(component, 'toggleRead');
+      const toggle = fixture.nativeElement.querySelector('.journal-toggle');
+      const icon = toggle.querySelector('.audio-icon');
+      icon.click();
+      expect(spy).toHaveBeenCalledWith('notes');
+    });
+
+    it('should read notes text when toggleRead(\'notes\') is called', () => {
+      const speakSpy = jest.spyOn(component['ttsService'], 'speak');
+      component.toggleRead('notes');
+      expect(speakSpy).toHaveBeenCalledWith('My journal notes');
+    });
+
+    it('should not crash toggleRead(\'notes\') when notes is empty', () => {
+      component.notes = '';
+      component.toggleRead('notes');
+      expect(component.readingSection).toBeNull();
+    });
+
     it('should stop TTS on ionViewWillLeave', () => {
       const stopSpy = jest.spyOn(component['ttsService'], 'stop');
       component.ionViewWillLeave();
@@ -507,6 +542,44 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
         headerDiv.click();
         expect(stopSpy).toHaveBeenCalled();
         expect(component.readingSection).toBeNull();
+      });
+    });
+
+    describe('toggleNotes — collapse stops audio', () => {
+      it('should stop TTS and clear readingSection when collapsing journal with active notes audio', () => {
+        component.showNotes = true;
+        component.toggleRead('notes');
+        expect(component.readingSection).toBe('notes');
+        const stopSpy = jest.spyOn(component['ttsService'], 'stop');
+        component.toggleNotes();
+        expect(stopSpy).toHaveBeenCalled();
+        expect(component.readingSection).toBeNull();
+      });
+
+      it('should NOT stop TTS when collapsing journal with a different section active', () => {
+        component.showNotes = true;
+        component.toggleRead('bible');
+        const stopSpy = jest.spyOn(component['ttsService'], 'stop');
+        component.toggleNotes();
+        expect(stopSpy).not.toHaveBeenCalled();
+        expect(component.readingSection).toBe('bible');
+      });
+
+      it('should NOT stop TTS when expanding journal', () => {
+        component.showNotes = false;
+        component.toggleRead('notes');
+        const stopSpy = jest.spyOn(component['ttsService'], 'stop');
+        component.toggleNotes();
+        expect(stopSpy).not.toHaveBeenCalled();
+        expect(component.readingSection).toBe('notes');
+      });
+
+      it('should toggle showNotes', () => {
+        component.showNotes = true;
+        component.toggleNotes();
+        expect(component.showNotes).toBe(false);
+        component.toggleNotes();
+        expect(component.showNotes).toBe(true);
       });
     });
   });

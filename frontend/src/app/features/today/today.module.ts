@@ -188,11 +188,14 @@ interface BibleSection {
           <!-- Journal section -->
           @if (completed || notes) {
             <div class="journal-section">
-              <button class="journal-toggle" (click)="showNotes = !showNotes">
+              <button class="journal-toggle" (click)="toggleNotes()">
                 <ion-icon [name]="showNotes ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
                 <span>My Journal Notes</span>
                 @if (notes && !showNotes) {
                   <ion-note slot="end">Has notes</ion-note>
+                }
+                @if (notes) {
+                  <ion-icon [name]="readingSection === 'notes' ? 'volume-mute-outline' : 'volume-high-outline'" class="audio-icon" (click)="$event.stopPropagation(); toggleRead('notes')"></ion-icon>
                 }
               </button>
 
@@ -365,6 +368,9 @@ interface BibleSection {
       color: var(--ion-color-primary);
       flex-shrink: 0;
       padding: 4px;
+    }
+    @media print {
+      .audio-icon { display: none; }
     }
     .section-body {
       margin-top: 12px;
@@ -586,7 +592,7 @@ export class TodayPage {
     this.router.navigate(['/bible-verses'], { queryParams: { refs: encodeURIComponent(refs) } });
   }
 
-  toggleSection(section: 'bible' | 'primary' | 'secondary'): void {
+  toggleSection(section: 'bible' | 'primary' | 'secondary' | 'notes'): void {
     let wasExpanded: boolean;
     if (section === 'bible') {
       wasExpanded = this.bibleExpanded;
@@ -604,7 +610,16 @@ export class TodayPage {
     }
   }
 
-  toggleRead(section: 'bible' | 'primary' | 'secondary'): void {
+  toggleNotes(): void {
+    const wasExpanded = this.showNotes;
+    this.showNotes = !this.showNotes;
+    if (wasExpanded && this.readingSection === 'notes') {
+      this.ttsService.stop();
+      this.readingSection = null;
+    }
+  }
+
+  toggleRead(section: 'bible' | 'primary' | 'secondary' | 'notes'): void {
     if (this.readingSection === section) {
       this.ttsService.stop();
       this.readingSection = null;
@@ -620,6 +635,8 @@ export class TodayPage {
       text = this.getPlainText(this.detail?.fullTextPrimary);
     } else if (section === 'secondary') {
       text = this.getPlainText(this.detail?.fullTextSecondary);
+    } else if (section === 'notes') {
+      text = this.notes ?? '';
     }
 
     if (text) {
