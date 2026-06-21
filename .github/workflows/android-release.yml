@@ -135,6 +135,13 @@ jobs:
           name: android-apk-${{ github.ref_name }}-run${{ github.run_number }}
           path: apk-output/app-release.apk
 
+      - name: Tag release with commit count
+        if: github.ref_type == 'branch' && github.ref_name == 'main'
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          git tag v$COMMIT_COUNT
+          git push origin v$COMMIT_COUNT
+
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
