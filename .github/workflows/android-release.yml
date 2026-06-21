@@ -60,6 +60,7 @@ jobs:
           mkdir -p apk-output
           docker run --rm \
             -v ${{ github.workspace }}/frontend:/app/frontend \
+            -v ${{ github.workspace }}/assets:/app/assets \
             -v ${{ github.workspace }}/apk-output:/output \
             -v /tmp/encounter-daily-keystore.jks:/tmp/encounter-daily-keystore.jks:ro \
             -e API_URL=https://mg-encounter.com/api/v1 \
