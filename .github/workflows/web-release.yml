@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci --legacy-peer-deps
       - name: Run unit tests
-        run: cd frontend && npx jest --ci
+        run: cd frontend && npx jest --ci --testPathPattern="src/app/core/"
       - name: Run linting
         run: cd frontend && npx ng lint
 
@@ -61,7 +61,7 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm ci --legacy-peer-deps
       - name: Run integration tests
-        run: cd frontend && npx jest --ci --passWithNoTests
+        run: cd frontend && npx jest --ci --testPathPattern="src/app/features/"
 
   e2e-tests:
     needs: [backend-unit-tests, backend-integration-tests, frontend-unit-tests, frontend-integration-tests]

@@ -40,6 +40,7 @@ describe('BibleVersesPage', () => {
     };
 
     const mockLoggingService = {
+      info: jest.fn(),
       error: jest.fn()
     };
 
