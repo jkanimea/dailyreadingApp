@@ -1,4 +1,4 @@
-import { NgModule, Component, inject } from '@angular/core';
+import { NgModule, Component, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, ActivatedRoute, Router } from '@angular/router';
@@ -6,6 +6,7 @@ import { SharedModule } from '../../shared/shared.module';
 import { BibleService } from '../../core/services/bible.service';
 import { BibleLookupResponse } from '../../core/models/bible.model';
 import { LoggingService } from '../../core/services/logging.service';
+import { TtsService } from '../../core/services/tts.service';
 import { firstValueFrom } from 'rxjs';
 
 @Component({
@@ -43,21 +44,33 @@ import { firstValueFrom } from 'rxjs';
       @if (result && !loading) {
         <div class="ref-header">{{ result.reference }}</div>
 
-        @for (g of result.groups; track $index) {
-          <div class="verse-card">
-            <div class="verse-ref">{{ g.reference }}</div>
-            @for (v of g.verses; track $index) {
-              <div class="verse-text">{{ v.verse }} {{ v.text }}</div>
-            }
+        <!-- Bible verses toggle panel -->
+        <div class="section-card">
+          <div class="section-header" (click)="toggleSection()">
+            <ion-icon [name]="expanded ? 'chevron-up-outline' : 'chevron-down-outline'" class="section-chevron"></ion-icon>
+            <span class="section-header-title">Bible Reading</span>
+            <ion-icon [name]="readingSection === 'bible-verses' ? 'volume-mute-outline' : 'volume-high-outline'" class="audio-icon" (click)="$event.stopPropagation(); toggleRead()"></ion-icon>
           </div>
-        }
+          @if (expanded) {
+            <div class="section-body">
+              @for (g of result.groups; track $index) {
+                <div class="verse-card">
+                  <div class="verse-ref">{{ g.reference }}</div>
+                  @for (v of g.verses; track $index) {
+                    <div class="verse-text">{{ v.verse }} {{ v.text }}</div>
+                  }
+                </div>
+              }
 
-        @if (result.groups.length === 0) {
-          <div class="error-state">
-            <ion-icon name="alert-circle-outline" size="large" color="medium"></ion-icon>
-            <p>No verses found for this reference.</p>
-          </div>
-        }
+              @if (result.groups.length === 0) {
+                <div class="error-state">
+                  <ion-icon name="alert-circle-outline" size="large" color="medium"></ion-icon>
+                  <p>No verses found for this reference.</p>
+                </div>
+              }
+            </div>
+          }
+        </div>
       }
     </ion-content>
   `,
@@ -72,6 +85,44 @@ import { firstValueFrom } from 'rxjs';
       padding: 16px 0 12px;
       border-bottom: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
       margin-bottom: 16px;
+    }
+    .section-card {
+      background: var(--card-bg, var(--ion-background-color));
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      border: 1px solid var(--ion-color-step-150, rgba(0,0,0,0.06));
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .section-chevron {
+      font-size: 20px;
+      color: var(--ion-color-step-400, #bbb);
+      flex-shrink: 0;
+    }
+    .audio-icon {
+      margin-left: auto;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--ion-color-primary);
+      flex-shrink: 0;
+      padding: 4px;
+    }
+    @media print {
+      .audio-icon { display: none; }
+    }
+    .section-body {
+      margin-top: 12px;
+    }
+    .section-header-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--ion-color-primary);
     }
     .verse-card {
       background: var(--card-bg, var(--ion-background-color));
@@ -99,15 +150,18 @@ import { firstValueFrom } from 'rxjs';
     }
   `]
 })
-export class BibleVersesPage {
+export class BibleVersesPage implements OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private bibleService = inject(BibleService);
   private loggingService = inject(LoggingService);
+  private ttsService = inject(TtsService);
 
   result?: BibleLookupResponse;
   loading = false;
   error?: string;
+  expanded = true;
+  readingSection: string | null = null;
 
   async ionViewWillEnter(): Promise<void> {
     const refs = this.route.snapshot.queryParamMap.get('refs');
@@ -116,6 +170,49 @@ export class BibleVersesPage {
       return;
     }
     await this.loadVerses(decodeURIComponent(refs));
+  }
+
+  ionViewWillLeave(): void {
+    this.ttsService.stop();
+    this.readingSection = null;
+  }
+
+  ngOnDestroy(): void {
+    this.ttsService.stop();
+  }
+
+  toggleSection(): void {
+    const wasExpanded = this.expanded;
+    this.expanded = !this.expanded;
+    if (wasExpanded && this.readingSection === 'bible-verses') {
+      this.ttsService.stop();
+      this.readingSection = null;
+    }
+  }
+
+  toggleRead(): void {
+    if (this.readingSection === 'bible-verses') {
+      this.ttsService.stop();
+      this.readingSection = null;
+      return;
+    }
+    this.ttsService.stop();
+    this.expanded = true;
+    this.readingSection = 'bible-verses';
+
+    const text = this.getVersesText();
+    if (text) {
+      this.ttsService.speak(text);
+    } else {
+      this.readingSection = null;
+    }
+  }
+
+  private getVersesText(): string {
+    if (!this.result) return '';
+    return this.result.groups
+      .map(g => g.verses.map(v => `${v.verse} ${v.text}`).join('. '))
+      .join('. ');
   }
 
   private async loadVerses(refs: string): Promise<void> {
