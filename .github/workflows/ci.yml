@@ -3,7 +3,7 @@ name: CI Pipeline
 on:
   pull_request:
     branches: [main, develop]
-  workflow_call:
+  workflow_call: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
