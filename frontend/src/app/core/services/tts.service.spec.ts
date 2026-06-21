@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
 import { TtsService } from './tts.service';
 
 jest.mock('@capacitor-community/text-to-speech', () => ({
@@ -24,7 +25,7 @@ describe('TtsService', () => {
     mockStop.mockResolvedValue(undefined);
 
     TestBed.configureTestingModule({
-      providers: [TtsService],
+      providers: [TtsService, provideHttpClient()],
     });
     service = TestBed.inject(TtsService);
   });
