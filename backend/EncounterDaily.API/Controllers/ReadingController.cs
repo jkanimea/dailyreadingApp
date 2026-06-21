@@ -30,6 +30,11 @@ namespace EncounterDaily.API.Controllers
         [HttpGet("series/{seriesId}/today")]
         public async Task<ActionResult<DailyReadingDto>> GetToday(int seriesId, [FromQuery] int? month = null, [FromQuery] int? day = null)
         {
+            if (month.HasValue && (month < 1 || month > 12))
+                return BadRequest(new { message = "Month must be between 1 and 12." });
+            if (day.HasValue && (day < 1 || day > 31))
+                return BadRequest(new { message = "Day must be between 1 and 31." });
+
             try
             {
                 var result = await _readingService.GetTodayReadingAsync(seriesId, month, day);

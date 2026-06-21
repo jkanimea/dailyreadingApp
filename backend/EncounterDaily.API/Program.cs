@@ -43,8 +43,17 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+if (builder.Environment.IsEnvironment("IntegrationTest") || builder.Configuration.GetValue<bool>("UseInMemoryDatabase"))
+{
+    var dbName = builder.Configuration.GetValue<string>("InMemoryDatabaseName") ?? "EncounterDailyTest";
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseInMemoryDatabase(dbName));
+}
+else
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<AiSettings>(builder.Configuration.GetSection("Ai"));
@@ -197,9 +206,12 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await dbContext.Database.EnsureCreatedAsync();
-    await EnsureSchemaAsync(dbContext);
-    await SeedRolesAsync(dbContext);
-    await SeedDevUserAsync(dbContext);
+    if (!app.Environment.IsEnvironment("IntegrationTest"))
+    {
+        await EnsureSchemaAsync(dbContext);
+        await SeedRolesAsync(dbContext);
+        await SeedDevUserAsync(dbContext);
+    }
 }
 
 app.UseMiddleware<ExceptionMiddleware>();
