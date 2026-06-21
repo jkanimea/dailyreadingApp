@@ -53,7 +53,7 @@ import { SocialLogin } from '@capgo/capacitor-social-login';
           </div>
         }
 
-        <p class="version-text">v{{ version }}</p>
+        <p class="version-text">{{ version }}</p>
       </div>
 
       <div #gBtnHost class="g-btn-host" aria-hidden="true"></div>
