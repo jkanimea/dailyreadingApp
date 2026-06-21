@@ -123,9 +123,9 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
                       @if (seg.isRef) {
                         <span class="para-ref">{{ seg.text }}</span>
                       } @else if (seg.isBibleRef) {
-                        <span class="bible-ref" (click)="onBibleRefClick(seg.text)">{{ seg.text }}</span>
+                        <span class="bible-ref" [class.active-highlight]="segmentToGroup && segmentToGroup[$index] === activeProseGroup" (click)="onBibleRefClick(seg.text)">{{ seg.text }}</span>
                       } @else {
-                        <span>{{ seg.text }}</span>
+                        <span [class.active-highlight]="segmentToGroup && segmentToGroup[$index] === activeProseGroup">{{ seg.text }}</span>
                       }
                     }
                   </div>
@@ -153,9 +153,9 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
                         @if (seg.isRef) {
                           <span class="para-ref">{{ seg.text }}</span>
                         } @else if (seg.isBibleRef) {
-                          <span class="bible-ref" (click)="onBibleRefClick(seg.text)">{{ seg.text }}</span>
+                          <span class="bible-ref" [class.active-highlight]="segmentToGroup && segmentToGroup[$index] === activeProseGroup" (click)="onBibleRefClick(seg.text)">{{ seg.text }}</span>
                         } @else {
-                          <span>{{ seg.text }}</span>
+                          <span [class.active-highlight]="segmentToGroup && segmentToGroup[$index] === activeProseGroup">{{ seg.text }}</span>
                         }
                       }
                     </div>
@@ -475,6 +475,10 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
     .loading-block {
       border-radius: 12px;
     }
+    .active-highlight {
+      background: rgba(var(--ion-color-primary-rgb), 0.12);
+      border-radius: 3px;
+    }
   `]
 })
 export class ReadingDetailPage extends BaseReadingPageComponent implements OnDestroy {
@@ -501,11 +505,15 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   private notesDebounce?: ReturnType<typeof setTimeout>;
   readingSeen = false;
   readingSection: string | null = null;
+  activeProseGroup: number | null = null;
+  segmentToGroup: (number | null)[] | null = null;
+  private ttsStateSub: Subscription | null = null;
   @ViewChild('pageContent', { static: false }) content?: any;
 
   override ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     clearTimeout(this.notesDebounce);
+    this.ttsStateSub?.unsubscribe();
     this.ttsService.stop();
     super.ngOnDestroy();
   }
@@ -513,6 +521,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   ionViewWillLeave(): void {
     this.ttsService.stop();
     this.readingSection = null;
+    this.activeProseGroup = null;
+    this.segmentToGroup = null;
   }
 
   async toggleComplete(event: CustomEvent): Promise<void> {
@@ -590,6 +600,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     if (wasExpanded && this.readingSection === section) {
       this.ttsService.stop();
       this.readingSection = null;
+      this.activeProseGroup = null;
+      this.segmentToGroup = null;
     }
   }
 
@@ -599,6 +611,8 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     if (wasExpanded && this.readingSection === 'notes') {
       this.ttsService.stop();
       this.readingSection = null;
+      this.activeProseGroup = null;
+      this.segmentToGroup = null;
     }
   }
 
@@ -606,22 +620,46 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     if (this.readingSection === section) {
       this.ttsService.stop();
       this.readingSection = null;
+      this.activeProseGroup = null;
+      this.segmentToGroup = null;
       return;
     }
     this.ttsService.stop();
+    this.activeProseGroup = null;
+    this.segmentToGroup = null;
     if (section === 'bible') { this.bibleExpanded = true; }
     else if (section === 'primary') { this.egwExpanded = true; }
     else if (section === 'secondary') { this.secondaryExpanded = true; }
     else if (section === 'notes') { this.showNotes = true; }
     this.readingSection = section;
 
+    if (section === 'primary') {
+      const segments = this.getParagraphSegments(this.detail?.fullTextPrimary);
+      const { groups, segmentToGroup } = this.buildParagraphGroups(segments);
+      this.segmentToGroup = segmentToGroup;
+      if (groups.length > 0) {
+        this.ttsService.speakSegments(groups, (i) => this.activeProseGroup = i);
+      } else {
+        this.readingSection = null;
+      }
+      return;
+    }
+
+    if (section === 'secondary') {
+      const segments = this.getParagraphSegments(this.detail?.fullTextSecondary);
+      const { groups, segmentToGroup } = this.buildParagraphGroups(segments);
+      this.segmentToGroup = segmentToGroup;
+      if (groups.length > 0) {
+        this.ttsService.speakSegments(groups, (i) => this.activeProseGroup = i);
+      } else {
+        this.readingSection = null;
+      }
+      return;
+    }
+
     let text = '';
     if (section === 'bible') {
       text = this.detail?.fullTextBible ?? '';
-    } else if (section === 'primary') {
-      text = this.getPlainText(this.detail?.fullTextPrimary);
-    } else if (section === 'secondary') {
-      text = this.getPlainText(this.detail?.fullTextSecondary);
     } else if (section === 'notes') {
       text = this.notes ?? '';
     }
@@ -825,6 +863,36 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     return segments;
   }
 
+  buildParagraphGroups(segments: { text: string; isRef: boolean; isBibleRef: boolean }[]): { groups: string[]; segmentToGroup: (number | null)[] } {
+    const groups: string[] = [];
+    const segmentToGroup: (number | null)[] = [];
+    let currentGroupIndex: number | null = null;
+    let currentText = '';
+
+    for (const seg of segments) {
+      if (seg.isRef) {
+        const trimmed = currentText.replace(/\s+/g, ' ').trim();
+        if (trimmed) groups.push(trimmed);
+        segmentToGroup.push(null);
+        currentText = '';
+        currentGroupIndex = null;
+      } else if (seg.isBibleRef) {
+        segmentToGroup.push(currentGroupIndex);
+      } else {
+        if (currentGroupIndex === null) {
+          currentGroupIndex = groups.length;
+        }
+        currentText += seg.text;
+        segmentToGroup.push(currentGroupIndex);
+      }
+    }
+
+    const trimmed = currentText.replace(/\s+/g, ' ').trim();
+    if (trimmed) groups.push(trimmed);
+
+    return { groups, segmentToGroup };
+  }
+
   async onBibleTranslationChange(event: CustomEvent): Promise<void> {
     const t = event.detail.value as BibleTranslation;
     this.translation = t;
@@ -850,6 +918,15 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
 
   protected async load(): Promise<void> {
     this.translation = this.prefs.getTranslation();
+    if (!this.ttsStateSub) {
+      this.ttsStateSub = this.ttsService.state$.subscribe(state => {
+        if (state === 'idle') {
+          this.readingSection = null;
+          this.activeProseGroup = null;
+          this.segmentToGroup = null;
+        }
+      });
+    }
     this.routeSub?.unsubscribe();
     this.routeSub = this.route.paramMap.subscribe(async params => {
       const id = Number(params.get('id'));

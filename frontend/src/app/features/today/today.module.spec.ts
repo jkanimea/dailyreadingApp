@@ -58,20 +58,6 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       ]
     }).compileComponents();
 
-    // Mock SpeechSynthesis for TtsService
-    class MockUtterance {
-      text: string;
-      rate = 1; pitch = 1; volume = 1;
-      onstart: any = null; onend: any = null; onerror: any = null;
-      onpause: any = null; onresume: any = null;
-      constructor(text: string) { this.text = text; }
-    }
-    (globalThis as any).SpeechSynthesisUtterance = MockUtterance;
-    Object.defineProperty(window, 'speechSynthesis', {
-      value: { speak: jest.fn(), cancel: jest.fn(), pause: jest.fn(), resume: jest.fn() },
-      configurable: true, writable: true,
-    });
-
     fixture = TestBed.createComponent(TodayPage);
     component = fixture.componentInstance;
     // loadToday() fires in constructor via seriesId$ — reset its side-effects
@@ -402,16 +388,22 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       expect(speakSpy).toHaveBeenCalledWith('In the beginning God created the heavens and the earth.');
     });
 
-    it('should read EGW text without ref markers when toggleRead(\'primary\') is called', () => {
-      const speakSpy = jest.spyOn(component['ttsService'], 'speak');
+    it('should read EGW text as segmented groups when toggleRead(\'primary\') is called', () => {
+      const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
       component.toggleRead('primary');
-      expect(speakSpy).toHaveBeenCalledWith('Read for context. Extra text.');
+      expect(speakSegmentsSpy).toHaveBeenCalledWith(
+        ['Read for context.', 'Extra text.'],
+        expect.any(Function)
+      );
     });
 
-    it('should read companion text without refs when toggleRead(\'secondary\') is called', () => {
-      const speakSpy = jest.spyOn(component['ttsService'], 'speak');
+    it('should read companion text as segmented groups when toggleRead(\'secondary\') is called', () => {
+      const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
       component.toggleRead('secondary');
-      expect(speakSpy).toHaveBeenCalledWith('Another passage.');
+      expect(speakSegmentsSpy).toHaveBeenCalledWith(
+        ['Another passage.'],
+        expect.any(Function)
+      );
     });
 
     it('should stop TTS and clear readingSection when clicking active section again', () => {
@@ -425,6 +417,54 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       component.detail = { ...mockDetail, fullTextBible: '' };
       component.toggleRead('bible');
       expect(component.readingSection).toBeNull();
+    });
+
+    describe('buildParagraphGroups', () => {
+      it('should group consecutive prose segments with refs as boundaries', () => {
+        const segments = component.getParagraphSegments('Some text [1.1] more text');
+        const { groups, segmentToGroup } = component.buildParagraphGroups(segments);
+        expect(groups).toEqual(['Some text', 'more text']);
+        expect(segmentToGroup).toEqual([0, null, 1]);
+      });
+
+      it('should exclude Bible ref text from group text', () => {
+        const segments = component.getParagraphSegments('See John 3:16 for context');
+        const { groups, segmentToGroup } = component.buildParagraphGroups(segments);
+        expect(groups).toEqual(['See for context']);
+        expect(segmentToGroup).toEqual([0, 0, 0]);
+      });
+
+      it('should assign prose group to Bible refs embedded within prose', () => {
+        const segments = component.getParagraphSegments('Read John 3:16 here [1.1] more');
+        const { groups, segmentToGroup } = component.buildParagraphGroups(segments);
+        expect(groups).toEqual(['Read here', 'more']);
+        expect(segmentToGroup).toEqual([0, 0, 0, null, 1]);
+      });
+    });
+
+    describe('highlight class', () => {
+      beforeEach(() => {
+        component.detail = { ...mockDetail, fullTextPrimary: 'First paragraph [1.1] Second paragraph' };
+        component.egwExpanded = true;
+      });
+
+      it('should set segmentToGroup on toggleRead(\'primary\')', () => {
+        component.toggleRead('primary');
+        expect(component.segmentToGroup).toEqual([0, null, 1]);
+      });
+
+      it('should update activeProseGroup via onGroup callback', () => {
+        const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
+        component.toggleRead('primary');
+        const onGroup = speakSegmentsSpy.mock.calls[0][1];
+        expect(onGroup).toBeInstanceOf(Function);
+
+        (onGroup as (i: number) => void)(0);
+        expect(component.activeProseGroup).toBe(0);
+
+        (onGroup as (i: number) => void)(1);
+        expect(component.activeProseGroup).toBe(1);
+      });
     });
 
     it('should render audio icon in journal section when notes exist', () => {
