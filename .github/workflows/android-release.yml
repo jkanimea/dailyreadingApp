@@ -135,12 +135,18 @@ jobs:
           name: android-apk-${{ github.ref_name }}-run${{ github.run_number }}
           path: apk-output/app-release.apk
 
-      - name: Tag release with commit count
+      - name: Tag release with next version number
         if: github.ref_type == 'branch' && github.ref_name == 'main'
         run: |
-          COMMIT_COUNT=$(git rev-list --count HEAD)
-          git tag v$COMMIT_COUNT
-          git push origin v$COMMIT_COUNT
+          LATEST=$(git tag --list 'v1.0.*' --sort=-version:refname | head -1)
+          if [ -z "$LATEST" ]; then
+            NEXT="v1.0.1"
+          else
+            NUM=$(echo "$LATEST" | sed 's/^v1\.0\.//')
+            NEXT="v1.0.$((NUM + 1))"
+          fi
+          git tag "$NEXT"
+          git push origin "$NEXT"
 
       - uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
