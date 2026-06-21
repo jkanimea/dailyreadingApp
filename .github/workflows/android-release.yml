@@ -36,8 +36,36 @@ jobs:
       - name: Run integration tests
         run: dotnet test backend/ --filter "Category=Integration" --no-restore --verbosity normal
 
+  frontend-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+      - name: Install dependencies
+        run: cd frontend && npm ci --legacy-peer-deps
+      - name: Run unit tests
+        run: cd frontend && npx jest --ci
+      - name: Run linting
+        run: cd frontend && npx ng lint
+
+  frontend-integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+      - name: Install dependencies
+        run: cd frontend && npm ci --legacy-peer-deps
+      - name: Run integration tests
+        run: cd frontend && npx jest --ci --passWithNoTests
+
   build:
-    needs: [backend-unit-tests, backend-integration-tests]
+    needs: [backend-unit-tests, backend-integration-tests, frontend-unit-tests, frontend-integration-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
