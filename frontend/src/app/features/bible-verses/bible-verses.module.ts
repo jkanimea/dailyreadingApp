@@ -1,4 +1,4 @@
-import { NgModule, Component, OnDestroy, ViewChild, inject, ChangeDetectorRef, NgZone } from '@angular/core';
+import { NgModule, Component, OnDestroy, ViewChild, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, ActivatedRoute, Router } from '@angular/router';
@@ -167,8 +167,6 @@ export class BibleVersesPage implements OnDestroy {
   private loggingService = inject(LoggingService);
   private ttsService = inject(TtsService);
   private cdr = inject(ChangeDetectorRef);
-  private ngZone = inject(NgZone);
-
   result?: BibleLookupResponse;
   loading = false;
   error?: string;
@@ -182,18 +180,19 @@ export class BibleVersesPage implements OnDestroy {
   private scrollToActiveHighlight(): void {
     if (!this.content) return;
     this.cdr.detectChanges();
-    this.ngZone.runOutsideAngular(() => {
-      setTimeout(async () => {
-        try {
-          const scrollEl = await this.content.getScrollElement();
-          const targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
-          if (targetEl) {
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        } catch {
-          /* ignore */
+    requestAnimationFrame(async () => {
+      try {
+        const scrollEl = await this.content.getScrollElement();
+        const targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
+        if (targetEl) {
+          const rect = targetEl.getBoundingClientRect();
+          const contentRect = scrollEl.getBoundingClientRect();
+          const offsetY = rect.top - contentRect.top + scrollEl.scrollTop - contentRect.height * 0.35;
+          await this.content.scrollToPoint(0, Math.max(0, offsetY), 200);
         }
-      }, 100);
+      } catch {
+        /* ignore */
+      }
     });
   }
 
