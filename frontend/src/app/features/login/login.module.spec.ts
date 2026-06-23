@@ -78,6 +78,15 @@ describe('LoginPage', () => {
     delete (window as any).FB;
   });
 
+  // ─── Version ──────────────────────────────────────────────────────────────
+
+  it('should render the current app version on the login page', () => {
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement.querySelector('.version-text');
+    expect(el).not.toBeNull();
+    expect(el.textContent?.trim()).toMatch(/^v\d+$/);
+  });
+
   // ─── Guest ────────────────────────────────────────────────────────────────
 
   describe('continueAsGuest', () => {
