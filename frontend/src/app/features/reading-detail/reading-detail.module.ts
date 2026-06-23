@@ -476,7 +476,7 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
       border-radius: 12px;
     }
     .active-highlight {
-      background: rgba(var(--ion-color-primary-rgb), 0.12);
+      background: var(--active-highlight-bg, rgba(var(--ion-color-primary-rgb), 0.12));
       border-radius: 3px;
     }
   `]
@@ -551,6 +551,28 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     } catch (e: unknown) {
       this.loggingService.error('ReadingDetailPage', 'notifyContentFit', String(e));
     }
+  }
+
+  private scrollToActiveHighlight(): void {
+    if (!this.content) return;
+    setTimeout(async () => {
+      try {
+        const scrollEl = await this.content.getScrollElement();
+        let targetEl: HTMLElement | null = null;
+        if (this.readingSection === 'primary' || this.readingSection === 'secondary') {
+          targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
+        } else if (this.readingSection === 'bible') {
+          targetEl = scrollEl.querySelector('.section-card .bible-text') as HTMLElement | null;
+        } else if (this.readingSection === 'notes') {
+          targetEl = scrollEl.querySelector('.journal-section') as HTMLElement | null;
+        }
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 50);
   }
 
   onReadingScroll(_event: CustomEvent): void {
@@ -638,7 +660,10 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
       const { groups, segmentToGroup } = this.buildParagraphGroups(segments);
       this.segmentToGroup = segmentToGroup;
       if (groups.length > 0) {
-        this.ttsService.speakSegments(groups, (i) => this.activeProseGroup = i);
+        this.ttsService.speakSegments(groups, (i) => {
+          this.activeProseGroup = i;
+          this.scrollToActiveHighlight();
+        });
       } else {
         this.readingSection = null;
       }
@@ -650,7 +675,10 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
       const { groups, segmentToGroup } = this.buildParagraphGroups(segments);
       this.segmentToGroup = segmentToGroup;
       if (groups.length > 0) {
-        this.ttsService.speakSegments(groups, (i) => this.activeProseGroup = i);
+        this.ttsService.speakSegments(groups, (i) => {
+          this.activeProseGroup = i;
+          this.scrollToActiveHighlight();
+        });
       } else {
         this.readingSection = null;
       }
@@ -666,6 +694,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
 
     if (text) {
       this.ttsService.speak(text);
+      this.scrollToActiveHighlight();
     } else {
       this.readingSection = null;
     }

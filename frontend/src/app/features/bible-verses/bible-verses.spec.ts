@@ -168,6 +168,21 @@ describe('BibleVersesPage', () => {
       component.toggleRead();
       expect(component.readingSection).toBeNull();
     });
+
+    it('should call scrollToActiveSection when reading starts', () => {
+      component.result = mockResult;
+      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveSection');
+      component.toggleRead();
+      expect(scrollSpy).toHaveBeenCalled();
+    });
+
+    it('should not call scrollToActiveSection when stopping reading', () => {
+      component.result = mockResult;
+      component.toggleRead();
+      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveSection');
+      component.toggleRead();
+      expect(scrollSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('ionViewWillLeave', () => {

@@ -419,6 +419,40 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       expect(component.readingSection).toBeNull();
     });
 
+    it('should call scrollToActiveHighlight when reading bible section', () => {
+      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+      component.toggleRead('bible');
+      expect(scrollSpy).toHaveBeenCalled();
+    });
+
+    it('should call scrollToActiveHighlight when reading notes section', () => {
+      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+      component.toggleRead('notes');
+      expect(scrollSpy).toHaveBeenCalled();
+    });
+
+    it('should use CSS variable for active-highlight background', () => {
+      fixture.detectChanges();
+      let found = false;
+      for (let i = 0; i < document.styleSheets.length; i++) {
+        const sheet = document.styleSheets[i];
+        try {
+          const rules = sheet.cssRules || sheet.rules;
+          if (rules) {
+            for (let j = 0; j < rules.length; j++) {
+              const rule = rules[j] as CSSStyleRule;
+              if (rule.selectorText?.includes('.active-highlight')) {
+                expect(rule.style.background).toContain('var(--active-highlight-bg');
+                found = true;
+                break;
+              }
+            }
+          }
+        } catch { /* cross-origin style sheets */ }
+        if (found) break;
+      }
+    });
+
     describe('buildParagraphGroups', () => {
       it('should group consecutive prose segments with refs as boundaries', () => {
         const segments = component.getParagraphSegments('Some text [1.1] more text');
@@ -464,6 +498,26 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
 
         (onGroup as (i: number) => void)(1);
         expect(component.activeProseGroup).toBe(1);
+      });
+
+      it('should call scrollToActiveHighlight when onGroup callback fires for primary', () => {
+        const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+        const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
+        component.toggleRead('primary');
+        const onGroup = speakSegmentsSpy.mock.calls[0][1];
+        (onGroup as (i: number) => void)(0);
+        expect(scrollSpy).toHaveBeenCalled();
+      });
+
+      it('should call scrollToActiveHighlight when onGroup callback fires for secondary', () => {
+        component.detail = { ...mockDetail, fullTextPrimary: 'First paragraph [1.1] Second paragraph', fullTextSecondary: 'Another passage.' };
+        component.secondaryExpanded = true;
+        const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+        const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
+        component.toggleRead('secondary');
+        const onGroup = speakSegmentsSpy.mock.calls[0][1];
+        (onGroup as (i: number) => void)(0);
+        expect(scrollSpy).toHaveBeenCalled();
       });
     });
 

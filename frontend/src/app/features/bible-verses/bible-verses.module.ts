@@ -1,4 +1,4 @@
-import { NgModule, Component, OnDestroy, inject } from '@angular/core';
+import { NgModule, Component, OnDestroy, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, ActivatedRoute, Router } from '@angular/router';
@@ -25,7 +25,7 @@ import { firstValueFrom } from 'rxjs';
       </ion-toolbar>
     </ion-header>
 
-    <ion-content class="ion-padding">
+    <ion-content #pageContent class="ion-padding">
       @if (loading) {
         <div style="padding: 8px;">
           <div class="skeleton-shimmer" style="width:60%;height:16px;border-radius:8px;margin-bottom:12px;"></div>
@@ -162,6 +162,22 @@ export class BibleVersesPage implements OnDestroy {
   error?: string;
   expanded = true;
   readingSection: string | null = null;
+  @ViewChild('pageContent', { static: false }) content?: any;
+
+  private scrollToActiveSection(): void {
+    if (!this.content) return;
+    setTimeout(async () => {
+      try {
+        const scrollEl = await this.content.getScrollElement();
+        const targetEl = scrollEl.querySelector('.section-card') as HTMLElement | null;
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 50);
+  }
 
   async ionViewWillEnter(): Promise<void> {
     const refs = this.route.snapshot.queryParamMap.get('refs');
@@ -203,6 +219,7 @@ export class BibleVersesPage implements OnDestroy {
     const text = this.getVersesText();
     if (text) {
       this.ttsService.speak(text);
+      this.scrollToActiveSection();
     } else {
       this.readingSection = null;
     }

@@ -2,7 +2,7 @@ import { NgModule, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
@@ -44,7 +44,7 @@ interface BibleSection {
         </ion-buttons>
       </ion-toolbar>
     </ion-header>
-    <ion-content class="ion-padding">
+    <ion-content #pageContent class="ion-padding">
       @if (loading) {
         <div class="skeleton-container">
           <div class="skeleton-shimmer loading-line" style="width:60%;height:16px;"></div>
@@ -486,7 +486,7 @@ interface BibleSection {
       line-height: 1.5;
     }
     .active-highlight {
-      background: rgba(var(--ion-color-primary-rgb), 0.12);
+      background: var(--active-highlight-bg, rgba(var(--ion-color-primary-rgb), 0.12));
       border-radius: 3px;
     }
   `]
@@ -535,6 +535,29 @@ export class TodayPage {
   private seriesId = 1;
   private readingId = 0;
   private monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  @ViewChild('pageContent', { static: false }) content?: any;
+
+  private scrollToActiveHighlight(): void {
+    if (!this.content) return;
+    setTimeout(async () => {
+      try {
+        const scrollEl = await this.content.getScrollElement();
+        let targetEl: HTMLElement | null = null;
+        if (this.readingSection === 'primary' || this.readingSection === 'secondary') {
+          targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
+        } else if (this.readingSection === 'bible') {
+          targetEl = scrollEl.querySelector('.section-card .bible-text') as HTMLElement | null;
+        } else if (this.readingSection === 'notes') {
+          targetEl = scrollEl.querySelector('.journal-section') as HTMLElement | null;
+        }
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      } catch {
+        /* ignore */
+      }
+    }, 50);
+  }
 
   get bibleSections(): BibleSection[] {
     const text = this.detail?.fullTextBible;
@@ -660,7 +683,10 @@ export class TodayPage {
       const { groups, segmentToGroup } = this.buildParagraphGroups(segments);
       this.segmentToGroup = segmentToGroup;
       if (groups.length > 0) {
-        this.ttsService.speakSegments(groups, (i) => this.activeProseGroup = i);
+        this.ttsService.speakSegments(groups, (i) => {
+          this.activeProseGroup = i;
+          this.scrollToActiveHighlight();
+        });
       } else {
         this.readingSection = null;
       }
@@ -672,7 +698,10 @@ export class TodayPage {
       const { groups, segmentToGroup } = this.buildParagraphGroups(segments);
       this.segmentToGroup = segmentToGroup;
       if (groups.length > 0) {
-        this.ttsService.speakSegments(groups, (i) => this.activeProseGroup = i);
+        this.ttsService.speakSegments(groups, (i) => {
+          this.activeProseGroup = i;
+          this.scrollToActiveHighlight();
+        });
       } else {
         this.readingSection = null;
       }
@@ -688,6 +717,7 @@ export class TodayPage {
 
     if (text) {
       this.ttsService.speak(text);
+      this.scrollToActiveHighlight();
     } else {
       this.readingSection = null;
     }

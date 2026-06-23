@@ -357,6 +357,24 @@ describe('ReadingDetailPage', () => {
       (onGroup as (i: number) => void)(1);
       expect(component.activeProseGroup).toBe(1);
     });
+
+    it('should call scrollToActiveHighlight when onGroup callback fires', () => {
+      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+      const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
+      component.toggleRead('primary');
+      const onGroup = speakSegmentsSpy.mock.calls[0][1];
+      (onGroup as (i: number) => void)(0);
+      expect(scrollSpy).toHaveBeenCalled();
+    });
+
+    it('should call scrollToActiveHighlight for secondary reading when onGroup fires', () => {
+      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+      const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
+      component.toggleRead('secondary');
+      const onGroup = speakSegmentsSpy.mock.calls[0][1];
+      (onGroup as (i: number) => void)(0);
+      expect(scrollSpy).toHaveBeenCalled();
+    });
   });
 
   describe('onBibleRefClick', () => {
@@ -912,6 +930,41 @@ describe('ReadingDetailPage', () => {
         component.detail = { ...mockDetail, fullTextBible: '' };
         component.toggleRead('bible');
         expect(component.readingSection).toBeNull();
+      });
+
+      it('should call scrollToActiveHighlight when reading bible section', () => {
+        const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+        component.toggleRead('bible');
+        expect(scrollSpy).toHaveBeenCalled();
+      });
+
+      it('should call scrollToActiveHighlight when reading notes section', () => {
+        const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+        component.toggleRead('notes');
+        expect(scrollSpy).toHaveBeenCalled();
+      });
+
+      it('should use CSS variable for active-highlight background', () => {
+        fixture.detectChanges();
+        const styleSheet = document.styleSheets[0];
+        let found = false;
+        for (let i = 0; i < document.styleSheets.length; i++) {
+          const sheet = document.styleSheets[i];
+          try {
+            const rules = sheet.cssRules || sheet.rules;
+            if (rules) {
+              for (let j = 0; j < rules.length; j++) {
+                const rule = rules[j] as CSSStyleRule;
+                if (rule.selectorText?.includes('.active-highlight')) {
+                  expect(rule.style.background).toContain('var(--active-highlight-bg');
+                  found = true;
+                  break;
+                }
+              }
+            }
+          } catch { /* cross-origin style sheets */ }
+          if (found) break;
+        }
       });
 
       it('should stop TTS on ionViewWillLeave', () => {
