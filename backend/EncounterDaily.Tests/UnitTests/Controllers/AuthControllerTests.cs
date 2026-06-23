@@ -183,5 +183,65 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
             var attr = method?.GetCustomAttribute<AuthorizeAttribute>();
             attr.Should().NotBeNull();
         }
+
+        // ─── Regression: full TokenResponse must be returned so the frontend
+        //            has tokens to store and a user to react to. The frontend
+        //            login page depends on receiving a non-null body on 2xx. ───
+
+        [Fact]
+        public async Task LoginWithGoogle_ShouldReturnTokenResponse_WithAllRequiredFields()
+        {
+            var response = new TokenResponse
+            {
+                AccessToken = "google-access",
+                RefreshToken = "google-refresh",
+                ExpiresIn = 900,
+                User = new UserDto { Id = 7, Email = "google@b.com", DisplayName = "Google User" }
+            };
+            _mockService.Setup(s => s.LoginWithGoogleAsync("good-token")).ReturnsAsync(response);
+
+            var result = await _controller.LoginWithGoogle(new LoginRequest { IdToken = "good-token" });
+
+            var okResult = result.Result as OkObjectResult;
+            okResult.Should().NotBeNull();
+            okResult!.StatusCode.Should().Be(200);
+            okResult.Value.Should().NotBeNull("frontend relies on a non-null body to call storeTokens and navigate");
+
+            var body = okResult.Value as TokenResponse;
+            body.Should().NotBeNull();
+            body!.AccessToken.Should().Be("google-access");
+            body.RefreshToken.Should().Be("google-refresh");
+            body.User.Should().NotBeNull();
+            body.User!.Email.Should().Be("google@b.com");
+            body.User.Id.Should().Be(7);
+        }
+
+        [Fact]
+        public async Task LoginWithFacebook_ShouldReturnTokenResponse_WithAllRequiredFields()
+        {
+            var response = new TokenResponse
+            {
+                AccessToken = "fb-access",
+                RefreshToken = "fb-refresh",
+                ExpiresIn = 900,
+                User = new UserDto { Id = 8, Email = "fb@b.com", DisplayName = "FB User" }
+            };
+            _mockService.Setup(s => s.LoginWithFacebookAsync("good-fb-token")).ReturnsAsync(response);
+
+            var result = await _controller.LoginWithFacebook(new LoginRequest { IdToken = "good-fb-token" });
+
+            var okResult = result.Result as OkObjectResult;
+            okResult.Should().NotBeNull();
+            okResult!.StatusCode.Should().Be(200);
+            okResult.Value.Should().NotBeNull("frontend relies on a non-null body to call storeTokens and navigate");
+
+            var body = okResult.Value as TokenResponse;
+            body.Should().NotBeNull();
+            body!.AccessToken.Should().Be("fb-access");
+            body.RefreshToken.Should().Be("fb-refresh");
+            body.User.Should().NotBeNull();
+            body.User!.Email.Should().Be("fb@b.com");
+            body.User.Id.Should().Be(8);
+        }
     }
 }

@@ -7,7 +7,7 @@ API_URL="${API_URL:-https://mg-encounter.com/api/v1}"
 
 if [ ! -d "$FRONTEND_DIR" ]; then
     echo "ERROR: Mount frontend directory to /app/frontend"
-    echo "Usage: podman run --rm -v ./frontend:/app/frontend:ro -v ./output:/output"
+    echo "Usage: podman run --rm -v ./frontend:/app/frontend -v ./output:/output"
     echo "    localhost/encounter-daily-android-builder"
     exit 1
 fi
@@ -126,6 +126,27 @@ android {
 }
 GRADLE
     echo "apply from: '../signing.gradle'" >> android/app/build.gradle
+fi
+
+# Patch Facebook OAuth intent filter into AndroidManifest.xml
+MANIFEST="android/app/src/main/AndroidManifest.xml"
+if [ -f "$MANIFEST" ] && ! grep -q 'fb1510105297476514' "$MANIFEST" 2>/dev/null; then
+    node -e "
+const fs = require('fs');
+const xml = fs.readFileSync('$MANIFEST', 'utf8');
+const updated = xml.replace(
+    /(<activity\\b[^>]*?>[\\s\\S]*?<\\/intent-filter>)(\\s*<\\/activity>)/,
+    (_, before, after) => before + \`
+        <intent-filter>
+            <action android:name=\"android.intent.action.VIEW\" />
+            <category android:name=\"android.intent.category.DEFAULT\" />
+            <category android:name=\"android.intent.category.BROWSABLE\" />
+            <data android:scheme=\"fb1510105297476514\" />
+        </intent-filter>\` + after
+);
+fs.writeFileSync('$MANIFEST', updated, 'utf8');
+"
+    echo "Facebook intent filter patched into AndroidManifest.xml"
 fi
 
 # Build APK

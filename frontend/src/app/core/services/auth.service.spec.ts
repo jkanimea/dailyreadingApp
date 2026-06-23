@@ -158,6 +158,17 @@ describe('AuthService', () => {
       await service.storeTokens(responseWithoutUser);
       expect(service.currentUser).toBeNull();
     });
+
+    it('storeTokens should be a no-op when response is null (empty 200 body)', async () => {
+      await service.storeTokens(null);
+      expect(secureStorage.setTokens).not.toHaveBeenCalled();
+      expect(service.currentUser).toBeNull();
+    });
+
+    it('storeTokens should be a no-op when response has no accessToken', async () => {
+      await service.storeTokens({ refreshToken: 'rt', expiresIn: 60 } as any);
+      expect(secureStorage.setTokens).not.toHaveBeenCalled();
+    });
   });
 
   describe('isGuest', () => {

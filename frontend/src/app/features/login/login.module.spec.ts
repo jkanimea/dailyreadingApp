@@ -190,6 +190,37 @@ describe('LoginPage', () => {
         expect.objectContaining({ type: 'standard', size: 'large' })
       );
     });
+
+    // ─── Regression: null/undefined backend response must still redirect ───
+    // Bug: a falsy response from authService.login silently skipped the redirect,
+    // stranding the user on /login. The fix is to navigate unconditionally on 2xx
+    // and let storeTokens be a no-op on a null body.
+
+    it('should still navigate to /series when backend returns null', async () => {
+      authService.login.mockReturnValue(of(null as any));
+
+      const p = component.loginWithGoogle();
+      googleCredentialCallback({ credential: 'google-id-token' });
+      await p;
+
+      expect(authService.login).toHaveBeenCalledWith('google', 'google-id-token');
+      expect(authService.storeTokens).toHaveBeenCalledWith(null);
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+      expect(component.loading).toBe(false);
+      expect(component.error).toBeUndefined();
+    });
+
+    it('should still navigate to /series when backend returns undefined', async () => {
+      authService.login.mockReturnValue(of(undefined as any));
+
+      const p = component.loginWithGoogle();
+      googleCredentialCallback({ credential: 'google-id-token' });
+      await p;
+
+      expect(authService.storeTokens).toHaveBeenCalledWith(undefined);
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+      expect(component.error).toBeUndefined();
+    });
   });
 
   // ─── Facebook ─────────────────────────────────────────────────────────────
@@ -282,6 +313,42 @@ describe('LoginPage', () => {
       expect(component.loading).toBe(true);
       await p;
       expect(component.loading).toBe(false);
+    });
+
+    // ─── Regression: null/undefined backend response must still redirect ───
+    // Same bug as loginWithGoogle — the `if (res)` guard skipped navigation when
+    // the backend returned an empty body, stranding the user on /login.
+
+    it('should still navigate to /series when backend returns null', async () => {
+      (window as any).FB = {
+        login: jest.fn().mockImplementation((cb: any) => {
+          cb({ authResponse: { accessToken: 'fb-access-token' } });
+        })
+      };
+      authService.login.mockReturnValue(of(null as any));
+
+      await component.loginWithFacebook();
+
+      expect(authService.login).toHaveBeenCalledWith('facebook', 'fb-access-token');
+      expect(authService.storeTokens).toHaveBeenCalledWith(null);
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+      expect(component.loading).toBe(false);
+      expect(component.error).toBeUndefined();
+    });
+
+    it('should still navigate to /series when backend returns undefined', async () => {
+      (window as any).FB = {
+        login: jest.fn().mockImplementation((cb: any) => {
+          cb({ authResponse: { accessToken: 'fb-access-token' } });
+        })
+      };
+      authService.login.mockReturnValue(of(undefined as any));
+
+      await component.loginWithFacebook();
+
+      expect(authService.storeTokens).toHaveBeenCalledWith(undefined);
+      expect(router.navigate).toHaveBeenCalledWith(['/series']);
+      expect(component.error).toBeUndefined();
     });
   });
 

@@ -346,10 +346,12 @@ export class LoginPage implements OnDestroy {
       }
 
       const res = await firstValueFrom(this.authService.login('google', credential));
-      if (res) {
-        await this.authService.storeTokens(res);
-        this.router.navigate(['/series']);
-      }
+      // Navigate unconditionally on a 2xx response — the backend only returns 200 when
+      // the credential was valid. storeTokens is null-safe and a no-op on an empty body,
+      // so the user lands on /series either way (auth guard will bounce back to login
+      // if no token was actually stored).
+      await this.authService.storeTokens(res);
+      this.router.navigate(['/series']);
     } catch (e) {
       this.loggingService.error('LoginPage', 'loginWithGoogle', String(e));
       this.error = e instanceof Error ? e.message : 'Google sign-in failed.';
@@ -367,7 +369,7 @@ export class LoginPage implements OnDestroy {
       if (Capacitor.isNativePlatform()) {
         // Native Android/iOS — use @capgo/capacitor-social-login
         if (!this.socialLoginInitialized) await this.initSocialLogin();
-        const res = await SocialLogin.login({ provider: 'facebook', options: { permissions: ['public_profile'] } });
+        const res = await SocialLogin.login({ provider: 'facebook', options: { permissions: ['public_profile', 'email'] } });
         const token = res.result.accessToken?.token;
         if (!token) throw new Error('Facebook sign-in failed — no access token.');
         credential = token;
@@ -391,10 +393,10 @@ export class LoginPage implements OnDestroy {
       }
 
       const res = await firstValueFrom(this.authService.login('facebook', credential));
-      if (res) {
-        await this.authService.storeTokens(res);
-        this.router.navigate(['/series']);
-      }
+      // See loginWithGoogle — navigate unconditionally so the user isn't stranded on
+      // the login screen if the backend returns an empty body.
+      await this.authService.storeTokens(res);
+      this.router.navigate(['/series']);
     } catch (e) {
       this.loggingService.error('LoginPage', 'loginWithFacebook', String(e));
       this.error = e instanceof Error ? e.message : 'Facebook sign-in failed.';

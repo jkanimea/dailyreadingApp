@@ -101,8 +101,12 @@ export class AuthService {
     return !token || token.startsWith('guest-');
   }
 
-  async storeTokens(response: TokenResponse): Promise<void> {
+  async storeTokens(response: TokenResponse | null | undefined): Promise<void> {
     this.clearRoleCache();
+    // Tolerate empty bodies — a 200 with no payload should not throw during login.
+    // The auth guard will redirect the user back to /login on the next navigation
+    // if no token was actually persisted.
+    if (!response?.accessToken) return;
     await this.secureStorage.setTokens(response.accessToken, response.refreshToken);
     this._user$.next(response.user ?? null);
   }
