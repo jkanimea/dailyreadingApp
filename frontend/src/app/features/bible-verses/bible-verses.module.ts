@@ -53,11 +53,11 @@ import { firstValueFrom, Subscription } from 'rxjs';
           </div>
           @if (expanded) {
             <div class="section-body">
-              @for (g of result.groups; track $index) {
-                <div class="verse-card" [class.active-highlight]="activeProseGroup === $index">
+              @for (g of result.groups; track $index; let gIdx = $index) {
+                <div class="verse-card">
                   <div class="verse-ref">{{ g.reference }}</div>
-                  @for (v of g.verses; track $index) {
-                    <div class="verse-text">{{ v.verse }} {{ v.text }}</div>
+                  @for (v of g.verses; track $index; let vIdx = $index) {
+                    <div class="verse-text" [class.active-highlight]="verseFlatIndex[gIdx] !== undefined && verseFlatIndex[gIdx][vIdx] === activeProseGroup">{{ v.verse }} {{ v.text }}</div>
                   }
                 </div>
               }
@@ -151,6 +151,12 @@ import { firstValueFrom, Subscription } from 'rxjs';
     .active-highlight {
       background: var(--active-highlight-bg, rgba(var(--ion-color-primary-rgb), 0.12));
       border-radius: 6px;
+      animation: readingPop 0.35s ease-out;
+    }
+    @keyframes readingPop {
+      0% { background-color: rgba(var(--ion-color-primary-rgb), 0.45); transform: scale(1.03); }
+      70% { transform: scale(1.01); }
+      100% { background-color: var(--active-highlight-bg, rgba(var(--ion-color-primary-rgb), 0.12)); transform: scale(1); }
     }
   `]
 })
@@ -169,6 +175,7 @@ export class BibleVersesPage implements OnDestroy {
   expanded = true;
   readingSection: string | null = null;
   activeProseGroup: number | null = null;
+  verseFlatIndex: number[][] = [];
   @ViewChild('pageContent', { static: false }) content?: any;
   private ttsStateSub?: Subscription;
 
@@ -209,6 +216,7 @@ export class BibleVersesPage implements OnDestroy {
     this.ttsService.stop();
     this.readingSection = null;
     this.activeProseGroup = null;
+    this.verseFlatIndex = [];
   }
 
   ngOnDestroy(): void {
@@ -237,7 +245,8 @@ export class BibleVersesPage implements OnDestroy {
     this.activeProseGroup = null;
     this.readingSection = 'bible-verses';
 
-    const groups = this.getVersesGroups();
+    const { groups, flatIndex } = this.buildVerseGroups();
+    this.verseFlatIndex = flatIndex;
     if (groups.length > 0) {
       this.ttsService.speakSegments(groups, (i) => {
         this.activeProseGroup = i;
@@ -248,11 +257,20 @@ export class BibleVersesPage implements OnDestroy {
     }
   }
 
-  private getVersesGroups(): string[] {
-    if (!this.result) return [];
-    return this.result.groups.map(g =>
-      g.verses.map(v => `${v.verse} ${v.text}`).join('. ')
-    );
+  private buildVerseGroups(): { groups: string[]; flatIndex: number[][] } {
+    if (!this.result) return { groups: [], flatIndex: [] };
+    const groups: string[] = [];
+    const flatIndex: number[][] = [];
+    let counter = 0;
+    for (const g of this.result.groups) {
+      const groupIndices: number[] = [];
+      for (const v of g.verses) {
+        groups.push(`${v.verse} ${v.text}`);
+        groupIndices.push(counter++);
+      }
+      flatIndex.push(groupIndices);
+    }
+    return { groups, flatIndex };
   }
 
   private async loadVerses(refs: string): Promise<void> {

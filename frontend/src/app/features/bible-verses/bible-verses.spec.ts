@@ -136,12 +136,15 @@ describe('BibleVersesPage', () => {
   });
 
   describe('toggleRead', () => {
-    it('should start reading verses as segmented groups', () => {
+    it('should read each verse as a separate segmented group', () => {
       component.result = mockResult;
       const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
       component.toggleRead();
       expect(speakSegmentsSpy).toHaveBeenCalledWith(
-        ['16 For God so loved the world, that he gave his only begotten Son.. 17 For God sent not his Son into the world to condemn the world.'],
+        [
+          '16 For God so loved the world, that he gave his only begotten Son.',
+          '17 For God sent not his Son into the world to condemn the world.'
+        ],
         expect.any(Function)
       );
       expect(component.readingSection).toBe('bible-verses');
@@ -199,14 +202,27 @@ describe('BibleVersesPage', () => {
       expect(scrollSpy).not.toHaveBeenCalled();
     });
 
-    it('should render active-highlight class on verse-card for active group', () => {
+    it('should render active-highlight class on verse-text for active verse', () => {
       component.result = mockResult;
       fixture.detectChanges();
       component.toggleRead();
+      expect(component.verseFlatIndex).toEqual([[0, 1]]);
       component.activeProseGroup = 0;
       fixture.detectChanges();
-      const cards = fixture.nativeElement.querySelectorAll('.verse-card');
-      expect(cards[0].classList.contains('active-highlight')).toBe(true);
+      const texts = fixture.nativeElement.querySelectorAll('.verse-text');
+      expect(texts[0].classList.contains('active-highlight')).toBe(true);
+      expect(texts[1].classList.contains('active-highlight')).toBe(false);
+    });
+
+    it('should highlight only the matching verse, not adjacent verses', () => {
+      component.result = mockResult;
+      fixture.detectChanges();
+      component.toggleRead();
+      component.activeProseGroup = 1;
+      fixture.detectChanges();
+      const texts = fixture.nativeElement.querySelectorAll('.verse-text');
+      expect(texts[0].classList.contains('active-highlight')).toBe(false);
+      expect(texts[1].classList.contains('active-highlight')).toBe(true);
     });
   });
 

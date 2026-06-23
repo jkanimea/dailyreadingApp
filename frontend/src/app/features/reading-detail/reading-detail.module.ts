@@ -478,6 +478,12 @@ const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d
     .active-highlight {
       background: var(--active-highlight-bg, rgba(var(--ion-color-primary-rgb), 0.12));
       border-radius: 3px;
+      animation: readingPop 0.35s ease-out;
+    }
+    @keyframes readingPop {
+      0% { background-color: rgba(var(--ion-color-primary-rgb), 0.45); transform: scale(1.03); }
+      70% { transform: scale(1.01); }
+      100% { background-color: var(--active-highlight-bg, rgba(var(--ion-color-primary-rgb), 0.12)); transform: scale(1); }
     }
   `]
 })
@@ -900,29 +906,22 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   buildParagraphGroups(segments: { text: string; isRef: boolean; isBibleRef: boolean }[]): { groups: string[]; segmentToGroup: (number | null)[] } {
     const groups: string[] = [];
     const segmentToGroup: (number | null)[] = [];
-    let currentGroupIndex: number | null = null;
-    let currentText = '';
 
     for (const seg of segments) {
       if (seg.isRef) {
-        const trimmed = currentText.replace(/\s+/g, ' ').trim();
-        if (trimmed) groups.push(trimmed);
         segmentToGroup.push(null);
-        currentText = '';
-        currentGroupIndex = null;
       } else if (seg.isBibleRef) {
-        segmentToGroup.push(currentGroupIndex);
+        segmentToGroup.push(groups.length > 0 ? groups.length - 1 : null);
       } else {
-        if (currentGroupIndex === null) {
-          currentGroupIndex = groups.length;
+        const trimmed = seg.text.replace(/\s+/g, ' ').trim();
+        if (trimmed) {
+          groups.push(trimmed);
+          segmentToGroup.push(groups.length - 1);
+        } else {
+          segmentToGroup.push(null);
         }
-        currentText += seg.text;
-        segmentToGroup.push(currentGroupIndex);
       }
     }
-
-    const trimmed = currentText.replace(/\s+/g, ' ').trim();
-    if (trimmed) groups.push(trimmed);
 
     return { groups, segmentToGroup };
   }

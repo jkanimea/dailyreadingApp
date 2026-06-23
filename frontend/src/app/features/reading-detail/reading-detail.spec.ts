@@ -319,18 +319,18 @@ describe('ReadingDetailPage', () => {
       expect(segmentToGroup).toEqual([0, null, 1]);
     });
 
-    it('should exclude Bible ref text from group text', () => {
+    it('should make each prose segment its own group and attach Bible refs to preceding group', () => {
       const segments = component.getParagraphSegments('See John 3:16 for context');
       const { groups, segmentToGroup } = component.buildParagraphGroups(segments);
-      expect(groups).toEqual(['See for context']);
-      expect(segmentToGroup).toEqual([0, 0, 0]);
+      expect(groups).toEqual(['See', 'for context']);
+      expect(segmentToGroup).toEqual([0, 0, 1]);
     });
 
-    it('should assign prose group to Bible refs embedded within prose', () => {
+    it('should split by paragraph refs and assign each prose span its own group', () => {
       const segments = component.getParagraphSegments('Read John 3:16 here [1.1] more');
       const { groups, segmentToGroup } = component.buildParagraphGroups(segments);
-      expect(groups).toEqual(['Read here', 'more']);
-      expect(segmentToGroup).toEqual([0, 0, 0, null, 1]);
+      expect(groups).toEqual(['Read', 'here', 'more']);
+      expect(segmentToGroup).toEqual([0, 0, 1, null, 2]);
     });
   });
 
@@ -905,7 +905,7 @@ describe('ReadingDetailPage', () => {
         const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
         component.toggleRead('primary');
         expect(speakSegmentsSpy).toHaveBeenCalledWith(
-          ['Read for context.', 'Extra text.'],
+          ['Read', 'for context.', 'Extra text.'],
           expect.any(Function)
         );
       });
