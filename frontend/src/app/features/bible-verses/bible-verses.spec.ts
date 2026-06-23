@@ -136,12 +136,13 @@ describe('BibleVersesPage', () => {
   });
 
   describe('toggleRead', () => {
-    it('should start reading verses', () => {
+    it('should start reading verses as segmented groups', () => {
       component.result = mockResult;
-      const speakSpy = jest.spyOn(component['ttsService'], 'speak');
+      const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
       component.toggleRead();
-      expect(speakSpy).toHaveBeenCalledWith(
-        '16 For God so loved the world, that he gave his only begotten Son.. 17 For God sent not his Son into the world to condemn the world.'
+      expect(speakSegmentsSpy).toHaveBeenCalledWith(
+        ['16 For God so loved the world, that he gave his only begotten Son.. 17 For God sent not his Son into the world to condemn the world.'],
+        expect.any(Function)
       );
       expect(component.readingSection).toBe('bible-verses');
     });
@@ -154,6 +155,7 @@ describe('BibleVersesPage', () => {
       component.toggleRead();
       expect(stopSpy).toHaveBeenCalled();
       expect(component.readingSection).toBeNull();
+      expect(component.activeProseGroup).toBeNull();
     });
 
     it('should auto-expand collapsed section when toggleRead is called', () => {
@@ -169,29 +171,54 @@ describe('BibleVersesPage', () => {
       expect(component.readingSection).toBeNull();
     });
 
-    it('should call scrollToActiveSection when reading starts', () => {
+    it('should set activeProseGroup via onGroup callback', () => {
       component.result = mockResult;
-      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveSection');
+      const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
       component.toggleRead();
+      const onGroup = speakSegmentsSpy.mock.calls[0][1];
+      expect(onGroup).toBeInstanceOf(Function);
+      (onGroup as (i: number) => void)(0);
+      expect(component.activeProseGroup).toBe(0);
+    });
+
+    it('should call scrollToActiveHighlight when onGroup callback fires', () => {
+      component.result = mockResult;
+      const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
+      component.toggleRead();
+      const onGroup = speakSegmentsSpy.mock.calls[0][1];
+      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
+      (onGroup as (i: number) => void)(0);
       expect(scrollSpy).toHaveBeenCalled();
     });
 
-    it('should not call scrollToActiveSection when stopping reading', () => {
+    it('should not call scrollToActiveHighlight when stopping reading', () => {
       component.result = mockResult;
       component.toggleRead();
-      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveSection');
+      const scrollSpy = jest.spyOn(component as any, 'scrollToActiveHighlight');
       component.toggleRead();
       expect(scrollSpy).not.toHaveBeenCalled();
+    });
+
+    it('should render active-highlight class on verse-card for active group', () => {
+      component.result = mockResult;
+      fixture.detectChanges();
+      component.toggleRead();
+      component.activeProseGroup = 0;
+      fixture.detectChanges();
+      const cards = fixture.nativeElement.querySelectorAll('.verse-card');
+      expect(cards[0].classList.contains('active-highlight')).toBe(true);
     });
   });
 
   describe('ionViewWillLeave', () => {
-    it('should stop TTS on leave', () => {
+    it('should stop TTS and clear state on leave', () => {
       component.readingSection = 'bible-verses';
+      component.activeProseGroup = 0;
       const stopSpy = jest.spyOn(component['ttsService'], 'stop');
       component.ionViewWillLeave();
       expect(stopSpy).toHaveBeenCalled();
       expect(component.readingSection).toBeNull();
+      expect(component.activeProseGroup).toBeNull();
     });
   });
 

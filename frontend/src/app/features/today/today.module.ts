@@ -2,7 +2,7 @@ import { NgModule, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, ChangeDetectorRef, NgZone } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
@@ -500,6 +500,8 @@ export class TodayPage {
   private alertCtrl = inject(AlertController);
   private destroyRef = inject(DestroyRef);
   private ttsService = inject(TtsService);
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
 
   loading = false;
 
@@ -539,24 +541,27 @@ export class TodayPage {
 
   private scrollToActiveHighlight(): void {
     if (!this.content) return;
-    setTimeout(async () => {
-      try {
-        const scrollEl = await this.content.getScrollElement();
-        let targetEl: HTMLElement | null = null;
-        if (this.readingSection === 'primary' || this.readingSection === 'secondary') {
-          targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
-        } else if (this.readingSection === 'bible') {
-          targetEl = scrollEl.querySelector('.section-card .bible-text') as HTMLElement | null;
-        } else if (this.readingSection === 'notes') {
-          targetEl = scrollEl.querySelector('.journal-section') as HTMLElement | null;
+    this.cdr.detectChanges();
+    this.ngZone.runOutsideAngular(() => {
+      setTimeout(async () => {
+        try {
+          const scrollEl = await this.content.getScrollElement();
+          let targetEl: HTMLElement | null = null;
+          if (this.readingSection === 'primary' || this.readingSection === 'secondary') {
+            targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
+          } else if (this.readingSection === 'bible') {
+            targetEl = scrollEl.querySelector('.section-card .bible-text') as HTMLElement | null;
+          } else if (this.readingSection === 'notes') {
+            targetEl = scrollEl.querySelector('.journal-section') as HTMLElement | null;
+          }
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } catch {
+          /* ignore */
         }
-        if (targetEl) {
-          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      } catch {
-        /* ignore */
-      }
-    }, 50);
+      }, 100);
+    });
   }
 
   get bibleSections(): BibleSection[] {

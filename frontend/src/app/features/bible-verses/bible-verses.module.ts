@@ -1,4 +1,4 @@
-import { NgModule, Component, OnDestroy, ViewChild, inject } from '@angular/core';
+import { NgModule, Component, OnDestroy, ViewChild, inject, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, ActivatedRoute, Router } from '@angular/router';
@@ -7,7 +7,7 @@ import { BibleService } from '../../core/services/bible.service';
 import { BibleLookupResponse } from '../../core/models/bible.model';
 import { LoggingService } from '../../core/services/logging.service';
 import { TtsService } from '../../core/services/tts.service';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 
 @Component({
   template: `
@@ -54,7 +54,7 @@ import { firstValueFrom } from 'rxjs';
           @if (expanded) {
             <div class="section-body">
               @for (g of result.groups; track $index) {
-                <div class="verse-card">
+                <div class="verse-card" [class.active-highlight]="activeProseGroup === $index">
                   <div class="verse-ref">{{ g.reference }}</div>
                   @for (v of g.verses; track $index) {
                     <div class="verse-text">{{ v.verse }} {{ v.text }}</div>
@@ -148,6 +148,10 @@ import { firstValueFrom } from 'rxjs';
     .verse-text + .verse-text {
       margin-top: 8px;
     }
+    .active-highlight {
+      background: var(--active-highlight-bg, rgba(var(--ion-color-primary-rgb), 0.12));
+      border-radius: 6px;
+    }
   `]
 })
 export class BibleVersesPage implements OnDestroy {
@@ -156,27 +160,34 @@ export class BibleVersesPage implements OnDestroy {
   private bibleService = inject(BibleService);
   private loggingService = inject(LoggingService);
   private ttsService = inject(TtsService);
+  private cdr = inject(ChangeDetectorRef);
+  private ngZone = inject(NgZone);
 
   result?: BibleLookupResponse;
   loading = false;
   error?: string;
   expanded = true;
   readingSection: string | null = null;
+  activeProseGroup: number | null = null;
   @ViewChild('pageContent', { static: false }) content?: any;
+  private ttsStateSub?: Subscription;
 
-  private scrollToActiveSection(): void {
+  private scrollToActiveHighlight(): void {
     if (!this.content) return;
-    setTimeout(async () => {
-      try {
-        const scrollEl = await this.content.getScrollElement();
-        const targetEl = scrollEl.querySelector('.section-card') as HTMLElement | null;
-        if (targetEl) {
-          targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    this.cdr.detectChanges();
+    this.ngZone.runOutsideAngular(() => {
+      setTimeout(async () => {
+        try {
+          const scrollEl = await this.content.getScrollElement();
+          const targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } catch {
+          /* ignore */
         }
-      } catch {
-        /* ignore */
-      }
-    }, 50);
+      }, 100);
+    });
   }
 
   async ionViewWillEnter(): Promise<void> {
@@ -186,14 +197,22 @@ export class BibleVersesPage implements OnDestroy {
       return;
     }
     await this.loadVerses(decodeURIComponent(refs));
+    this.ttsStateSub = this.ttsService.state$.subscribe(state => {
+      if (state === 'idle') {
+        this.readingSection = null;
+        this.activeProseGroup = null;
+      }
+    });
   }
 
   ionViewWillLeave(): void {
     this.ttsService.stop();
     this.readingSection = null;
+    this.activeProseGroup = null;
   }
 
   ngOnDestroy(): void {
+    this.ttsStateSub?.unsubscribe();
     this.ttsService.stop();
   }
 
@@ -210,26 +229,30 @@ export class BibleVersesPage implements OnDestroy {
     if (this.readingSection === 'bible-verses') {
       this.ttsService.stop();
       this.readingSection = null;
+      this.activeProseGroup = null;
       return;
     }
     this.ttsService.stop();
     this.expanded = true;
+    this.activeProseGroup = null;
     this.readingSection = 'bible-verses';
 
-    const text = this.getVersesText();
-    if (text) {
-      this.ttsService.speak(text);
-      this.scrollToActiveSection();
+    const groups = this.getVersesGroups();
+    if (groups.length > 0) {
+      this.ttsService.speakSegments(groups, (i) => {
+        this.activeProseGroup = i;
+        this.scrollToActiveHighlight();
+      });
     } else {
       this.readingSection = null;
     }
   }
 
-  private getVersesText(): string {
-    if (!this.result) return '';
-    return this.result.groups
-      .map(g => g.verses.map(v => `${v.verse} ${v.text}`).join('. '))
-      .join('. ');
+  private getVersesGroups(): string[] {
+    if (!this.result) return [];
+    return this.result.groups.map(g =>
+      g.verses.map(v => `${v.verse} ${v.text}`).join('. ')
+    );
   }
 
   private async loadVerses(refs: string): Promise<void> {
