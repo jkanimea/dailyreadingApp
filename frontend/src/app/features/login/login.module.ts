@@ -52,12 +52,11 @@ import { SocialLogin } from '@capgo/capacitor-social-login';
             <p class="error-message">{{ error }}</p>
           </div>
         }
+        <p class="version-text">{{ version }}</p>
       </div>
 
       <div #gBtnHost class="g-btn-host" aria-hidden="true"></div>
     </ion-content>
-
-    <p class="version-text">{{ version }}</p>
   `,
   standalone: false,
   styles: [`
@@ -160,13 +159,10 @@ import { SocialLogin } from '@capgo/capacitor-social-login';
       margin: 0;
     }
     .version-text {
-      position: fixed;
-      bottom: 16px;
-      left: 0;
-      right: 0;
-      text-align: center;
+      margin-top: 24px;
       font-size: 12px;
       color: var(--ion-color-step-400, #bbb);
+      text-align: center;
     }
     .g-btn-host {
       position: fixed;
