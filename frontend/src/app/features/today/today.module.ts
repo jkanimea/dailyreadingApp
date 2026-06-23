@@ -2,7 +2,7 @@ import { NgModule, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
-import { Component, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, ViewChild, ChangeDetectorRef, ElementRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReadingService } from '../../core/services/reading.service';
 import { ProgressService } from '../../core/services/progress.service';
@@ -507,6 +507,7 @@ export class TodayPage {
   private destroyRef = inject(DestroyRef);
   private ttsService = inject(TtsService);
   private cdr = inject(ChangeDetectorRef);
+  private elementRef = inject(ElementRef);
   loading = false;
 
   constructor() {
@@ -551,11 +552,11 @@ export class TodayPage {
         const scrollEl = await this.content.getScrollElement();
         let targetEl: HTMLElement | null = null;
         if (this.readingSection === 'primary' || this.readingSection === 'secondary') {
-          targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
+          targetEl = this.elementRef.nativeElement.querySelector('.active-highlight') as HTMLElement | null;
         } else if (this.readingSection === 'bible') {
-          targetEl = scrollEl.querySelector('.section-card .bible-text') as HTMLElement | null;
+          targetEl = this.elementRef.nativeElement.querySelector('.section-card .bible-text') as HTMLElement | null;
         } else if (this.readingSection === 'notes') {
-          targetEl = scrollEl.querySelector('.journal-section') as HTMLElement | null;
+          targetEl = this.elementRef.nativeElement.querySelector('.journal-section') as HTMLElement | null;
         }
         if (targetEl) {
           const rect = targetEl.getBoundingClientRect();

@@ -1,4 +1,4 @@
-import { NgModule, Component, OnDestroy, inject, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { NgModule, Component, OnDestroy, inject, ViewChild, ChangeDetectorRef, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule, ActionSheetController, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
@@ -497,6 +497,7 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   private progressService = inject(ProgressService);
   private ttsService = inject(TtsService);
   private cdr = inject(ChangeDetectorRef);
+  private elementRef = inject(ElementRef);
   seriesList: Series[] = [];
   private routeSub?: Subscription;
   completed = false;
@@ -568,11 +569,11 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
         const scrollEl = await this.content.getScrollElement();
         let targetEl: HTMLElement | null = null;
         if (this.readingSection === 'primary' || this.readingSection === 'secondary') {
-          targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
+          targetEl = this.elementRef.nativeElement.querySelector('.active-highlight') as HTMLElement | null;
         } else if (this.readingSection === 'bible') {
-          targetEl = scrollEl.querySelector('.section-card .bible-text') as HTMLElement | null;
+          targetEl = this.elementRef.nativeElement.querySelector('.section-card .bible-text') as HTMLElement | null;
         } else if (this.readingSection === 'notes') {
-          targetEl = scrollEl.querySelector('.journal-section') as HTMLElement | null;
+          targetEl = this.elementRef.nativeElement.querySelector('.journal-section') as HTMLElement | null;
         }
         if (targetEl) {
           const rect = targetEl.getBoundingClientRect();

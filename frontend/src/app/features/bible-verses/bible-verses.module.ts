@@ -1,4 +1,4 @@
-import { NgModule, Component, OnDestroy, ViewChild, inject, ChangeDetectorRef } from '@angular/core';
+import { NgModule, Component, OnDestroy, ViewChild, inject, ChangeDetectorRef, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule, Routes, ActivatedRoute, Router } from '@angular/router';
@@ -167,6 +167,7 @@ export class BibleVersesPage implements OnDestroy {
   private loggingService = inject(LoggingService);
   private ttsService = inject(TtsService);
   private cdr = inject(ChangeDetectorRef);
+  private elementRef = inject(ElementRef);
   result?: BibleLookupResponse;
   loading = false;
   error?: string;
@@ -183,7 +184,7 @@ export class BibleVersesPage implements OnDestroy {
     requestAnimationFrame(async () => {
       try {
         const scrollEl = await this.content.getScrollElement();
-        const targetEl = scrollEl.querySelector('.active-highlight') as HTMLElement | null;
+        const targetEl = this.elementRef.nativeElement.querySelector('.active-highlight') as HTMLElement | null;
         if (targetEl) {
           const rect = targetEl.getBoundingClientRect();
           const contentRect = scrollEl.getBoundingClientRect();
