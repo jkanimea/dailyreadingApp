@@ -49,8 +49,7 @@ describe('LoginPage', () => {
 
     authService = {
       login: jest.fn().mockReturnValue(of(mockTokenResponse)),
-      storeTokens: jest.fn().mockResolvedValue(undefined),
-      guestLogin: jest.fn().mockResolvedValue(undefined)
+      storeTokens: jest.fn().mockResolvedValue(undefined)
     };
     router = { navigate: jest.fn() };
 
@@ -85,29 +84,6 @@ describe('LoginPage', () => {
     const el: HTMLElement = fixture.nativeElement.querySelector('.version-text');
     expect(el).not.toBeNull();
     expect(el.textContent?.trim()).toMatch(/^v\d+$/);
-  });
-
-  // ─── Guest ────────────────────────────────────────────────────────────────
-
-  describe('continueAsGuest', () => {
-    it('should call guestLogin and navigate to /series on success', async () => {
-      await component.continueAsGuest();
-
-      expect(authService.guestLogin).toHaveBeenCalled();
-      expect(router.navigate).toHaveBeenCalledWith(['/series']);
-      expect(component.loading).toBe(false);
-      expect(component.error).toBeUndefined();
-    });
-
-    it('should show error message when guestLogin throws', async () => {
-      authService.guestLogin.mockRejectedValue(new Error('network'));
-
-      await component.continueAsGuest();
-
-      expect(component.error).toBe('Failed to start guest session.');
-      expect(component.loading).toBe(false);
-      expect(router.navigate).not.toHaveBeenCalled();
-    });
   });
 
   // ─── Google ───────────────────────────────────────────────────────────────

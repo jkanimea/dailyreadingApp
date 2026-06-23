@@ -24,11 +24,6 @@ import { SocialLogin } from '@capgo/capacitor-social-login';
         </div>
 
         <div class="button-section animate-stagger">
-          <ion-button *ngIf="bypassAuth" expand="block" class="guest-btn" (click)="continueAsGuest()" [disabled]="loading">
-            <ion-icon slot="start" name="person-outline"></ion-icon>
-            Continue as Guest
-          </ion-button>
-
           <ion-button expand="block" class="social-btn google-btn" (click)="loginWithGoogle()" [disabled]="loading">
             <ion-icon slot="start" name="logo-google"></ion-icon>
             Sign in with Google
@@ -119,13 +114,6 @@ import { SocialLogin } from '@capgo/capacitor-social-login';
       letter-spacing: 0.2px;
       margin: 0;
     }
-    .guest-btn {
-      --background: var(--ion-color-step-150, #e8e8e8);
-      --color: var(--ion-text-color);
-      --box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      margin-bottom: 4px;
-      --background-hover: var(--ion-color-step-200, #ddd);
-    }
     .social-btn {
       --box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
@@ -180,7 +168,6 @@ export class LoginPage implements OnDestroy {
   version = appVersion;
   loading = false;
   error?: string;
-  bypassAuth = environment.bypassAuth;
 
   @ViewChild('gBtnHost') gBtnHost?: ElementRef<HTMLDivElement>;
 
@@ -276,20 +263,6 @@ export class LoginPage implements OnDestroy {
       });
       this.socialLoginInitialized = true;
     } catch (e: unknown) { this.loggingService.error('LoginPage', 'initSocialLogin', String(e)); }
-  }
-
-  async continueAsGuest(): Promise<void> {
-    this.loading = true;
-    this.error = undefined;
-    try {
-      await this.authService.guestLogin();
-      this.router.navigate(['/series']);
-    } catch (e: unknown) {
-      this.loggingService.error('LoginPage', 'continueAsGuest', String(e));
-      this.error = 'Failed to start guest session.';
-    } finally {
-      this.loading = false;
-    }
   }
 
   async loginWithGoogle(): Promise<void> {
