@@ -139,6 +139,7 @@ jobs:
         id: tag_version
         if: github.ref_type == 'branch' && github.ref_name == 'main'
         run: |
+          git fetch --tags origin
           LATEST=$(git tag --list 'v1.0.*' --sort=-version:refname | head -1)
           if [ -z "$LATEST" ]; then
             NEXT="v1.0.1"
@@ -146,6 +147,10 @@ jobs:
             NUM=$(echo "$LATEST" | sed 's/^v1\.0\.//')
             NEXT="v1.0.$((NUM + 1))"
           fi
+          while git rev-parse "$NEXT" >/dev/null 2>&1; do
+            NUM=$((NUM + 1))
+            NEXT="v1.0.$NUM"
+          done
           git tag "$NEXT"
           git push origin "$NEXT"
           echo "tag_name=$NEXT" >> "$GITHUB_OUTPUT"
