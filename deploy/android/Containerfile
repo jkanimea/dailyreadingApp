@@ -5,6 +5,7 @@
 FROM docker.io/library/node:22 AS node-deps
 WORKDIR /tmp
 COPY frontend/package*.json ./
+COPY frontend/scripts ./scripts
 RUN npm ci --legacy-peer-deps && cp -r node_modules /node_modules
 
 FROM docker.io/library/gradle:8-jdk21
