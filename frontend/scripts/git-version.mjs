@@ -1,10 +1,12 @@
 import { execSync } from 'child_process';
-import { writeFileSync } from 'fs';
+import { writeFileSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const outFile = join(__dirname, '..', 'src', 'environments', 'version.ts');
+const outDir = join(__dirname, '..', 'src', 'environments');
+const outFile = join(outDir, 'version.ts');
+mkdirSync(outDir, { recursive: true });
 
 function run(cmd) {
   try {
