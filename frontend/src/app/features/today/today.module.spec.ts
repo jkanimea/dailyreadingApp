@@ -522,6 +522,141 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
         (onGroup as (i: number) => void)(0);
         expect(scrollSpy).toHaveBeenCalled();
       });
+
+      it('should set bibleSegmentToGroup on toggleRead(\'bible\')', () => {
+        component.detail = {
+          ...mockDetail,
+          fullTextBible: 'Acts 13:3\n\nFirst verse\n\nSecond verse\n\nActs 13:4\n\nThird verse'
+        };
+        component.toggleRead('bible');
+        expect(component.bibleSegmentToGroup).toEqual([0, 1, 2]);
+      });
+
+      it('should update activeProseGroup via onGroup callback for bible', () => {
+        const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
+        component.toggleRead('bible');
+        const onGroup = speakSegmentsSpy.mock.calls[0][1];
+        expect(onGroup).toBeInstanceOf(Function);
+        (onGroup as (i: number) => void)(0);
+        expect(component.activeProseGroup).toBe(0);
+      });
+
+      it('should reset bibleSegmentToGroup when toggling off Bible audio', () => {
+        component.toggleRead('bible');
+        expect(component.bibleSegmentToGroup).not.toBeNull();
+        component.toggleRead('bible');
+        expect(component.bibleSegmentToGroup).toBeNull();
+      });
+
+      it('should reset bibleSegmentToGroup when collapsing Bible section while reading', () => {
+        component.toggleRead('bible');
+        expect(component.bibleSegmentToGroup).not.toBeNull();
+        component.toggleSection('bible');
+        expect(component.bibleSegmentToGroup).toBeNull();
+      });
+
+      it('should reset bibleSegmentToGroup on ionViewWillLeave', () => {
+        component.toggleRead('bible');
+        expect(component.bibleSegmentToGroup).not.toBeNull();
+        component.ionViewWillLeave();
+        expect(component.bibleSegmentToGroup).toBeNull();
+      });
+
+      it('should reset bibleSegmentToGroup on TTS idle state', () => {
+        component.toggleRead('bible');
+        expect(component.bibleSegmentToGroup).not.toBeNull();
+        (component['ttsService'] as any).stateSubject.next('idle');
+        expect(component.bibleSegmentToGroup).toBeNull();
+      });
+    });
+
+    describe('buildBibleGroups', () => {
+      it('should group verses into one group per verse block when sections exist', () => {
+        component.detail = {
+          ...mockDetail,
+          fullTextBible: 'Acts 13:3\n\nFirst verse\n\nSecond verse\n\nActs 13:4\n\nThird verse'
+        };
+        const { groups, segmentToGroup } = component.buildBibleGroups();
+        expect(groups).toEqual(['First verse', 'Second verse', 'Third verse']);
+        expect(segmentToGroup).toEqual([0, 1, 2]);
+      });
+
+      it('should produce a single group for plain text without section titles', () => {
+        component.detail = { ...mockDetail, fullTextBible: 'And when they had fasted and prayed...' };
+        const { groups, segmentToGroup } = component.buildBibleGroups();
+        expect(groups).toEqual(['And when they had fasted and prayed...']);
+        expect(segmentToGroup).toEqual([0]);
+      });
+
+      it('should return empty groups when no Bible text exists', () => {
+        component.detail = { ...mockDetail, fullTextBible: '' };
+        const { groups, segmentToGroup } = component.buildBibleGroups();
+        expect(groups).toEqual([]);
+        expect(segmentToGroup).toEqual([]);
+      });
+    });
+
+    describe('getBibleVerseIndex', () => {
+      beforeEach(() => {
+        component.detail = {
+          ...mockDetail,
+          fullTextBible: 'Acts 13:3\n\nFirst verse\n\nSecond verse\n\nActs 13:4\n\nThird verse'
+        };
+      });
+
+      it('should return flat index within a section', () => {
+        expect(component.getBibleVerseIndex('Acts 13:3', 1)).toBe(1);
+        expect(component.getBibleVerseIndex('Acts 13:4', 0)).toBe(2);
+      });
+
+      it('should return -1 for unknown section title', () => {
+        expect(component.getBibleVerseIndex('Unknown 1:1', 0)).toBe(-1);
+      });
+    });
+
+    describe('bible active-highlight template rendering', () => {
+      beforeEach(() => {
+        component.detail = mockDetail;
+        component.readingSection = null;
+      });
+
+      it('should not highlight any verse span when not reading bible', () => {
+        fixture.detectChanges();
+        const highlighted = fixture.nativeElement.querySelectorAll('.bible-text .active-highlight');
+        expect(highlighted.length).toBe(0);
+      });
+
+      it('should render .active-highlight on Bible verse spans when reading bible', () => {
+        component.toggleRead('bible');
+        fixture.detectChanges();
+        const highlighted = fixture.nativeElement.querySelectorAll('.bible-text .active-highlight');
+        expect(highlighted.length).toBeGreaterThanOrEqual(1);
+      });
+
+      it('should highlight correct verse when onGroup fires for specific index', () => {
+        const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
+        component.detail = { ...mockDetail, fullTextBible: 'First verse\nSecond verse' };
+        component.toggleRead('bible');
+        const onGroup = speakSegmentsSpy.mock.calls[0][1];
+        (onGroup as (i: number) => void)(1);
+        fixture.detectChanges();
+        const bibleTextDiv = fixture.nativeElement.querySelector('.bible-text');
+        const spans = bibleTextDiv.querySelectorAll('span');
+        expect(spans[1].classList.contains('active-highlight')).toBe(true);
+        expect(spans[0].classList.contains('active-highlight')).toBe(false);
+      });
+
+      it('should remove .active-highlight when toggling bible audio off', () => {
+        component.detail = { ...mockDetail, fullTextBible: 'First verse\nSecond verse' };
+        fixture.detectChanges();
+        component.toggleRead('bible');
+        component.activeProseGroup = 0;
+        fixture.detectChanges();
+        component.toggleRead('bible');
+        fixture.detectChanges();
+        const highlighted = fixture.nativeElement.querySelectorAll('.bible-text .active-highlight');
+        expect(highlighted.length).toBe(0);
+      });
     });
 
     it('should render audio icon in journal section when notes exist', () => {
