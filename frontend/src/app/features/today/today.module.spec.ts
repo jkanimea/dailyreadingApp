@@ -382,10 +382,13 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       expect(spy).toHaveBeenCalledWith('primary');
     });
 
-    it('should read fullTextBible when toggleRead(\'bible\') is called', () => {
-      const speakSpy = jest.spyOn(component['ttsService'], 'speak');
+    it('should read fullTextBible as segmented groups when toggleRead(\'bible\') is called', () => {
+      const speakSegmentsSpy = jest.spyOn(component['ttsService'], 'speakSegments');
       component.toggleRead('bible');
-      expect(speakSpy).toHaveBeenCalledWith('In the beginning God created the heavens and the earth.');
+      expect(speakSegmentsSpy).toHaveBeenCalledWith(
+        ['In the beginning God created the heavens and the earth.'],
+        expect.any(Function)
+      );
     });
 
     it('should read EGW text as segmented groups when toggleRead(\'primary\') is called', () => {

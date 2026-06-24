@@ -97,11 +97,19 @@ interface BibleSection {
                   @if (bibleSections.length > 0) {
                     @for (section of bibleSections; track section.title) {
                       <div class="bible-section-title">{{ section.title }}</div>
-                      <div class="bible-text">{{ section.verses.join('\n\n') }}</div>
+                      <div class="bible-text">
+                        @for (verseBlock of section.verses; track $index; let vi = $index) {
+                          <span [class.active-highlight]="bibleSegmentToGroup && bibleSegmentToGroup[getBibleVerseIndex(section.title, vi)] === activeProseGroup">{{ verseBlock }}</span>
+                        }
+                      </div>
                     }
                   } @else {
                     @if (detail.fullTextBible) {
-                      <div class="bible-text">{{ detail.fullTextBible }}</div>
+                      <div class="bible-text">
+                        @for (seg of [detail.fullTextBible]; track $index) {
+                          <span [class.active-highlight]="bibleSegmentToGroup && bibleSegmentToGroup[0] === activeProseGroup">{{ seg }}</span>
+                        }
+                      </div>
                     } @else {
                       <div class="empty-bible-text">
                         <p>Bible text not available for {{ translation }}.</p>
@@ -519,6 +527,7 @@ export class TodayPage {
         this.readingSection = null;
         this.activeProseGroup = null;
         this.segmentToGroup = null;
+        this.bibleSegmentToGroup = null;
       }
     });
   }
@@ -538,6 +547,7 @@ export class TodayPage {
   readingSection: string | null = null;
   activeProseGroup: number | null = null;
   segmentToGroup: (number | null)[] | null = null;
+  bibleSegmentToGroup: (number | null)[] | null = null;
 
   private seriesId = 1;
   private readingId = 0;
@@ -551,10 +561,8 @@ export class TodayPage {
       try {
         const scrollEl = await this.content.getScrollElement();
         let targetEl: HTMLElement | null = null;
-        if (this.readingSection === 'primary' || this.readingSection === 'secondary') {
+        if (this.readingSection === 'primary' || this.readingSection === 'secondary' || this.readingSection === 'bible') {
           targetEl = this.elementRef.nativeElement.querySelector('.active-highlight') as HTMLElement | null;
-        } else if (this.readingSection === 'bible') {
-          targetEl = this.elementRef.nativeElement.querySelector('.section-card .bible-text') as HTMLElement | null;
         } else if (this.readingSection === 'notes') {
           targetEl = this.elementRef.nativeElement.querySelector('.journal-section') as HTMLElement | null;
         }
@@ -601,6 +609,7 @@ export class TodayPage {
     this.readingSection = null;
     this.activeProseGroup = null;
     this.segmentToGroup = null;
+    this.bibleSegmentToGroup = null;
   }
 
   formatDate(month: number, day: number): string {
@@ -658,6 +667,7 @@ export class TodayPage {
       this.readingSection = null;
       this.activeProseGroup = null;
       this.segmentToGroup = null;
+      this.bibleSegmentToGroup = null;
     }
   }
 
@@ -669,6 +679,7 @@ export class TodayPage {
       this.readingSection = null;
       this.activeProseGroup = null;
       this.segmentToGroup = null;
+      this.bibleSegmentToGroup = null;
     }
   }
 
@@ -678,11 +689,13 @@ export class TodayPage {
       this.readingSection = null;
       this.activeProseGroup = null;
       this.segmentToGroup = null;
+      this.bibleSegmentToGroup = null;
       return;
     }
     this.ttsService.stop();
     this.activeProseGroup = null;
     this.segmentToGroup = null;
+    this.bibleSegmentToGroup = null;
     if (section === 'bible') { this.bibleExpanded = true; }
     else if (section === 'primary') { this.egwExpanded = true; }
     else if (section === 'secondary') { this.secondaryExpanded = true; }
@@ -721,7 +734,22 @@ export class TodayPage {
 
     let text = '';
     if (section === 'bible') {
-      text = this.detail?.fullTextBible ?? '';
+      const bibleText = this.detail?.fullTextBible ?? '';
+      if (bibleText) {
+        const { groups, segmentToGroup } = this.buildBibleGroups();
+        this.bibleSegmentToGroup = segmentToGroup;
+        if (groups.length > 0) {
+          this.ttsService.speakSegments(groups, (i) => {
+            this.activeProseGroup = i;
+            this.scrollToActiveHighlight();
+          });
+        } else {
+          this.readingSection = null;
+        }
+      } else {
+        this.readingSection = null;
+      }
+      return;
     } else if (section === 'notes') {
       text = this.notes ?? '';
     }
@@ -766,6 +794,48 @@ export class TodayPage {
     }
 
     return { groups, segmentToGroup };
+  }
+
+  buildBibleGroups(): { groups: string[]; segmentToGroup: (number | null)[] } {
+    const text = this.detail?.fullTextBible;
+    const groups: string[] = [];
+    const segmentToGroup: (number | null)[] = [];
+
+    if (!text) return { groups, segmentToGroup };
+
+    const sections = this.bibleSections;
+    if (sections.length > 0) {
+      for (const section of sections) {
+        for (const verseBlock of section.verses) {
+          const trimmed = verseBlock.replace(/\s+/g, ' ').trim();
+          if (trimmed) {
+            groups.push(trimmed);
+            segmentToGroup.push(groups.length - 1);
+          } else {
+            segmentToGroup.push(null);
+          }
+        }
+      }
+    } else {
+      const trimmed = text.replace(/\s+/g, ' ').trim();
+      if (trimmed) {
+        groups.push(trimmed);
+        segmentToGroup.push(0);
+      }
+    }
+
+    return { groups, segmentToGroup };
+  }
+
+  getBibleVerseIndex(sectionTitle: string, verseIndex: number): number {
+    let idx = 0;
+    for (const s of this.bibleSections) {
+      if (s.title === sectionTitle) {
+        return idx + verseIndex;
+      }
+      idx += s.verses.length;
+    }
+    return -1;
   }
 
   async onBibleTranslationChange(event: CustomEvent): Promise<void> {
