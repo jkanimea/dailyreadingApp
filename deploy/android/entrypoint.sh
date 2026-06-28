@@ -107,7 +107,7 @@ if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
         echo "ERROR: Keystore file is empty or missing at $KEYSTORE_PATH — check the KEYSTORE secret"
         exit 1
     fi
-    echo "Configuring APK signing..."
+    echo "Configuring APK/AAB signing..."
     cat > android/signing.gradle <<GRADLE
 android {
     signingConfigs {
@@ -149,13 +149,13 @@ fs.writeFileSync('$MANIFEST', updated, 'utf8');
     echo "Facebook intent filter patched into AndroidManifest.xml"
 fi
 
-# Build APK
-echo "Building Android APK..."
+# Build APK + AAB
+echo "Building Android APK and AAB..."
 cd android
-./gradlew assembleRelease
+./gradlew assembleRelease bundleRelease
 
-# Copy APK to output
+# Copy APK and AAB to output
 cp app/build/outputs/apk/release/app-release.apk "$OUTPUT_DIR/app-release.apk"
-cp app/build/outputs/apk/release/app-release.aab "$OUTPUT_DIR/app-release.aab" 2>/dev/null || true
+cp app/build/outputs/bundle/release/app-release.aab "$OUTPUT_DIR/app-release.aab" 2>/dev/null || true
 
-echo "Done! APK at: $OUTPUT_DIR/app-release.apk"
+echo "Done! APK at: $OUTPUT_DIR/app-release.apk | AAB at: $OUTPUT_DIR/app-release.aab"
