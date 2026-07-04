@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "868571551367",
+    "project_id": "encounter-daily",
+    "storage_bucket": "encounter-daily.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:868571551367:android:abb290a1ad75494a9dca22",
+        "android_client_info": {
+          "package_name": "com.dailyreading.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "126956037492-0v2i92mj4q0ulko5u5io1bd5do619liu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dailyreading.app",
+            "certificate_hash": "89c3dbd40b232c43232b68486e25cc03699ccbcb"
+          }
+        },
+        {
+          "client_id": "126956037492-7fg9i2u84h6d7nve7u04c22nkfp2b4h2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCj2Ygsil9Es1b-j6dQCCENg8ni9Dt80MA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "126956037492-7fg9i2u84h6d7nve7u04c22nkfp2b4h2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
