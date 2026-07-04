@@ -254,7 +254,7 @@ export class LoginPage implements OnDestroy {
     try {
       await SocialLogin.initialize({
         google: {
-          webClientId: '126956037492-0v2i92mj4q0ulko5u5io1bd5do619liu.apps.googleusercontent.com',
+          webClientId: '868571551367-ubc3o3nvel2tfl7ntgch74rcr84hkqir.apps.googleusercontent.com',
           mode: 'online'
         },
         facebook: {
