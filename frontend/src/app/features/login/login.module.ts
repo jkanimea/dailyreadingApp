@@ -273,7 +273,7 @@ export class LoginPage implements OnDestroy {
 
       if (Capacitor.isNativePlatform()) {
         // Native Android/iOS — use @capgo/capacitor-social-login
-        const res = await SocialLogin.login({ provider: 'google', options: { scopes: ['email', 'profile'] } });
+        const res = await SocialLogin.login({ provider: 'google', options: {} });
         if (res.result.responseType !== 'online') throw new Error('Google sign-in failed — unexpected offline response.');
         const idToken = res.result.idToken;
         if (!idToken) throw new Error('Google sign-in failed — no ID token returned.');
