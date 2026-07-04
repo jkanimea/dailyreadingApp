@@ -128,6 +128,14 @@ GRADLE
     echo "apply from: '../signing.gradle'" >> android/app/build.gradle
 fi
 
+# Set dynamic versionCode from CI build number
+if [ -n "${VERSION:-}" ]; then
+    echo "Setting versionCode to $VERSION..."
+    sed -i "s/versionCode [0-9]*/versionCode $VERSION/" android/app/build.gradle
+    # Also set a human-friendly versionName
+    sed -i "s/versionName \"[^\"]*\"/versionName \"1.0.$VERSION\"/" android/app/build.gradle
+fi
+
 # Patch Facebook OAuth intent filter into AndroidManifest.xml
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ] && ! grep -q 'fb1510105297476514' "$MANIFEST" 2>/dev/null; then
