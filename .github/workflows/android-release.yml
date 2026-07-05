@@ -126,7 +126,7 @@ jobs:
             -e KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
             -e KEY_PASSWORD="$KEY_PASSWORD" \
             -e GOOGLE_SERVICES_JSON="$GOOGLE_SERVICES_JSON" \
-            -e VERSION=$(git rev-list --count HEAD) \
+            -e VERSION=$(echo "$(git rev-list --count HEAD) + ${{ github.run_number }}" | bc) \
             android-builder
 
       - name: Upload APK + AAB artifact
