@@ -114,6 +114,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          FACEBOOK_CLIENT_TOKEN: ${{ secrets.FACEBOOK_CLIENT_TOKEN }}
         run: |
           mkdir -p apk-output
           docker run --rm \
@@ -126,6 +127,7 @@ jobs:
             -e KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
             -e KEY_PASSWORD="$KEY_PASSWORD" \
             -e GOOGLE_SERVICES_JSON="$GOOGLE_SERVICES_JSON" \
+          -e FACEBOOK_CLIENT_TOKEN="$FACEBOOK_CLIENT_TOKEN" \
             -e VERSION=$(echo "$(git rev-list --count HEAD) + ${{ github.run_number }}" | bc) \
             android-builder
 
