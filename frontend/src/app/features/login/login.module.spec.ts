@@ -7,6 +7,15 @@ import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
 import { LoginPage } from './login.module';
 import { TokenResponse } from '../../core/models/user.model';
+import { Capacitor } from '@capacitor/core';
+import { SocialLogin } from '@capgo/capacitor-social-login';
+
+jest.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform: jest.fn() }
+}));
+jest.mock('@capgo/capacitor-social-login', () => ({
+  SocialLogin: { initialize: jest.fn().mockResolvedValue(undefined), login: jest.fn() }
+}));
 
 const mockTokenResponse: TokenResponse = {
   accessToken: 'jwt-123',
@@ -410,6 +419,166 @@ describe('LoginPage', () => {
       expect(component.error).toBe('Google Sign-In is still loading — please try again in a moment.');
       expect(component.loading).toBe(false);
       expect(authService.login).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── Native (Android/iOS) login paths ─────────────────────────────────────
+
+  describe('native (Android/iOS) login', () => {
+    beforeEach(async () => {
+      (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
+      (SocialLogin.login as jest.Mock).mockReset();
+      (SocialLogin.initialize as jest.Mock).mockResolvedValue(undefined);
+      (component as any).socialLoginInitialized = false;
+    });
+
+    describe('loginWithGoogle', () => {
+      it('should sign in with Google via SocialLogin on native', async () => {
+        (SocialLogin.login as jest.Mock).mockResolvedValue({
+          result: { responseType: 'online', idToken: 'google-id-token-native' }
+        });
+
+        await component.loginWithGoogle();
+
+        expect(SocialLogin.login).toHaveBeenCalledWith({
+          provider: 'google',
+          options: { style: 'bottom' }
+        });
+        expect(authService.login).toHaveBeenCalledWith('google', 'google-id-token-native');
+        expect(authService.storeTokens).toHaveBeenCalledWith(mockTokenResponse);
+        expect(router.navigate).toHaveBeenCalledWith(['/series']);
+        expect(component.loading).toBe(false);
+        expect(component.error).toBeUndefined();
+      });
+
+      it('should fail when SocialLogin returns offline response', async () => {
+        (SocialLogin.login as jest.Mock).mockResolvedValue({
+          result: { responseType: 'offline', idToken: 'token', serverAuthCode: 'auth-code' }
+        });
+
+        await component.loginWithGoogle();
+
+        expect(component.error).toBe('Google sign-in failed — unexpected offline response.');
+        expect(authService.login).not.toHaveBeenCalled();
+        expect(component.loading).toBe(false);
+      });
+
+      it('should fail when SocialLogin returns no idToken', async () => {
+        (SocialLogin.login as jest.Mock).mockResolvedValue({
+          result: { responseType: 'online', idToken: undefined }
+        });
+
+        await component.loginWithGoogle();
+
+        expect(component.error).toBe('Google sign-in failed — no ID token returned.');
+        expect(authService.login).not.toHaveBeenCalled();
+        expect(component.loading).toBe(false);
+      });
+
+      it('should handle SocialLogin.login rejection', async () => {
+        (SocialLogin.login as jest.Mock).mockRejectedValue(
+          new Error('Google Sign-In cancelled by user')
+        );
+
+        await component.loginWithGoogle();
+
+        expect(component.error).toBe('Google Sign-In cancelled by user');
+        expect(authService.login).not.toHaveBeenCalled();
+        expect(component.loading).toBe(false);
+      });
+
+      it('should handle backend rejection on native', async () => {
+        (SocialLogin.login as jest.Mock).mockResolvedValue({
+          result: { responseType: 'online', idToken: 'google-id-token-native' }
+        });
+        authService.login.mockReturnValue(throwError(() => new Error('401 Unauthorized')));
+
+        await component.loginWithGoogle();
+
+        expect(component.error).toBe('401 Unauthorized');
+        expect(component.loading).toBe(false);
+        expect(router.navigate).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('loginWithFacebook', () => {
+      it('should sign in with Facebook via SocialLogin on native', async () => {
+        (SocialLogin.login as jest.Mock).mockResolvedValue({
+          result: { accessToken: { token: 'fb-access-token-native' } }
+        });
+
+        await component.loginWithFacebook();
+
+        expect(SocialLogin.login).toHaveBeenCalledWith({
+          provider: 'facebook',
+          options: { permissions: ['public_profile', 'email'] }
+        });
+        expect(authService.login).toHaveBeenCalledWith('facebook', 'fb-access-token-native');
+        expect(authService.storeTokens).toHaveBeenCalledWith(mockTokenResponse);
+        expect(router.navigate).toHaveBeenCalledWith(['/series']);
+        expect(component.loading).toBe(false);
+        expect(component.error).toBeUndefined();
+      });
+
+      it('should fail when SocialLogin returns no access token', async () => {
+        (SocialLogin.login as jest.Mock).mockResolvedValue({
+          result: { accessToken: { token: undefined } }
+        });
+
+        await component.loginWithFacebook();
+
+        expect(component.error).toBe('Facebook sign-in failed — no access token.');
+        expect(authService.login).not.toHaveBeenCalled();
+        expect(component.loading).toBe(false);
+      });
+
+      it('should handle SocialLogin.facebook rejection', async () => {
+        (SocialLogin.login as jest.Mock).mockRejectedValue(
+          new Error('Facebook login cancelled')
+        );
+
+        await component.loginWithFacebook();
+
+        expect(component.error).toBe('Facebook login cancelled');
+        expect(authService.login).not.toHaveBeenCalled();
+        expect(component.loading).toBe(false);
+      });
+
+      it('should initialize SocialLogin before first use on native', async () => {
+        (SocialLogin.login as jest.Mock).mockResolvedValue({
+          result: { accessToken: { token: 'fb-token' } }
+        });
+        (component as any).socialLoginInitialized = false;
+
+        await component.loginWithFacebook();
+
+        expect(SocialLogin.initialize).toHaveBeenCalledWith({
+          google: { webClientId: expect.any(String), mode: 'online' },
+          facebook: { appId: '1510105297476514' }
+        });
+        expect((component as any).socialLoginInitialized).toBe(true);
+      });
+    });
+
+    describe('initSocialLogin', () => {
+      it('should initialize Google and Facebook providers', async () => {
+        await (component as any).initSocialLogin();
+
+        expect(SocialLogin.initialize).toHaveBeenCalledWith({
+          google: { webClientId: expect.stringContaining('googleusercontent.com'), mode: 'online' },
+          facebook: { appId: '1510105297476514' }
+        });
+        expect((component as any).socialLoginInitialized).toBe(true);
+      });
+
+      it('should not re-initialize if already initialized', async () => {
+        (component as any).socialLoginInitialized = true;
+        (SocialLogin.initialize as jest.Mock).mockClear();
+
+        await (component as any).initSocialLogin();
+
+        expect(SocialLogin.initialize).not.toHaveBeenCalled();
+      });
     });
   });
 });

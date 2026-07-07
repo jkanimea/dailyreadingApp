@@ -3,7 +3,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/setup-jest.ts'],
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/www/'],
   transformIgnorePatterns: [
-    'node_modules/(?!.*\\.mjs$|@ionic/core|@ionic/angular|@stencil/core|ionicons|@codetrix-studio/capacitor-google-auth)'
+    'node_modules/(?!.*\\.mjs$|@ionic/core|@ionic/angular|@stencil/core|ionicons|@codetrix-studio/capacitor-google-auth|@capacitor/core|@capgo/capacitor-social-login)'
   ],
   collectCoverage: true,
   collectCoverageFrom: [

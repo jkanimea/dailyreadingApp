@@ -136,6 +136,21 @@ if [ -n "${VERSION:-}" ]; then
     sed -i "s/versionName \"[^\"]*\"/versionName \"1.0.$VERSION\"/" android/app/build.gradle
 fi
 
+# Inject Facebook SDK config into strings.xml for native Android
+FB_STRINGS="android/app/src/main/res/values/facebook-strings.xml"
+FB_CLIENT_TOKEN="${FACEBOOK_CLIENT_TOKEN:-5ebf47a6cc789c1e3e02f964739e1e58}"
+if [ ! -f "$FB_STRINGS" ]; then
+    cat > "$FB_STRINGS" << XMLEOF
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="facebook_app_id">1510105297476514</string>
+    <string name="fb_login_protocol_scheme">fb1510105297476514</string>
+    <string name="facebook_client_token">$FB_CLIENT_TOKEN</string>
+</resources>
+XMLEOF
+    echo "Facebook strings.xml injected for native Facebook login"
+fi
+
 # Patch Facebook OAuth intent filter into AndroidManifest.xml
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [ -f "$MANIFEST" ] && ! grep -q 'fb1510105297476514' "$MANIFEST" 2>/dev/null; then
