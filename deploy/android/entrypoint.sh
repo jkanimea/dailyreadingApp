@@ -107,6 +107,13 @@ if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
         echo "ERROR: Keystore file is empty or missing at $KEYSTORE_PATH — check the KEYSTORE secret"
         exit 1
     fi
+
+    # Extract Facebook key hash from release keystore (needed in Facebook Developer Console)
+    echo "Extracting key hash from release keystore..."
+    KEY_HASH=$(keytool -exportcert -alias release -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | openssl sha1 -binary | openssl base64)
+    echo "Facebook Key Hash: $KEY_HASH"
+    echo "Add this to https://developers.facebook.com -> your app -> Settings -> Basic -> Android -> Key Hashes"
+
     echo "Configuring APK/AAB signing..."
     cat > android/signing.gradle <<GRADLE
 android {
