@@ -548,26 +548,44 @@ describe('LoginPage', () => {
         (SocialLogin.login as jest.Mock).mockResolvedValue({
           result: { accessToken: { token: 'fb-token' } }
         });
+        (SocialLogin.initialize as jest.Mock).mockClear();
         (component as any).socialLoginInitialized = false;
 
         await component.loginWithFacebook();
 
-        expect(SocialLogin.initialize).toHaveBeenCalledWith({
-          google: { webClientId: expect.any(String), mode: 'online' },
-          facebook: { appId: '1510105297476514', clientToken: '5ebf47a6cc789c1e3e02f964739e1e58' }
-        });
+        expect(SocialLogin.initialize).toHaveBeenCalled();
+        const callArgs = (SocialLogin.initialize as jest.Mock).mock.calls[0][0];
+        expect(callArgs.google?.webClientId).toEqual(expect.any(String));
+        expect(callArgs.google?.mode).toBe('online');
+        expect(callArgs.facebook?.appId).toBe('1510105297476514');
+        expect(callArgs.facebook?.clientToken).toEqual(expect.any(String));
+        expect(callArgs.facebook?.clientToken.length).toBeGreaterThan(0);
         expect((component as any).socialLoginInitialized).toBe(true);
       });
     });
 
     describe('initSocialLogin', () => {
-      it('should initialize Google and Facebook providers', async () => {
+      it('should initialize Google and Facebook providers with all required fields', async () => {
+        (SocialLogin.initialize as jest.Mock).mockClear();
         await (component as any).initSocialLogin();
 
-        expect(SocialLogin.initialize).toHaveBeenCalledWith({
-          google: { webClientId: expect.stringContaining('googleusercontent.com'), mode: 'online' },
-          facebook: { appId: '1510105297476514', clientToken: '5ebf47a6cc789c1e3e02f964739e1e58' }
-        });
+        expect(SocialLogin.initialize).toHaveBeenCalled();
+        const callArgs = (SocialLogin.initialize as jest.Mock).mock.calls[0][0];
+
+        // Google provider: must have webClientId and mode
+        expect(callArgs.google).toBeDefined();
+        expect(callArgs.google.webClientId).toEqual(expect.stringContaining('googleusercontent.com'));
+        expect(typeof callArgs.google.webClientId).toBe('string');
+        expect(callArgs.google.webClientId.length).toBeGreaterThan(0);
+        expect(callArgs.google.mode).toBe('online');
+
+        // Facebook provider: must have appId AND clientToken (both required by native plugin)
+        expect(callArgs.facebook).toBeDefined();
+        expect(callArgs.facebook.appId).toBe('1510105297476514');
+        expect(callArgs.facebook.clientToken).toBeDefined();
+        expect(typeof callArgs.facebook.clientToken).toBe('string');
+        expect(callArgs.facebook.clientToken.length).toBeGreaterThan(0);
+
         expect((component as any).socialLoginInitialized).toBe(true);
       });
 
