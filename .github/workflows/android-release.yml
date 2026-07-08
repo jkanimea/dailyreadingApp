@@ -137,14 +137,14 @@ jobs:
           name: android-build-${{ github.ref_name }}-run${{ github.run_number }}
           path: apk-output/
 
-      - name: Upload to Play Store (internal testing)
+      - name: Upload to Play Store (closed testing - alpha)
         if: startsWith(github.ref, 'refs/tags/')
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.dailyreading.app
           releaseFiles: apk-output/app-release.aab
-          tracks: internal
+          tracks: alpha
           status: completed
           releaseName: Release ${{ github.ref_name }}
 
