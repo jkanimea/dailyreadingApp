@@ -145,7 +145,7 @@ jobs:
           packageName: com.dailyreading.app
           releaseFiles: apk-output/app-release.aab
           tracks: alpha
-          status: completed
+          status: draft
           releaseName: Release ${{ github.ref_name }}
 
       - name: Tag release with next version number
