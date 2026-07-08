@@ -554,7 +554,7 @@ describe('LoginPage', () => {
 
         expect(SocialLogin.initialize).toHaveBeenCalledWith({
           google: { webClientId: expect.any(String), mode: 'online' },
-          facebook: { appId: '1510105297476514' }
+          facebook: { appId: '1510105297476514', clientToken: '5ebf47a6cc789c1e3e02f964739e1e58' }
         });
         expect((component as any).socialLoginInitialized).toBe(true);
       });
@@ -566,7 +566,7 @@ describe('LoginPage', () => {
 
         expect(SocialLogin.initialize).toHaveBeenCalledWith({
           google: { webClientId: expect.stringContaining('googleusercontent.com'), mode: 'online' },
-          facebook: { appId: '1510105297476514' }
+          facebook: { appId: '1510105297476514', clientToken: '5ebf47a6cc789c1e3e02f964739e1e58' }
         });
         expect((component as any).socialLoginInitialized).toBe(true);
       });

@@ -258,7 +258,8 @@ export class LoginPage implements OnDestroy {
           mode: 'online'
         },
         facebook: {
-          appId: '1510105297476514'
+          appId: '1510105297476514',
+          clientToken: '5ebf47a6cc789c1e3e02f964739e1e58'
         }
       });
       this.socialLoginInitialized = true;
