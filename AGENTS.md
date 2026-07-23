@@ -7,3 +7,6 @@
 
 ## CI Maintenance
 - After each successful CI run, review the full log for deprecation warnings (Node.js, actions, etc.) and fix them immediately by updating to the latest major version of the affected action.
+
+## Last CI trigger
+- 2026-07-24 11:59 - Test SSH_KEY fix via REST API
