@@ -3,6 +3,7 @@ name: Web Release
 on:
   push:
     branches: [main, develop]
+  workflow_dispatch:
 
 permissions:
   contents: read
