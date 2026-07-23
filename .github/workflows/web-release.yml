@@ -152,14 +152,20 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ vars.PRODUCTION_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Warning: could not scan host key"
 
+      - name: Test SSH connectivity
+        run: |
+          SSH_OPTS="-o ConnectTimeout=30 -vvv"
+          echo "Testing SSH connectivity to ${{ vars.PRODUCTION_HOST }}:22 ..."
+          echo "Loaded keys:"
+          ssh-add -l
+          timeout 35 ssh $SSH_OPTS ${{ vars.SSH_USER }}@${{ vars.PRODUCTION_HOST }} "echo 'SSH OK'" 2>&1 || {
+            echo "ERROR: SSH connection failed. Check authorized_keys on VPS."
+            exit 1
+          }
+
       - name: Sync files to VPS
         run: |
           SSH_OPTS="-o ConnectTimeout=30"
-          echo "Testing SSH connectivity to ${{ vars.PRODUCTION_HOST }}:22 ..."
-          if ! timeout 35 ssh $SSH_OPTS ${{ vars.SSH_USER }}@${{ vars.PRODUCTION_HOST }} "echo 'SSH OK'" 2>&1; then
-            echo "ERROR: Cannot reach ${{ vars.PRODUCTION_HOST }} on port 22."
-            exit 1
-          fi
           for attempt in 1 2 3; do
             echo "Attempt $attempt: syncing deploy files..."
             rsync -avz --timeout=300 -e "ssh $SSH_OPTS" \
