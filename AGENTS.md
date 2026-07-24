@@ -10,3 +10,4 @@
 
 ## Last CI trigger
 - 2026-07-24 11:59 - Test SSH_KEY fix via REST API
+- 2026-07-24 12:12 - Add CI public key to VPS2 authorized_keys
