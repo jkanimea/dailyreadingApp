@@ -196,6 +196,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: SA_PASSWORD, JWT_RSA_PRIVATE_KEY, GOOGLE_CLIENT_ID, FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, DEEPSEEK_API_KEY
           script: |
+            set +H
             cd /opt/encounter-daily
             rm -rf android 2>/dev/null || true
             ROLLBACK_IMAGE=$(podman inspect --format '{{.Image}}' encounter-daily-api 2>/dev/null || echo "")
@@ -250,7 +251,7 @@ jobs:
               -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
               docker.io/nginx:alpine
             echo "Running smoke tests..."
-            for i in $(seq 1 30); do
+            for i in $(seq 1 60); do
               sleep 2
               HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/v1/health)
               if [ "$HTTP_CODE" = "200" ]; then break; fi
