@@ -250,8 +250,12 @@ jobs:
               -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
               docker.io/nginx:alpine
             echo "Running smoke tests..."
-            sleep 10
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/v1/health)
+            for i in $(seq 1 30); do
+              sleep 2
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/v1/health)
+              if [ "$HTTP_CODE" = "200" ]; then break; fi
+              echo "Waiting for API to be ready... (attempt $i, HTTP $HTTP_CODE)"
+            done
             if [ "$HTTP_CODE" != "200" ]; then
               echo "SMOKE TEST FAILED: API returned HTTP $HTTP_CODE (expected 200)"
               if [ -n "$ROLLBACK_IMAGE" ]; then
