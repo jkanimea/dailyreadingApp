@@ -32,7 +32,7 @@ namespace EncounterDaily.Services
 
             var request = new DeepSeekRequest
             {
-                Model = "deepseek-chat",
+                Model = "deepseek-v4-flash",
                 Messages =
                 [
                     new DeepSeekMessage { Role = "system", Content = "Summarize these devotional notes in 2-3 clear sentences. Keep the core message and key reflections. Respond with only the summary." },
