@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { PreloadAllModules, RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
 import { AdminGuard } from './core/guards/admin.guard';
+import { PrivacyPolicyPage, DeleteAccountPage } from './features/legal/legal.module';
 
 const routes: Routes = [
   {
@@ -55,8 +56,12 @@ const routes: Routes = [
     canActivate: [AuthGuard]
   },
   {
-    path: '',
-    loadChildren: () => import('./features/legal/legal.module').then(m => m.LegalModule)
+    path: 'privacy',
+    component: PrivacyPolicyPage
+  },
+  {
+    path: 'delete-account',
+    component: DeleteAccountPage
   },
   { path: 'today', redirectTo: '/tabs/today', pathMatch: 'full' },
   { path: 'calendar', redirectTo: '/tabs/calendar', pathMatch: 'full' },

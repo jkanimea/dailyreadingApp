@@ -1,6 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { IonicModule } from '@ionic/angular';
-import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { PrivacyPolicyPage, DeleteAccountPage } from './legal.module';
 
@@ -10,8 +9,7 @@ describe('PrivacyPolicyPage', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [PrivacyPolicyPage],
-      imports: [CommonModule, IonicModule.forRoot(), RouterModule.forRoot([])]
+      imports: [PrivacyPolicyPage, IonicModule.forRoot(), RouterModule.forRoot([])]
     }).compileComponents();
 
     fixture = TestBed.createComponent(PrivacyPolicyPage);
@@ -46,8 +44,7 @@ describe('DeleteAccountPage', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [DeleteAccountPage],
-      imports: [CommonModule, IonicModule.forRoot(), RouterModule.forRoot([])]
+      imports: [DeleteAccountPage, IonicModule.forRoot(), RouterModule.forRoot([])]
     }).compileComponents();
 
     fixture = TestBed.createComponent(DeleteAccountPage);

@@ -1,10 +1,8 @@
-import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
-import { RouterModule, Routes } from '@angular/router';
-import { Component } from '@angular/core';
+import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 
 @Component({
+  standalone: true,
+  selector: 'app-privacy-policy',
   template: `
     <ion-header>
       <ion-toolbar>
@@ -54,7 +52,6 @@ import { Component } from '@angular/core';
       </article>
     </ion-content>
   `,
-  standalone: false,
   styles: [`
     .legal-content { --background: var(--ion-background-color); }
     .legal-article {
@@ -66,7 +63,8 @@ import { Component } from '@angular/core';
     .legal-article h2 { font-size: 18px; font-weight: 700; margin: 28px 0 8px; }
     .legal-article p, .legal-article li { line-height: 1.6; }
     .legal-article a { color: var(--ion-color-primary); }
-  `]
+  `],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class PrivacyPolicyPage {
   goHome(): void {
@@ -75,6 +73,8 @@ export class PrivacyPolicyPage {
 }
 
 @Component({
+  standalone: true,
+  selector: 'app-delete-account',
   template: `
     <ion-header>
       <ion-toolbar>
@@ -110,7 +110,6 @@ export class PrivacyPolicyPage {
       </article>
     </ion-content>
   `,
-  standalone: false,
   styles: [`
     .legal-content { --background: var(--ion-background-color); }
     .legal-article {
@@ -121,21 +120,11 @@ export class PrivacyPolicyPage {
     .legal-article h2 { font-size: 18px; font-weight: 700; margin: 28px 0 8px; }
     .legal-article p, .legal-article li { line-height: 1.6; }
     .legal-article a { color: var(--ion-color-primary); }
-  `]
+  `],
+  schemas: [CUSTOM_ELEMENTS_SCHEMA]
 })
 export class DeleteAccountPage {
   goHome(): void {
     window.location.href = '/';
   }
 }
-
-const routes: Routes = [
-  { path: 'privacy', component: PrivacyPolicyPage },
-  { path: 'delete-account', component: DeleteAccountPage }
-];
-
-@NgModule({
-  declarations: [PrivacyPolicyPage, DeleteAccountPage],
-  imports: [CommonModule, IonicModule, RouterModule.forChild(routes)]
-})
-export class LegalModule {}
