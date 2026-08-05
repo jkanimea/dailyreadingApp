@@ -18,30 +18,30 @@ Use this checklist to take the app from closed testing to a public Play Store re
 
 ---
 
-## 1. App information & developer setup (Play Console — manual)
-- [ ] Developer account verified, Developer Program Policy accepted
-- [ ] **App name / title** (e.g. "Encounter Daily")
-- [ ] **Short description** (80–90 chars)
-- [ ] **Full description**
-- [ ] **App category** (e.g., Lifestyle / Education / Books & Reference)
-- [ ] **Content rating questionnaire** completed
-- [ ] **Target audience & content** form completed
-- [ ] **Ads** declaration (does the app show ads? currently no — declare "no ads")
-- [ ] Contact email + website (`jack@kanimea.com` / `https://mg-encounter.com`)
+## 1. App information & developer setup (Play Console — manual) — DONE
+- [x] Developer account verified, Developer Program Policy accepted
+- [x] **App name / title** (e.g. "Encounter Daily")
+- [x] **Short description** (80–90 chars)
+- [x] **Full description**
+- [x] **App category** (e.g., Lifestyle / Education / Books & Reference)
+- [x] **Content rating questionnaire** completed
+- [x] **Target audience & content** form completed
+- [x] **Ads** declaration (does the app show ads? currently no — declare "no ads")
+- [x] Contact email + website (`jack@kanimea.com` / `https://mg-encounter.com`)
 
 ## 2 — Privacy & data (required for review)
-- [ ] **Privacy policy hosted at a public URL** — `PRIVACY.md` exists but is NOT served anywhere public yet; host it, e.g. `https://mg-encounter.com/privacy`
-- [ ] **Data deletion process documented at a public URL** — `DELETE_ACCOUNT.md` exists but needs hosting (e.g. `https://mg-encounter.com/delete-account`)
-- [ ] **Data safety form** completed in Play Console (declare account/email, reading progress, journal notes, preferences; how data is shared/secured)
-- [ ] Google OAuth + Facebook OAuth data handling disclosed per policy
+- [ ] **Privacy policy hosted at a public URL** — now `https://mg-encounter.com/privacy` (pushed; confirm after deploy)
+- [ ] **Data deletion process documented at a public URL** — now `https://mg-encounter.com/delete-account` (pushed; confirm after deploy)
+- [x] **Data safety form** completed in Play Console (declare account/email, reading progress, journal notes, preferences; how data is shared/secured)
+- [x] Google OAuth + Facebook OAuth data handling disclosed per policy
 
-## 3 — Store listing assets
-- [ ] **App icon** (512x512 PNG)
-- [ ] **Feature graphic** (1024x500 JPG/PNG)
-- [ ] **Phone screenshots** (min 2, up to 8)
-- [ ] Tablet screenshots (7- and 10-pot) — optional but recommended
-- [ ] **Promo video / thumbnails** — optional
-- [ ] **App icon for closed testing** is visible to testers
+## 3 — Store listing assets [DONE]
+- [x] **App icon** (512x512 PNG)
+- [x] **Feature graphic** (1024x500 JPG/PNG)
+- [x] **Phone screenshots** (min 2, up to 8)
+- [x] Tablet screenshots (7- and 10-pot)
+- [x] **Promo video / thumbnails** — optional
+- [x] **App icon for closed testing** is visible to testers
 
 ## 4 — Closed testing → production path
 - [ ] Create/confirm the **closed testing** (alpha) release is a complete, draft<release@0> with an AppAB
