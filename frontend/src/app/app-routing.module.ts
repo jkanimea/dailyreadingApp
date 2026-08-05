@@ -54,6 +54,10 @@ const routes: Routes = [
     loadChildren: () => import('./features/tabs/tabs.module').then(m => m.TabsModule),
     canActivate: [AuthGuard]
   },
+  {
+    path: '',
+    loadChildren: () => import('./features/legal/legal.module').then(m => m.LegalModule)
+  },
   { path: 'today', redirectTo: '/tabs/today', pathMatch: 'full' },
   { path: 'calendar', redirectTo: '/tabs/calendar', pathMatch: 'full' },
   { path: 'journal', redirectTo: '/tabs/journal', pathMatch: 'full' },
