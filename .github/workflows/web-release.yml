@@ -218,40 +218,76 @@ jobs:
             podman pod rm -f encounter-pod 2>/dev/null || true
             podman pull ghcr.io/jkanimea/encounter-daily-api:production-latest
             set -a; source .env; set +a
-            podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000 \
-              || { echo "Pod create failed. Retrying after sudo cleanup...";
-                   sudo podman pod rm -f encounter-pod 2>/dev/null || true;
-                   sleep 2;
-                   podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000 \
-                     || { echo "FATAL: Could not create pod."; exit 1; }; }
-            podman run -d --pod encounter-pod --name encounter-daily-sql \
-              -e ACCEPT_EULA=Y \
-              -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
-              -e MSSQL_PID=Express \
-              -v sql-data:/var/opt/mssql \
-              mcr.microsoft.com/mssql/server:2022-latest
-            echo "Waiting for SQL Server..."
-            for i in $(seq 1 30); do
-              podman exec encounter-daily-sql /opt/mssql-tools18/bin/sqlcmd \
-                -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
+
+            start_pod() {
+              local API_IMAGE="$1"
+              podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000 \
+                || { echo "Pod create failed. Retrying after sudo cleanup...";
+                     sudo podman pod rm -f encounter-pod 2>/dev/null || true;
+                     sleep 2;
+                     podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000 \
+                       || { echo "FATAL: Could not create pod."; return 1; }; }
+              podman run -d --pod encounter-pod --name encounter-daily-sql \
+                -e ACCEPT_EULA=Y \
+                -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
+                -e MSSQL_PID=Express \
+                -v sql-data:/var/opt/mssql \
+                mcr.microsoft.com/mssql/server:2022-latest
+              echo "Waiting for SQL Server..."
+              SQL_READY=0
+              for i in $(seq 1 45); do
+                if podman exec encounter-daily-sql /opt/mssql-tools18/bin/sqlcmd \
+                    -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1; then
+                  SQL_READY=1
+                  break
+                fi
+                echo "SQL not ready yet (attempt $i/45)..."
+                sleep 2
+              done
+              if [ "$SQL_READY" != "1" ]; then
+                echo "ERROR: SQL Server did not become ready within 90s."
+                return 1
+              fi
+              echo "SQL Server is ready."
+              podman run -d --pod encounter-pod --name encounter-daily-api \
+                --restart=always \
+                -e ASPNETCORE_ENVIRONMENT="$ASPNETCORE_ENVIRONMENT" \
+                -e ASPNETCORE_URLS=http://+:5000 \
+                -e ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=EncounterDaily;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True;" \
+                -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
+                -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
+                -e DevMode__BypassAuth="$BYPASS_AUTH" \
+                -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" \
+                "$API_IMAGE"
+              podman run -d --pod encounter-pod --name encounter-daily-nginx \
+                -v /opt/encounter-daily/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
+                -v /opt/encounter-daily/ssl:/etc/nginx/ssl:ro \
+                -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
+                docker.io/nginx:alpine
+              return 0
+            }
+
+            rollback_pod() {
+              echo "Rolling back to $ROLLBACK_IMAGE..."
+              podman pod rm -f encounter-pod 2>/dev/null || true
               sleep 2
-            done
-            podman run -d --pod encounter-pod --name encounter-daily-api \
-              -e ASPNETCORE_ENVIRONMENT="$ASPNETCORE_ENVIRONMENT" \
-              -e ASPNETCORE_URLS=http://+:5000 \
-              -e ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=EncounterDaily;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True;" \
-              -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
-              -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
-              -e DevMode__BypassAuth="$BYPASS_AUTH" \
-              -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" \
-              ghcr.io/jkanimea/encounter-daily-api:production-latest
-            podman run -d --pod encounter-pod --name encounter-daily-nginx \
-              -v /opt/encounter-daily/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
-              -v /opt/encounter-daily/ssl:/etc/nginx/ssl:ro \
-              -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
-              docker.io/nginx:alpine
+              start_pod "$ROLLBACK_IMAGE"
+              echo "Rollback complete"
+            }
+
+            if ! start_pod ghcr.io/jkanimea/encounter-daily-api:production-latest; then
+              echo "SMOKE DEPLOY FAILED: could not start the new stack."
+              if [ -n "$ROLLBACK_IMAGE" ]; then
+                rollback_pod
+              else
+                echo "No previous image. Production remains down."
+              fi
+              exit 1
+            fi
+
             echo "Running smoke tests..."
-            for i in $(seq 1 60); do
+            HTTP_CODE=000
+            for i in $(seq 1 90); do
               sleep 2
               HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/v1/health)
               if [ "$HTTP_CODE" = "200" ]; then break; fi
@@ -260,32 +296,7 @@ jobs:
             if [ "$HTTP_CODE" != "200" ]; then
               echo "SMOKE TEST FAILED: API returned HTTP $HTTP_CODE (expected 200)"
               if [ -n "$ROLLBACK_IMAGE" ]; then
-                echo "Rolling back to $ROLLBACK_IMAGE..."
-                podman pod rm -f encounter-pod 2>/dev/null || true
-                sleep 2
-                podman pod create --name encounter-pod -p 80:80 -p 443:443 -p 5000:5000
-                podman run -d --pod encounter-pod --name encounter-daily-sql \
-                  -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$SA_PASSWORD" -e MSSQL_PID=Express \
-                  -v sql-data:/var/opt/mssql mcr.microsoft.com/mssql/server:2022-latest
-                for i in $(seq 1 30); do
-                  podman exec encounter-daily-sql /opt/mssql-tools18/bin/sqlcmd \
-                    -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1 && break
-                  sleep 2
-                done
-                podman run -d --pod encounter-pod --name encounter-daily-api \
-                  -e ASPNETCORE_ENVIRONMENT="$ASPNETCORE_ENVIRONMENT" \
-                  -e ASPNETCORE_URLS=http://+:5000 \
-                  -e ConnectionStrings__DefaultConnection="Server=localhost,1433;Database=EncounterDaily;User Id=sa;Password=$SA_PASSWORD;TrustServerCertificate=True;" \
-                  -e Jwt__RsaPrivateKey="$JWT_RSA_PRIVATE_KEY" \
-                  -e Jwt__GoogleClientId="$JWT__GOOGLE_CLIENT_ID" \
-                  -e DevMode__BypassAuth="$BYPASS_AUTH" \
-                  -e Ai__DeepSeekApiKey="$DEEPSEEK_API_KEY" "$ROLLBACK_IMAGE"
-                podman run -d --pod encounter-pod --name encounter-daily-nginx \
-                  -v /opt/encounter-daily/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
-                  -v /opt/encounter-daily/ssl:/etc/nginx/ssl:ro \
-                  -v /opt/encounter-daily/frontend/www:/opt/encounter-daily/frontend/www:ro \
-                  docker.io/nginx:alpine
-                echo "Rollback complete"
+                rollback_pod
               else
                 echo "No previous image. Production remains down."
               fi
