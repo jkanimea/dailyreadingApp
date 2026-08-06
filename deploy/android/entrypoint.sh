@@ -179,6 +179,29 @@ fs.writeFileSync('$MANIFEST', updated, 'utf8');
     echo "Facebook intent filter patched into AndroidManifest.xml"
 fi
 
+# Remove unused Advertising ID permission so the Play declaration ("app does not use advertising ID") matches the manifest
+if [ -f "$MANIFEST" ] && ! grep -q 'tools:node="remove"' "$MANIFEST" 2>/dev/null; then
+    node -e "
+const fs = require('fs');
+const xml = fs.readFileSync('$MANIFEST', 'utf8');
+let updated = xml;
+if (!updated.includes('xmlns:tools=')) {
+    updated = updated.replace(
+        /<manifest\\b([^>]*?)\\s*>/,
+        '<manifest\$1 xmlns:tools=\"http://schemas.android.com/tools\">'
+    );
+}
+updated += \`
+    <uses-permission android:name=\"com.google.android.gms.permission.AD_ID\" tools:node=\"remove\" />
+    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_AD_ID\" tools:node=\"remove\" />
+    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_ATTRIBUTION\" tools:node=\"remove\" />
+    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_CUSTOM_AUDIENCE\" tools:node=\"remove\" />
+    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_TOPICS\" tools:node=\"remove\" />\`;
+fs.writeFileSync('$MANIFEST', updated, 'utf8');
+"
+    echo "Advertising ID + ad-services permissions removed from AndroidManifest.xml (tools:node=remove)"
+fi
+
 # Build APK + AAB
 echo "Building Android APK and AAB..."
 cd android
