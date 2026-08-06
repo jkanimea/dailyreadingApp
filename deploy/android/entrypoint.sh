@@ -191,12 +191,13 @@ if (!updated.includes('xmlns:tools=')) {
         '<manifest\$1 xmlns:tools=\"http://schemas.android.com/tools\">'
     );
 }
-updated += \`
+const removals = \`
     <uses-permission android:name=\"com.google.android.gms.permission.AD_ID\" tools:node=\"remove\" />
     <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_AD_ID\" tools:node=\"remove\" />
     <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_ATTRIBUTION\" tools:node=\"remove\" />
     <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_CUSTOM_AUDIENCE\" tools:node=\"remove\" />
     <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_TOPICS\" tools:node=\"remove\" />\`;
+updated = updated.replace(/\\s*<\\/manifest>\\s*\$/, removals + '\n</manifest>\n');
 fs.writeFileSync('$MANIFEST', updated, 'utf8');
 "
     echo "Advertising ID + ad-services permissions removed from AndroidManifest.xml (tools:node=remove)"
