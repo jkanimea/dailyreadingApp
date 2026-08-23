@@ -14,7 +14,11 @@ jest.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: jest.fn() }
 }));
 jest.mock('@capgo/capacitor-social-login', () => ({
-  SocialLogin: { initialize: jest.fn().mockResolvedValue(undefined), login: jest.fn() }
+  SocialLogin: {
+    initialize: jest.fn().mockResolvedValue(undefined),
+    login: jest.fn(),
+    logout: jest.fn().mockResolvedValue(undefined)
+  }
 }));
 
 const mockTokenResponse: TokenResponse = {
@@ -426,10 +430,12 @@ describe('LoginPage', () => {
 
   describe('native (Android/iOS) login', () => {
     beforeEach(async () => {
-      (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
-      (SocialLogin.login as jest.Mock).mockReset();
-      (SocialLogin.initialize as jest.Mock).mockResolvedValue(undefined);
-      (component as any).socialLoginInitialized = false;
+(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
+        (SocialLogin.login as jest.Mock).mockReset();
+        (SocialLogin.initialize as jest.Mock).mockResolvedValue(undefined);
+        (SocialLogin.logout as jest.Mock).mockReset();
+        (SocialLogin.logout as jest.Mock).mockResolvedValue(undefined);
+        (component as any).socialLoginInitialized = false;
     });
 
     describe('loginWithGoogle', () => {
@@ -482,9 +488,45 @@ describe('LoginPage', () => {
 
         await component.loginWithGoogle();
 
+        // Cancellation triggers stale-credential clearing + a single retry.
+        expect(SocialLogin.logout).toHaveBeenCalledWith({ provider: 'google' });
+        expect(SocialLogin.login).toHaveBeenCalledTimes(2);
         expect(component.error).toBe('Google Sign-In cancelled by user');
         expect(authService.login).not.toHaveBeenCalled();
         expect(component.loading).toBe(false);
+      });
+
+      it('should clear stale credentials and succeed on retry after USER_CANCELLED', async () => {
+        (SocialLogin.login as jest.Mock)
+          .mockRejectedValueOnce(
+            Object.assign(new Error('Google Sign-In cancelled by user'), { code: 'USER_CANCELLED' })
+          )
+          .mockResolvedValueOnce({
+            result: { responseType: 'online', idToken: 'google-id-token-retry' }
+          });
+
+        await component.loginWithGoogle();
+
+        expect(SocialLogin.logout).toHaveBeenCalledWith({ provider: 'google' });
+        expect(SocialLogin.login).toHaveBeenCalledTimes(2);
+        expect(authService.login).toHaveBeenCalledWith('google', 'google-id-token-retry');
+        expect(authService.storeTokens).toHaveBeenCalledWith(mockTokenResponse);
+        expect(router.navigate).toHaveBeenCalledWith(['/series']);
+        expect(component.loading).toBe(false);
+        expect(component.error).toBeUndefined();
+      });
+
+      it('should not retry on non-cancellation errors', async () => {
+        (SocialLogin.login as jest.Mock).mockRejectedValue(
+          new Error('Something else went wrong')
+        );
+
+        await component.loginWithGoogle();
+
+        expect(SocialLogin.logout).not.toHaveBeenCalled();
+        expect(SocialLogin.login).toHaveBeenCalledTimes(1);
+        expect(component.error).toBe('Something else went wrong');
+        expect(authService.login).not.toHaveBeenCalled();
       });
 
       it('should handle backend rejection on native', async () => {

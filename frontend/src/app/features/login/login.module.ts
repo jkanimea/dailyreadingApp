@@ -274,7 +274,7 @@ export class LoginPage implements OnDestroy {
 
       if (Capacitor.isNativePlatform()) {
         // Native Android/iOS — use @capgo/capacitor-social-login
-        const res = await SocialLogin.login({ provider: 'google', options: { style: 'bottom' } });
+        const res = await this.googleNativeLogin();
         if (res.result.responseType !== 'online') throw new Error('Google sign-in failed — unexpected offline response.');
         const idToken = res.result.idToken;
         if (!idToken) throw new Error('Google sign-in failed — no ID token returned.');
@@ -330,6 +330,43 @@ export class LoginPage implements OnDestroy {
       this.error = e instanceof Error ? e.message : 'Google sign-in failed.';
     } finally {
       this.loading = false;
+    }
+  }
+
+  /** Native (Android/iOS) Google Sign-In entry point.
+   *
+   *  Google Credential Manager reports `GetCredentialCancellationException` as
+   *  "Google Sign-In cancelled by user" (code `USER_CANCELLED`), but Android
+   *  throws that same exception for stale cached credentials / re-auth failures
+   *  (error 16) — NOT just a genuine user cancel. When a user taps an
+   *  already-authenticated account, the cached credential can fail to re-auth.
+   *  We clear the stale credential state and retry once so that tap succeeds
+   *  instead of surfacing a misleading "cancelled by user" error.
+   */
+  private async googleNativeLogin() {
+    try {
+      return await SocialLogin.login({ provider: 'google', options: { style: 'bottom' } });
+    } catch (e) {
+      if (this.isUserCancelled(e)) {
+        await this.clearGoogleCredentials();
+        return SocialLogin.login({ provider: 'google', options: { style: 'bottom' } });
+      }
+      throw e;
+    }
+  }
+
+  private isUserCancelled(e: unknown): boolean {
+    const err = e as { code?: string; message?: string };
+    return err?.code === 'USER_CANCELLED' || /cancelled by user/i.test(err?.message ?? '');
+  }
+
+  /** Best-effort clearing of stale Credential Manager state so a
+   *  previously-authenticated account can re-auth cleanly. */
+  private async clearGoogleCredentials(): Promise<void> {
+    try {
+      await SocialLogin.logout({ provider: 'google' });
+    } catch {
+      // Non-fatal: stale state may already be gone or unsupported.
     }
   }
 

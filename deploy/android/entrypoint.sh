@@ -108,11 +108,41 @@ if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
         exit 1
     fi
 
-    # Extract Facebook key hash from release keystore (needed in Facebook Developer Console)
-    echo "Extracting key hash from release keystore..."
+    # Extract key hashes from release keystore
+    echo "Extracting key hashes from release keystore..."
     KEY_HASH=$(keytool -exportcert -alias release -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | openssl sha1 -binary | openssl base64)
+    SHA1_FP=$(keytool -list -v -alias release -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | grep 'SHA1:' | awk '{print $2}')
+    SHA256_FP=$(keytool -list -v -alias release -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | grep 'SHA256:' | awk '{print $2}')
+    echo "=== ANDROID CERTIFICATE FINGERPRINTS ==="
+    echo "SHA1: $SHA1_FP"
+    echo "SHA256: $SHA256_FP"
     echo "Facebook Key Hash: $KEY_HASH"
-    echo "Add this to https://developers.facebook.com -> your app -> Settings -> Basic -> Android -> Key Hashes"
+    echo "========================================"
+    echo "Add SHA1 + SHA256 above to Google Cloud Console -> Credentials -> Android OAuth client"
+    echo "Also add Play App Signing SHA1 from Google Play Console -> App integrity -> App signing key certificate"
+    echo "Facebook Key Hash -> https://developers.facebook.com -> Settings -> Basic -> Android -> Key Hashes"
+
+    # Fail the build if the release SHA-1 is not registered in google-services.json.
+    # Android's Credential Manager reports "Google Sign-In cancelled by user" when a
+    # user taps an authenticated account whose signing certificate SHA-1 is missing
+    # from the Android OAuth client — so refuse to ship an APK whose Google Sign-In
+    # cannot work.
+    if [ -f android/app/google-services.json ]; then
+        RELEASE_SHA1=$(printf '%s' "$SHA1_FP" | tr -d ':' | tr '[:upper:]' '[:lower:]')
+        if [ -n "$RELEASE_SHA1" ] && grep -qF "$RELEASE_SHA1" android/app/google-services.json; then
+            echo "OK: release SHA-1 ($RELEASE_SHA1) is registered in google-services.json"
+        else
+            echo "ERROR: release SHA-1 ($RELEASE_SHA1) is NOT registered in android/app/google-services.json."
+            echo "  This causes 'Google Sign-In cancelled by user' when tapping an authenticated account."
+            echo "  Fix: Google Cloud Console -> Credentials -> Android OAuth client -> add SHA-1: $SHA1_FP"
+            echo "  (plus the Play App Signing SHA-1 from Play Console -> App integrity -> App signing key)."
+            echo "  Then re-download google-services.json and update the GOOGLE_SERVICES_JSON secret."
+            echo "  https://console.cloud.google.com/apis/credentials"
+            exit 1
+        fi
+    else
+        echo "WARNING: android/app/google-services.json not found — skipping SHA-1 verification."
+    fi
 
     echo "Configuring APK/AAB signing..."
     cat > android/signing.gradle <<GRADLE
