@@ -27,7 +27,7 @@ Use this checklist to take the app from closed testing to a public Play Store re
 - [x] **Content rating questionnaire** completed
 - [x] **Target audience & content** form completed
 - [x] **Ads** declaration (does the app show ads? currently no — declare "no ads")
-- [x] Contact email + website (`jack@kanimea.com` / `https://mg-encounter.com`)
+- [x] Contact email + website (`jkanimea@gmail.com` / `https://mg-encounter.com`)
 
 ## 2 — Privacy & data (required for review)
 - [ ] **Privacy policy hosted at a public URL** — now `https://mg-encounter.com/privacy` (pushed; confirm after deploy)

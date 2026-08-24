@@ -47,7 +47,7 @@ Our app does not knowingly collect personal information from children. The app i
 
 ## Contact
 
-Email: jack@kanimea.com
+Email: jkanimea@gmail.com
 
 ## Changes
 
