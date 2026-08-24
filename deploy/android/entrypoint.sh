@@ -263,8 +263,10 @@ fi
 # Build APK + AAB
 echo "Building Android APK and AAB..."
 cd android
-echo "=== Dependency trace: who pulls play-services-ads-identifier ==="
-./gradlew :app:dependencies --configuration releaseRuntimeClasspath 2>&1 | grep -iE 'play-services-|firebase-|ads' | head -80
+echo "=== dependencyInsight: who depends on play-services-ads-identifier ==="
+./gradlew :app:dependencyInsight --dependency play-services-ads-identifier --configuration releaseRuntimeClasspath 2>&1 | head -80
+echo "=== any bundled jars/aars in android project (non-maven) ==="
+find . -path './build' -prune -o \( -name '*.jar' -o -name '*.aar' \) -print 2>/dev/null | grep -v '/build/' | head -40
 ./gradlew assembleRelease bundleRelease
 
 # Copy APK and AAB to output
