@@ -263,6 +263,8 @@ fi
 # Build APK + AAB
 echo "Building Android APK and AAB..."
 cd android
+echo "=== Dependency trace: who pulls play-services-ads-identifier ==="
+./gradlew :app:dependencies --configuration releaseRuntimeClasspath 2>/dev/null | grep -iE 'ads-identifier|firebase-analytics|measurement|clearcut' || echo "(none found in dependency tree)"
 ./gradlew assembleRelease bundleRelease
 
 # Copy APK and AAB to output
