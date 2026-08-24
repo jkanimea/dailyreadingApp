@@ -237,6 +237,29 @@ fs.writeFileSync('$MANIFEST', updated, 'utf8');
     echo "Advertising ID + ad-services permissions removed from AndroidManifest.xml (tools:node=remove)"
 fi
 
+# Exclude Firebase Analytics + the ads-identifier chain from the build. Firebase
+# Cloud Messaging pulls in firebase-analytics (via firebase-measurement-connector),
+# which pulls in play-services-ads-identifier — the library that declares the AD_ID
+# permission. Play's advertising-ID declaration check detects the bundled library,
+# not just the manifest permission, so the only way to keep the "app does not use
+# advertising ID" declaration accurate is to not ship the analytics/ads-identifier
+# code at all. FCM push notifications keep working without Analytics.
+if ! grep -q 'play-services-ads-identifier' android/app/build.gradle 2>/dev/null; then
+    cat >> android/app/build.gradle << 'GRADLE'
+
+configurations.all {
+    exclude group: 'com.google.firebase', module: 'firebase-analytics'
+    exclude group: 'com.google.firebase', module: 'firebase-measurement-connector'
+    exclude group: 'com.google.android.gms', module: 'play-services-ads-identifier'
+    exclude group: 'com.google.android.gms', module: 'play-services-measurement-api'
+    exclude group: 'com.google.android.gms', module: 'play-services-measurement'
+    exclude group: 'com.google.android.gms', module: 'play-services-measurement-sdk-api'
+    exclude group: 'com.google.android.gms', module: 'play-services-measurement-base'
+}
+GRADLE
+    echo "Excluded firebase-analytics + play-services-ads-identifier (Advertising ID) from the build"
+fi
+
 # Build APK + AAB
 echo "Building Android APK and AAB..."
 cd android
