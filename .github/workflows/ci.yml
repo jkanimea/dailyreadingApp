@@ -66,6 +66,15 @@ jobs:
       - name: Run integration tests
         run: cd frontend && npx jest --ci --passWithNoTests
 
+  oauth-config-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify OAuth config matches GOOGLE_SERVICES_JSON
+        run: node frontend/scripts/check-oauth-config.mjs
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+
   e2e-tests:
     runs-on: ubuntu-latest
     needs: [backend-unit-tests, backend-integration-tests, frontend-unit-tests, frontend-integration-tests]
