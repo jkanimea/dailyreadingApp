@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent, HttpErrorResponse } from '@angular/common/http';
-import { Observable, BehaviorSubject, throwError, from, of } from 'rxjs';
-import { catchError, filter, take, switchMap, map } from 'rxjs/operators';
+import { Observable, BehaviorSubject, throwError, from } from 'rxjs';
+import { catchError, filter, take, switchMap } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 import { SecureStorageService } from '../services/secure-storage.service';
 import { LoggingService } from '../services/logging.service';
@@ -16,7 +16,7 @@ export class AuthInterceptor implements HttpInterceptor {
   private refreshTokenSubject = new BehaviorSubject<string | null>(null);
 
   intercept(req: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
-    if (req.url.includes('/auth/')) {
+    if (this.isExempt(req)) {
       return next.handle(req);
     }
 
@@ -24,16 +24,26 @@ export class AuthInterceptor implements HttpInterceptor {
       switchMap(authReq => next.handle(authReq)),
       catchError(error => {
         if (error instanceof HttpErrorResponse) {
+          if (error.status === 401) {
+            // Recoverable: an expired access token triggers a silent refresh+retry.
+            // Don't log it as an error — only session-expiry (failed refresh) is worth reporting.
+            return this.handle401Error(req, next);
+          }
           this.logging.error('AuthInterceptor',
             `HTTP ${error.status} ${req.method} ${req.urlWithParams}`,
             error.message);
-          if (error.status === 401) {
-            return this.handle401Error(req, next);
-          }
         }
         return throwError(() => error);
       })
     );
+  }
+
+  private isExempt(req: HttpRequest<unknown>): boolean {
+    if (req.url.includes('/auth/')) return true;
+    // Client log submission is anonymous on the backend — attaching an (often expired)
+    // token only triggers a pointless 401/refresh cycle on the logging endpoint. The
+    // admin GET/DELETE on /logs still requires auth and is NOT exempted.
+    return req.method === 'POST' && req.url.includes('/logs');
   }
 
   private async addToken(req: HttpRequest<unknown>): Promise<HttpRequest<unknown>> {
@@ -61,6 +71,9 @@ export class AuthInterceptor implements HttpInterceptor {
         }),
         catchError(err => {
           this.isRefreshing = false;
+          this.refreshTokenSubject.next(null);
+          this.logging.warn('AuthInterceptor',
+            `Session expired — token refresh failed (${req.method} ${req.urlWithParams})`);
           return throwError(() => err);
         })
       );
