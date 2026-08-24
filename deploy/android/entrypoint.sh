@@ -121,6 +121,10 @@ if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
     echo "Add SHA1 + SHA256 above to Google Cloud Console -> Credentials -> Android OAuth client"
     echo "Also add Play App Signing SHA1 from Google Play Console -> App integrity -> App signing key certificate"
     echo "Facebook Key Hash -> https://developers.facebook.com -> Settings -> Basic -> Android -> Key Hashes"
+    echo ""
+    echo "Exact commands to reproduce these fingerprints locally:"
+    echo "  keytool -list -v -alias release -keystore \"$KEYSTORE_PATH\" -storepass \"\$KEYSTORE_PASSWORD\" | grep -E 'SHA1:|SHA256:'"
+    echo "  keytool -exportcert -alias release -keystore \"$KEYSTORE_PATH\" -storepass \"\$KEYSTORE_PASSWORD\" | openssl sha1 -binary | openssl base64"
 
     # Fail the build if the release SHA-1 is not registered in google-services.json.
     # Android's Credential Manager reports "Google Sign-In cancelled by user" when a

@@ -38,18 +38,7 @@ jobs:
           # 3. Update track with country targeting + completed status
           echo "=== Updating alpha track ==="
           # Read current track and modify it
-          TRACK_DATA=$(echo "$TRACK_RESP" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for release in data.get('releases', []):
-    release['status'] = 'completed'
-    release['countryTargeting'] = {
-        'includeRestOfWorld': True,
-        'countries': ['US', 'CA', 'GB', 'AU', 'IN', 'DE', 'FR', 'JP', 'BR', 'MX']
-    }
-    release['userFraction'] = 1.0
-print(json.dumps(data))
-")
+          TRACK_DATA=$(echo "$TRACK_RESP" | python3 -c 'import sys,json; d=json.load(sys.stdin); [r.update({"status":"completed","countryTargeting":{"includeRestOfWorld":True,"countries":["US","CA","GB","AU","IN","DE","FR","JP","BR","MX"]},"userFraction":1.0}) for r in d.get("releases",[])]; print(json.dumps(d))')
           echo "Updated track data: $TRACK_DATA"
 
           UPDATE_RESP=$(curl -s -X PUT \
