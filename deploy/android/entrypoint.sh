@@ -213,71 +213,20 @@ fs.writeFileSync('$MANIFEST', updated, 'utf8');
     echo "Facebook intent filter patched into AndroidManifest.xml"
 fi
 
-# Remove unused Advertising ID permission so the Play declaration ("app does not use advertising ID") matches the manifest
-if [ -f "$MANIFEST" ] && ! grep -q 'tools:node="remove"' "$MANIFEST" 2>/dev/null; then
-    node -e "
-const fs = require('fs');
-const xml = fs.readFileSync('$MANIFEST', 'utf8');
-let updated = xml;
-if (!updated.includes('xmlns:tools=')) {
-    updated = updated.replace(
-        /<manifest\\b([^>]*?)\\s*>/,
-        '<manifest\$1 xmlns:tools=\"http://schemas.android.com/tools\">'
-    );
-}
-const removals = \`
-    <uses-permission android:name=\"com.google.android.gms.permission.AD_ID\" tools:node=\"remove\" />
-    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_AD_ID\" tools:node=\"remove\" />
-    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_ATTRIBUTION\" tools:node=\"remove\" />
-    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_CUSTOM_AUDIENCE\" tools:node=\"remove\" />
-    <uses-permission android:name=\"android.permission.ACCESS_ADSERVICES_TOPICS\" tools:node=\"remove\" />\`;
-updated = updated.replace(/\\s*<\\/manifest>\\s*\$/, removals + '\n</manifest>\n');
-fs.writeFileSync('$MANIFEST', updated, 'utf8');
-"
-    echo "Advertising ID + ad-services permissions removed from AndroidManifest.xml (tools:node=remove)"
-fi
-
-# Exclude Firebase Analytics + the ads-identifier chain from the build. Firebase
-# Cloud Messaging pulls in firebase-analytics (via firebase-measurement-connector),
-# which pulls in play-services-ads-identifier — the library that declares the AD_ID
-# permission. Play's advertising-ID declaration check detects the bundled library,
-# not just the manifest permission, so the only way to keep the "app does not use
-# advertising ID" declaration accurate is to not ship the analytics/ads-identifier
-# code at all. FCM push notifications keep working without Analytics.
-if ! grep -q 'play-services-ads-identifier' android/app/build.gradle 2>/dev/null; then
-    cat >> android/app/build.gradle << 'GRADLE'
-
-configurations.all {
-    exclude group: 'com.google.firebase', module: 'firebase-analytics'
-    exclude group: 'com.google.firebase', module: 'firebase-measurement-connector'
-    exclude group: 'com.google.android.gms', module: 'play-services-ads-identifier'
-    exclude group: 'com.google.android.gms', module: 'play-services-measurement-api'
-    exclude group: 'com.google.android.gms', module: 'play-services-measurement'
-    exclude group: 'com.google.android.gms', module: 'play-services-measurement-sdk-api'
-    exclude group: 'com.google.android.gms', module: 'play-services-measurement-base'
-}
-GRADLE
-    echo "Excluded firebase-analytics + play-services-ads-identifier (Advertising ID) from the build"
-fi
+# Advertising ID (AD_ID): the app ships Google Play Services (Google Sign-In) and
+# Firebase Cloud Messaging. GMS's core libs reference the ads-identifier reflectively,
+# so Play's AD-ID detection flags the app regardless of the manifest. The Play Console
+# declaration is therefore "app uses advertising ID" (see Play Console -> App content
+# -> Advertising ID), and we intentionally keep AD_ID unmodified so the manifest and
+# the declaration stay consistent. Do not add a tools:node="remove" for AD_ID.
 
 # Build APK + AAB
 echo "Building Android APK and AAB..."
 cd android
 ./gradlew assembleRelease bundleRelease
 
-# Post-build gate: the AAB's merged manifest must NOT declare the Advertising ID
-# permission. Play rejects any AAB that does when the Play Console declaration is
-# "does not use advertising ID". This fails the build here (fast, local) instead of
-# surfacing only at Play Store upload time, so a regression in the tools:node removal
-# is caught immediately.
-echo "Verifying Advertising ID is absent from the built AAB..."
-if unzip -p app/build/outputs/bundle/release/app-release.aab base/manifest/AndroidManifest.xml 2>/dev/null \
-   | grep -qiE 'com\.google\.android\.gms\.permission\.AD_ID|ACCESS_ADSERVICES'; then
-    echo "ERROR: AD_ID / ad-services permission present in the built AAB manifest."
-    echo "  The tools:node='remove' patch in AndroidManifest.xml is not taking effect."
-    exit 1
-fi
-echo "OK: no AD_ID / ad-services permission in the built AAB."
+# The Play Console declaration is "app uses advertising ID", so AD_ID is intentionally
+# kept in the manifest (see the note above). Do not strip it here.
 
 # Copy APK and AAB to output
 cp app/build/outputs/apk/release/app-release.apk "$OUTPUT_DIR/app-release.apk"
