@@ -9,6 +9,7 @@ import { LoginPage } from './login.module';
 import { TokenResponse } from '../../core/models/user.model';
 import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
+import { GOOGLE_WEB_CLIENT_ID, FACEBOOK_APP_ID, FACEBOOK_CLIENT_TOKEN } from '../../core/oauth.config';
 
 jest.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: jest.fn() }
@@ -597,11 +598,10 @@ describe('LoginPage', () => {
 
         expect(SocialLogin.initialize).toHaveBeenCalled();
         const callArgs = (SocialLogin.initialize as jest.Mock).mock.calls[0][0];
-        expect(callArgs.google?.webClientId).toEqual(expect.any(String));
+        expect(callArgs.google?.webClientId).toBe(GOOGLE_WEB_CLIENT_ID);
         expect(callArgs.google?.mode).toBe('online');
-        expect(callArgs.facebook?.appId).toBe('1510105297476514');
-        expect(callArgs.facebook?.clientToken).toEqual(expect.any(String));
-        expect(callArgs.facebook?.clientToken.length).toBeGreaterThan(0);
+        expect(callArgs.facebook?.appId).toBe(FACEBOOK_APP_ID);
+        expect(callArgs.facebook?.clientToken).toBe(FACEBOOK_CLIENT_TOKEN);
         expect((component as any).socialLoginInitialized).toBe(true);
       });
     });
@@ -616,17 +616,13 @@ describe('LoginPage', () => {
 
         // Google provider: must have webClientId and mode
         expect(callArgs.google).toBeDefined();
-        expect(callArgs.google.webClientId).toEqual(expect.stringContaining('googleusercontent.com'));
-        expect(typeof callArgs.google.webClientId).toBe('string');
-        expect(callArgs.google.webClientId.length).toBeGreaterThan(0);
+        expect(callArgs.google.webClientId).toBe(GOOGLE_WEB_CLIENT_ID);
         expect(callArgs.google.mode).toBe('online');
 
         // Facebook provider: must have appId AND clientToken (both required by native plugin)
         expect(callArgs.facebook).toBeDefined();
-        expect(callArgs.facebook.appId).toBe('1510105297476514');
-        expect(callArgs.facebook.clientToken).toBeDefined();
-        expect(typeof callArgs.facebook.clientToken).toBe('string');
-        expect(callArgs.facebook.clientToken.length).toBeGreaterThan(0);
+        expect(callArgs.facebook.appId).toBe(FACEBOOK_APP_ID);
+        expect(callArgs.facebook.clientToken).toBe(FACEBOOK_CLIENT_TOKEN);
 
         expect((component as any).socialLoginInitialized).toBe(true);
       });

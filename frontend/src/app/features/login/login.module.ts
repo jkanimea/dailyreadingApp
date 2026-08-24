@@ -10,6 +10,7 @@ import { environment } from '../../../environments/environment';
 import { appVersion } from '../../../environments/version';
 import { Capacitor } from '@capacitor/core';
 import { SocialLogin } from '@capgo/capacitor-social-login';
+import { GOOGLE_WEB_CLIENT_ID, FACEBOOK_APP_ID, FACEBOOK_CLIENT_TOKEN } from '../../core/oauth.config';
 
 @Component({
   template: `
@@ -205,7 +206,7 @@ export class LoginPage implements OnDestroy {
         await this.loadScript('https://accounts.google.com/gsi/client');
       }
       window.google!.accounts.id.initialize({
-        client_id: '868571551367-kkm4ggn0d9cc457k6s0p9rhoipq1bkio.apps.googleusercontent.com',
+        client_id: GOOGLE_WEB_CLIENT_ID,
         callback: (response: GoogleCredentialResponse) => {
           if (response?.credential) {
             this.googleCredResolve?.(response.credential);
@@ -239,7 +240,7 @@ export class LoginPage implements OnDestroy {
       if (!window.FB) {
         await new Promise<void>((resolve, reject) => {
           window.fbAsyncInit = () => {
-            window.FB!.init({ appId: '1510105297476514', version: 'v18.0' });
+            window.FB!.init({ appId: FACEBOOK_APP_ID, version: 'v18.0' });
             resolve();
           };
           this.loadScript('https://connect.facebook.net/en_US/sdk.js').catch(reject);
@@ -254,12 +255,12 @@ export class LoginPage implements OnDestroy {
     try {
       await SocialLogin.initialize({
         google: {
-          webClientId: '868571551367-kkm4ggn0d9cc457k6s0p9rhoipq1bkio.apps.googleusercontent.com',
+          webClientId: GOOGLE_WEB_CLIENT_ID,
           mode: 'online'
         },
         facebook: {
-          appId: '1510105297476514',
-          clientToken: '5ebf47a6cc789c1e3e02f964739e1e58'
+          appId: FACEBOOK_APP_ID,
+          clientToken: FACEBOOK_CLIENT_TOKEN
         }
       });
       this.socialLoginInitialized = true;
