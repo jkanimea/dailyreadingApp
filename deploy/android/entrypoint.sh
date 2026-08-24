@@ -263,11 +263,21 @@ fi
 # Build APK + AAB
 echo "Building Android APK and AAB..."
 cd android
-echo "=== dependencyInsight: who depends on play-services-ads-identifier ==="
-./gradlew :app:dependencyInsight --dependency play-services-ads-identifier --configuration releaseRuntimeClasspath 2>&1 | head -80
-echo "=== any bundled jars/aars in android project (non-maven) ==="
-find . -path './build' -prune -o \( -name '*.jar' -o -name '*.aar' \) -print 2>/dev/null | grep -v '/build/' | head -40
 ./gradlew assembleRelease bundleRelease
+
+# Post-build gate: the AAB's merged manifest must NOT declare the Advertising ID
+# permission. Play rejects any AAB that does when the Play Console declaration is
+# "does not use advertising ID". This fails the build here (fast, local) instead of
+# surfacing only at Play Store upload time, so a regression in the tools:node removal
+# is caught immediately.
+echo "Verifying Advertising ID is absent from the built AAB..."
+if unzip -p app/build/outputs/bundle/release/app-release.aab base/manifest/AndroidManifest.xml 2>/dev/null \
+   | grep -qiE 'com\.google\.android\.gms\.permission\.AD_ID|ACCESS_ADSERVICES'; then
+    echo "ERROR: AD_ID / ad-services permission present in the built AAB manifest."
+    echo "  The tools:node='remove' patch in AndroidManifest.xml is not taking effect."
+    exit 1
+fi
+echo "OK: no AD_ID / ad-services permission in the built AAB."
 
 # Copy APK and AAB to output
 cp app/build/outputs/apk/release/app-release.apk "$OUTPUT_DIR/app-release.apk"
