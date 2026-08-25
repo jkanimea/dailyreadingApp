@@ -59,21 +59,25 @@ if ! printf '%s' "$UI" | grep -q 'SIGN IN WITH GOOGLE'; then
 fi
 echo "    ok"
 
-echo "==> Check 3: tapping Sign in with Google yields a valid credential request"
+echo "==> Check 3: tapping Sign in with Google invokes Credential Manager without crashing"
 NODE=$(printf '%s' "$UI" | grep -oE '<node [^>]*text="SIGN IN WITH GOOGLE"[^>]*>' | head -1)
 BOUNDS=$(printf '%s' "$NODE" | grep -oE 'bounds="\[[0-9]+,[0-9]+\]\[[0-9]+,[0-9]+\]"' | head -1)
 CENTER=$(printf '%s' "$BOUNDS" | python3 -c "import sys,re; m=re.findall(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', sys.stdin.read()); x1,y1,x2,y2=map(int,m[0]); print((x1+x2)//2,(y1+y2)//2)")
 echo "    tapping at $CENTER"
 adb shell input tap $CENTER >/dev/null
-sleep 6
+sleep 5
 
-LOGCAT=$(adb logcat -d 2>/dev/null || true)
-if printf '%s' "$LOGCAT" | grep -qE 'TYPE_GOOGLE_ID_TOKEN_CREDENTIAL meets all filtering'; then
-  echo "    ok — credential option accepted by GMS (client ID is valid)"
-else
-  echo "    logcat (relevant lines):"
-  printf '%s' "$LOGCAT" | grep -iE 'GoogleProvider|CredMan|GetCredential|filtering|credentials' | tail -20
-  fail "Google credential request was not accepted (possible stale GOOGLE_WEB_CLIENT_ID)"
+if adb logcat -d 2>/dev/null | grep -q 'FATAL EXCEPTION'; then
+  adb logcat -d 2>/dev/null | grep -A20 'FATAL EXCEPTION'
+  fail "app crashed after tapping Sign in with Google"
 fi
+# The credential request must actually reach Credential Manager (native plugin
+# wiring works). This is account-independent — the client-ID *value* itself is
+# already verified deterministically by check-oauth-config.mjs.
+if ! adb logcat -d 2>/dev/null | grep -qiE 'executeGetCredential|CredManSysService|CredentialManager'; then
+  adb logcat -d 2>/dev/null | grep -iE 'GoogleProvider|CredMan|credential' | tail -15
+  fail "credential manager was not invoked after tapping Sign in with Google"
+fi
+echo "    ok"
 
 echo "SMOKE TEST PASSED"
