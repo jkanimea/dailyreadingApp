@@ -192,3 +192,33 @@ jobs:
             echo "APK + AAB artifacts uploaded!"
             echo "Download: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
+
+  device-smoke-test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v6
+        with:
+          pattern: android-build-*
+
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run Android device smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-snapshot -no-audio -no-boot-anim -no-window
+          script: |
+            APK=$(find . -name 'app-release.apk' | head -1)
+            echo "Using APK: $APK"
+            chmod +x frontend/scripts/android-smoke-test.sh
+            frontend/scripts/android-smoke-test.sh "$APK" emulator-5554
