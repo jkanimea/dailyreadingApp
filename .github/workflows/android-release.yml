@@ -218,7 +218,5 @@ jobs:
           target: google_apis
           emulator-options: -no-snapshot -no-audio -no-boot-anim -no-window
           script: |
-            APK=$(find . -name 'app-release.apk' | head -1)
-            echo "Using APK: $APK"
             chmod +x frontend/scripts/android-smoke-test.sh
-            frontend/scripts/android-smoke-test.sh "$APK" emulator-5554
+            frontend/scripts/android-smoke-test.sh "$(find . -name 'app-release.apk' | head -1)" emulator-5554
