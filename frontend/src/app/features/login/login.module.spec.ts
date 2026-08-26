@@ -439,6 +439,18 @@ describe('LoginPage', () => {
         (component as any).socialLoginInitialized = false;
     });
 
+    it('should NOT load the web Google/Facebook SDKs on native (avoids origin_mismatch)', async () => {
+        googleIdMock.initialize.mockClear();
+        (component as any).googleInitialized = false;
+
+        component.ionViewWillEnter();
+        await new Promise(r => setTimeout(r, 0)); // flush microtasks
+
+        // Native sign-in uses SocialLogin (Credential Manager), not the web GIS.
+        expect(googleIdMock.initialize).not.toHaveBeenCalled();
+        expect(SocialLogin.initialize).toHaveBeenCalled();
+    });
+
     describe('loginWithGoogle', () => {
       it('should sign in with Google via SocialLogin on native', async () => {
         (SocialLogin.login as jest.Mock).mockResolvedValue({

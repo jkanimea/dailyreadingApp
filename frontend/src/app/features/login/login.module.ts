@@ -187,15 +187,21 @@ export class LoginPage implements OnDestroy {
     this.googleCredReject = undefined;
   }
 
-  /** Pre-load both SDKs as soon as the page is visible so they are ready
+  /** Pre-load the correct SDK(s) as soon as the page is visible so they are ready
    *  before the user taps a button (preserves the user-gesture chain). */
   ionViewWillEnter(): void {
     this.googleInitialized = false;
     this.facebookInitialized = false;
-    this.initGoogle().catch(() => {});
-    this.initFacebook().catch(() => {});
     if (Capacitor.isNativePlatform()) {
+      // Native uses @capgo/capacitor-social-login (Credential Manager). Do NOT
+      // load the web Google/Facebook SDKs here — the Google Identity Services
+      // script would initialize against the Capacitor WebView origin and throw
+      // an `origin_mismatch` error even though native sign-in works fine.
       this.initSocialLogin().catch(() => {});
+    } else {
+      // Browser: pre-load the Google GIS + Facebook JS SDKs.
+      this.initGoogle().catch(() => {});
+      this.initFacebook().catch(() => {});
     }
   }
 
