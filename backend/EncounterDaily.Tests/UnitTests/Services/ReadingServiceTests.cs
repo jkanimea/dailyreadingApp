@@ -6,6 +6,7 @@ using EncounterDaily.Core.Interfaces.Services;
 using EncounterDaily.Infrastructure.Data;
 using EncounterDaily.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace EncounterDaily.Tests.UnitTests.Services
@@ -25,7 +26,7 @@ namespace EncounterDaily.Tests.UnitTests.Services
             _mockUow = new Mock<IUnitOfWork>();
             _mockUow.Setup(u => u.Repository<DailyReading>()).Returns(_mockRepo.Object);
             _mockUow.Setup(u => u.Readings).Returns(_mockReadingRepo.Object);
-            _service = new ReadingService(_mockUow.Object);
+            _service = new ReadingService(_mockUow.Object, new BibleTextAssembler(_mockUow.Object, Mock.Of<ILogger<BibleTextAssembler>>()));
         }
 
         [Fact]

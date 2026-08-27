@@ -175,8 +175,8 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddScoped<ISeriesService, SeriesService>();
+builder.Services.AddScoped<BibleTextAssembler>();
 builder.Services.AddScoped<IReadingService, ReadingService>();
-builder.Services.AddScoped<ISeriesFactory, SeriesFactory>();
 builder.Services.AddScoped<IProgressService, ProgressService>();
 builder.Services.AddScoped<IBookmarkService, BookmarkService>();
 builder.Services.AddHttpClient("FacebookGraph", client =>

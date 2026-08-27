@@ -12,6 +12,7 @@ import { ReadingDetail } from '../../core/models/reading.model';
 import { SharedModule } from '../../shared/shared.module';
 import { firstValueFrom } from 'rxjs';
 import { TtsService } from '../../core/services/tts.service';
+import { createBibleRefRegex } from '../../core/bible-refs';
 
 interface ParaSegment {
   text: string;
@@ -19,7 +20,7 @@ interface ParaSegment {
   isBibleRef: boolean;
 }
 
-const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:(?:[1-3]\s)?[A-Za-z]+\.?\s+)?\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
+const bibleRefRe = createBibleRefRegex();
 
 interface BibleSection {
   title: string;

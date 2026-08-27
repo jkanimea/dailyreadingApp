@@ -81,11 +81,12 @@ export class LogViewerComponent implements OnInit {
   }
 
   getLevelColor(level: string): string {
-    switch (level?.toLowerCase()) {
-      case 'error': return 'danger';
-      case 'warn': return 'warning';
-      case 'debug': return 'medium';
-      default: return 'primary';
-    }
+    return LogViewerComponent.levelColors[(level ?? '').toLowerCase()] ?? 'primary';
   }
+
+  private static readonly levelColors: Record<string, string> = {
+    error: 'danger',
+    warn: 'warning',
+    debug: 'medium'
+  };
 }

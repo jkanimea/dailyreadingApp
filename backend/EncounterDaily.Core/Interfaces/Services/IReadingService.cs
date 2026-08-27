@@ -12,7 +12,6 @@ namespace EncounterDaily.Core.Interfaces.Services
         Task<DailyReadingDto> GetTodayReadingAsync(int seriesId, int? month = null, int? day = null);
         Task<ReadingDetailDto> GetFullReadingAsync(int readingId, string translation = "KJV");
         Task<SummaryDto> GetSummaryAsync(int readingId);
-        Task<object> GetBibleStatusAsync();
         Task<BibleLookupResponse> LookupBibleVersesAsync(string refs, string translation = "KJV");
     }
 }

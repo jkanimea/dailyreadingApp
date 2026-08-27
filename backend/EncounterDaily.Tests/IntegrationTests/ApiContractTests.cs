@@ -72,4 +72,33 @@ public class ApiContractTests : IntegrationTestBase
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
+
+    [Fact]
+    public async Task Reading_WriteRoutes_AreGone()
+    {
+        (await Client.PostAsync("/api/v1/reading", null)).StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+        (await Client.PutAsync("/api/v1/reading/1", null)).StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+        (await Client.DeleteAsync("/api/v1/reading/1")).StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+    }
+
+    [Fact]
+    public async Task Series_WriteRoutes_AreGone()
+    {
+        (await Client.PostAsync("/api/v1/series", null)).StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+        (await Client.PutAsync("/api/v1/series/1", null)).StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+        (await Client.DeleteAsync("/api/v1/series/1")).StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed);
+    }
+
+    [Fact]
+    public async Task Reading_EntityDirectGet_IsGone()
+    {
+        (await Client.GetAsync("/api/v1/reading/1")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Series_ReadRoutes_StillServed()
+    {
+        (await Client.GetAsync("/api/v1/series/1")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync("/api/v1/series/1/config")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
 }

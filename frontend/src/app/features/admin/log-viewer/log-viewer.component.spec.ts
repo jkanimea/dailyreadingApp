@@ -153,5 +153,14 @@ describe('LogViewerComponent', () => {
     it('should return primary for info', () => {
       expect(component.getLevelColor('info')).toBe('primary');
     });
+
+    it('should be case-insensitive', () => {
+      expect(component.getLevelColor('Error')).toBe('danger');
+    });
+
+    it('should return primary for unknown or missing level', () => {
+      expect(component.getLevelColor('verbose')).toBe('primary');
+      expect(component.getLevelColor('' as any)).toBe('primary');
+    });
   });
 });

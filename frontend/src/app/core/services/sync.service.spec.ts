@@ -100,4 +100,26 @@ describe('SyncService', () => {
     expect(progress.unmarkComplete).toHaveBeenCalledWith(2);
     expect(queue.length).toBe(0);
   });
+
+  it('should dispatch each action to the matching service method', async () => {
+    let queue: SyncQueueItem[] = [
+      { id: '1', action: 'markComplete', readingId: 1, timestamp: 100 },
+      { id: '2', action: 'unmarkComplete', readingId: 2, timestamp: 200 },
+      { id: '3', action: 'addBookmark', readingId: 3, timestamp: 300 },
+      { id: '4', action: 'removeBookmark', readingId: 4, timestamp: 400 }
+    ];
+    storage.get.mockImplementation(() => Promise.resolve(queue));
+    storage.set.mockImplementation((_key: string, data: SyncQueueItem[]) => {
+      queue = data;
+      return Promise.resolve();
+    });
+
+    await (service as any).processQueue();
+
+    expect(progress.markComplete).toHaveBeenCalledWith(1);
+    expect(progress.unmarkComplete).toHaveBeenCalledWith(2);
+    expect(bookmark.addBookmark).toHaveBeenCalledWith(3);
+    expect(bookmark.removeBookmark).toHaveBeenCalledWith(4);
+    expect(queue.length).toBe(0);
+  });
 });
