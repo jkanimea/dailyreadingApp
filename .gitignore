@@ -17,6 +17,7 @@ log.txt
 *.jks
 *.p12
 *.keystore
+/.ssh/
 
 
 /.sourcemaps
