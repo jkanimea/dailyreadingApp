@@ -12,8 +12,9 @@ import { ActivatedRoute } from '@angular/router';
 import { Series } from '../../core/models/series.model';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { TtsService } from '../../core/services/tts.service';
+import { createBibleRefRegex } from '../../core/bible-refs';
 
-const bibleRefRe = /((?:[1-3]\s)?[A-Za-z]+\.?\s+\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*(?:\s*;\s*(?:(?:[1-3]\s)?[A-Za-z]+\.?\s+)?\d+:\d+(?:-\d+)?(?:,\s*\d+(?:-\d+)?)*)*)/g;
+const bibleRefRe = createBibleRefRegex();
 
 @Component({
   selector: 'app-reading-detail',
@@ -527,12 +528,11 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
   private ttsStateSub: Subscription | null = null;
   @ViewChild('pageContent', { static: false }) content?: any;
 
-  override ngOnDestroy(): void {
+  ngOnDestroy(): void {
     this.routeSub?.unsubscribe();
     clearTimeout(this.notesDebounce);
     this.ttsStateSub?.unsubscribe();
     this.ttsService.stop();
-    super.ngOnDestroy();
   }
 
   ionViewWillLeave(): void {

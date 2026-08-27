@@ -97,21 +97,26 @@ export class SyncService {
   }
 
   private async processItem(item: SyncQueueItem): Promise<void> {
-    switch (item.action) {
-      case 'markComplete':
-        await firstValueFrom(this.progress.markComplete(item.readingId));
-        break;
-      case 'unmarkComplete':
-        await firstValueFrom(this.progress.unmarkComplete(item.readingId));
-        break;
-      case 'addBookmark':
-        await firstValueFrom(this.bookmark.addBookmark(item.readingId));
-        break;
-      case 'removeBookmark':
-        await firstValueFrom(this.bookmark.removeBookmark(item.readingId));
-        break;
+    const handler = this.actionHandlers[item.action];
+    if (handler) {
+      await handler(item.readingId);
     }
   }
+
+  private readonly actionHandlers: Record<SyncQueueItem['action'], (readingId: number) => Promise<void>> = {
+    markComplete: async (readingId) => {
+      await firstValueFrom(this.progress.markComplete(readingId));
+    },
+    unmarkComplete: async (readingId) => {
+      await firstValueFrom(this.progress.unmarkComplete(readingId));
+    },
+    addBookmark: async (readingId) => {
+      await firstValueFrom(this.bookmark.addBookmark(readingId));
+    },
+    removeBookmark: async (readingId) => {
+      await firstValueFrom(this.bookmark.removeBookmark(readingId));
+    }
+  };
 
   private async removeFromQueue(id: string): Promise<void> {
     const queue = await this.getQueue();

@@ -150,5 +150,52 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
             attr.Should().NotBeNull();
             attr!.Policy.Should().Be("RequireAdminRole");
         }
+
+        [Fact]
+        public async Task Submit_RoutesLevelsToMatchingLogMethods()
+        {
+            var mockLogger = new Mock<ILogger<LogsController>>();
+            var controller = new LogsController(mockLogger.Object, _mockLogService.Object)
+            {
+                ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+            };
+
+            await controller.Submit(new List<ClientLogEntry>
+            {
+                new() { Level = "error", Source = "S", Message = "e" },
+                new() { Level = "Warn", Source = "S", Message = "w1" },
+                new() { Level = "warning", Source = "S", Message = "w2" },
+                new() { Level = "debug", Source = "S", Message = "d" },
+                new() { Level = "info", Source = "S", Message = "i" }
+            });
+
+            mockLogger.Verify(l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+
+            mockLogger.Verify(l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Exactly(2));
+
+            mockLogger.Verify(l => l.Log(
+                LogLevel.Debug,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+
+            mockLogger.Verify(l => l.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+        }
     }
 }

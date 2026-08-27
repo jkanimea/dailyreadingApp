@@ -1,3 +1,4 @@
+using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 
 namespace EncounterDaily.Core.Interfaces.Services
@@ -6,5 +7,6 @@ namespace EncounterDaily.Core.Interfaces.Services
     {
         Task<IEnumerable<Series>> GetAllSeriesWithBooksAsync();
         Task<Series?> GetSeriesWithBooksAsync(int seriesId);
+        Task<SeriesConfig> CreateConfigAsync(int seriesId);
     }
 }

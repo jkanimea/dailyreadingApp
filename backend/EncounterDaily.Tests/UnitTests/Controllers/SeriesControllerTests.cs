@@ -12,14 +12,12 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
     public class SeriesControllerTests
     {
         private readonly Mock<ISeriesService> _mockService;
-        private readonly Mock<ISeriesFactory> _mockFactory;
         private readonly SeriesController _controller;
 
         public SeriesControllerTests()
         {
             _mockService = new Mock<ISeriesService>();
-            _mockFactory = new Mock<ISeriesFactory>();
-            _controller = new SeriesController(_mockService.Object, _mockFactory.Object, Mock.Of<ILogger<SeriesController>>());
+            _controller = new SeriesController(_mockService.Object);
         }
 
         [Fact]
@@ -70,7 +68,7 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         public async Task GetConfig_ShouldReturnOk()
         {
             var config = new SeriesConfig { SeriesId = 1, PrimaryBookTitle = "Desire of Ages" };
-            _mockFactory.Setup(f => f.CreateConfigAsync(1)).ReturnsAsync(config);
+            _mockService.Setup(s => s.CreateConfigAsync(1)).ReturnsAsync(config);
 
             var result = await _controller.GetConfig(1);
 

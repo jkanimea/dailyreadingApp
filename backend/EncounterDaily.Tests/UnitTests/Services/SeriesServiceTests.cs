@@ -75,5 +75,40 @@ namespace EncounterDaily.Tests.UnitTests.Services
             result.Should().NotBeNull();
             result!.Id.Should().Be(1);
         }
+
+        [Fact]
+        public async Task CreateConfigAsync_ShouldMapSeriesToConfig()
+        {
+            var primaryBook = new Book { Id = 1, Title = "Desire of Ages" };
+            var secondaryBook = new Book { Id = 2, Title = "Acts of the Apostles" };
+            var series = new Series
+            {
+                Id = 1,
+                PrimaryBookId = 1,
+                PrimaryBook = primaryBook,
+                SecondaryBookId = 2,
+                SecondaryBook = secondaryBook
+            };
+            _mockSeriesRepo.Setup(r => r.GetSeriesWithBooksAsync(1)).ReturnsAsync(series);
+
+            var result = await _service.CreateConfigAsync(1);
+
+            result.SeriesId.Should().Be(1);
+            result.PrimaryBookTitle.Should().Be("Desire of Ages");
+            result.SecondaryBookTitle.Should().Be("Acts of the Apostles");
+            result.HasSecondaryReading.Should().BeTrue();
+            result.DateRangeStart.Should().Be("01-01");
+        }
+
+        [Fact]
+        public async Task CreateConfigAsync_ShouldUseUnknownTitle_WhenSeriesMissing()
+        {
+            _mockSeriesRepo.Setup(r => r.GetSeriesWithBooksAsync(999)).ReturnsAsync((Series?)null);
+
+            var result = await _service.CreateConfigAsync(999);
+
+            result.PrimaryBookTitle.Should().Be("Unknown");
+            result.HasSecondaryReading.Should().BeFalse();
+        }
     }
 }

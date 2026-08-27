@@ -6,25 +6,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EncounterDaily.API.Controllers
 {
-    public class ReadingController : BaseController<DailyReading>
+    public class ReadingController : BaseApiController
     {
         private readonly IReadingService _readingService;
         private readonly IBibleSeedService _bibleSeedService;
+        private readonly ILogger<ReadingController> _logger;
         private readonly IAppLogService _appLogService;
 
         public ReadingController(IReadingService readingService, IBibleSeedService bibleSeedService, ILogger<ReadingController> logger, IAppLogService appLogService)
-            : base(readingService, logger)
         {
             _readingService = readingService;
             _bibleSeedService = bibleSeedService;
+            _logger = logger;
             _appLogService = appLogService;
-        }
-
-        [HttpGet("debug/bible-status")]
-        public async Task<ActionResult> GetBibleStatus()
-        {
-            var status = await _readingService.GetBibleStatusAsync();
-            return Ok(status);
         }
 
         [HttpGet("series/{seriesId}/today")]

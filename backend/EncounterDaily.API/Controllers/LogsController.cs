@@ -10,6 +10,14 @@ namespace EncounterDaily.API.Controllers;
 [Route("api/v1/[controller]")]
 public class LogsController : BaseApiController
 {
+    private static readonly Dictionary<string, Action<ILogger, ClientLogEntry, string>> LogDispatch = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["error"] = (logger, entry, message) => logger.LogError(entry.Exception, message, entry.Source, entry.Message),
+        ["warn"] = (logger, entry, message) => logger.LogWarning(message, entry.Source, entry.Message),
+        ["warning"] = (logger, entry, message) => logger.LogWarning(message, entry.Source, entry.Message),
+        ["debug"] = (logger, entry, message) => logger.LogDebug(message, entry.Source, entry.Message)
+    };
+
     private readonly ILogger<LogsController> _logger;
     private readonly IAppLogService _appLogService;
 
@@ -36,22 +44,10 @@ public class LogsController : BaseApiController
         foreach (var entry in entries)
         {
             var message = "[Client] {Source}: {Message}";
-            switch (entry.Level?.ToLowerInvariant())
-            {
-                case "error":
-                    _logger.LogError(entry.Exception, message, entry.Source, entry.Message);
-                    break;
-                case "warn":
-                case "warning":
-                    _logger.LogWarning(message, entry.Source, entry.Message);
-                    break;
-                case "debug":
-                    _logger.LogDebug(message, entry.Source, entry.Message);
-                    break;
-                default:
-                    _logger.LogInformation(message, entry.Source, entry.Message);
-                    break;
-            }
+            if (LogDispatch.TryGetValue(entry.Level, out var log))
+                log(_logger, entry, message);
+            else
+                _logger.LogInformation(message, entry.Source, entry.Message);
         }
 
         await _appLogService.SaveClientLogsAsync(entries, userId, userEmail, ipAddress);
