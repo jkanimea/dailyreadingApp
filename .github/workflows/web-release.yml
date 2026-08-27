@@ -213,6 +213,11 @@ jobs:
             API_IMAGE_TAG=production-latest
             ENVEOF
             chmod 600 .env
+            # Gracefully stop SQL Server BEFORE tearing down the pod. A hard kill
+            # (`pod rm -f`) leaves the data volume mid-transaction, forcing SQL to do
+            # a long crash recovery on next boot that exceeds the readiness timeout.
+            podman stop -t 30 encounter-daily-sql 2>/dev/null || true
+            sudo podman stop -t 30 encounter-daily-sql 2>/dev/null || true
             sudo podman pod rm -f encounter-pod 2>/dev/null || true
             sleep 2
             podman pod rm -f encounter-pod 2>/dev/null || true
@@ -232,20 +237,30 @@ jobs:
                 -e MSSQL_SA_PASSWORD="$SA_PASSWORD" \
                 -e MSSQL_PID=Express \
                 -v sql-data:/var/opt/mssql \
-                mcr.microsoft.com/mssql/server:2022-latest
+                mcr.microsoft.com/mssql/server:2022-latest \
+                || { echo "ERROR: Failed to start SQL container."; podman ps -a; return 1; }
               echo "Waiting for SQL Server..."
               SQL_READY=0
-              for i in $(seq 1 45); do
+              for i in $(seq 1 90); do
+                # If the container exited (crash) or vanished, surface its logs and
+                # fail fast instead of waiting out the full timeout blindly.
+                STATE=$(podman inspect -f '{{.State.Status}}' encounter-daily-sql 2>/dev/null || echo "missing")
+                if [ "$STATE" = "exited" ] || [ "$STATE" = "missing" ]; then
+                  echo "ERROR: SQL container is not running (state=$STATE)."
+                  podman logs encounter-daily-sql --tail 80 2>&1 || true
+                  return 1
+                fi
                 if podman exec encounter-daily-sql /opt/mssql-tools18/bin/sqlcmd \
                     -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT 1" >/dev/null 2>&1; then
                   SQL_READY=1
                   break
                 fi
-                echo "SQL not ready yet (attempt $i/45)..."
+                echo "SQL not ready yet (attempt $i/90)..."
                 sleep 2
               done
               if [ "$SQL_READY" != "1" ]; then
-                echo "ERROR: SQL Server did not become ready within 90s."
+                echo "ERROR: SQL Server did not become ready within 180s."
+                podman logs encounter-daily-sql --tail 80 2>&1 || true
                 return 1
               fi
               echo "SQL Server is ready."
