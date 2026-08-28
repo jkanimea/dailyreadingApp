@@ -234,10 +234,14 @@ export async function mockAllRoutes(page: Page): Promise<void> {
     r.fulfill({ json: { id: 1, name: 'Daily Devotional', shortName: 'Daily', hasSecondaryReading: false, primaryBookName: 'Oswald Chambers', totalReadings: 365 } })
   );
 
-  // Today's reading
-  await page.route('**/api/v1/reading/series/1/today**', (r: Route) =>
-    r.fulfill({ json: MOCK_READING_DETAIL })
-  );
+  // Today's reading — varies by `day` so prev/next arrow navigation resolves neighbours
+  await page.route('**/api/v1/reading/series/1/today**', (r: Route) => {
+    const url = new URL(r.request().url());
+    const day = Number(url.searchParams.get('day'));
+    if (day === 13) return r.fulfill({ json: { ...MOCK_READING_DETAIL, id: 100, day: 13 } });
+    if (day === 15) return r.fulfill({ json: { ...MOCK_READING_DETAIL, id: 102, day: 15 } });
+    return r.fulfill({ json: MOCK_READING_DETAIL });
+  });
 
   // Reading by ID — basic and full
   await page.route('**/api/v1/reading/101', (r: Route) =>

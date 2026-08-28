@@ -54,7 +54,11 @@ describe('ReadingDetailPage', () => {
     paramMapSubject = new BehaviorSubject(convertToParamMap({ id: '5' }));
 
     mockReadingService = {
-      getToday: jest.fn().mockReturnValue(of({ id: 3, seriesId: 1 })),
+      getToday: jest.fn((_seriesId: number, _month: number, day: number) => {
+        if (day === 20) return of({ id: 4, seriesId: 2 });
+        if (day === 22) return of({ id: 6, seriesId: 2 });
+        return of({ id: 3, seriesId: 2 });
+      }),
       getFullReading: jest.fn().mockReturnValue(of(mockDetail)),
       getSummary: jest.fn().mockReturnValue(of({ id: 5, summaryPoints: '- Test summary' }))
     };
@@ -596,6 +600,89 @@ describe('ReadingDetailPage', () => {
       await (component as any).onSeriesSelected(3);
 
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/today']);
+    });
+  });
+
+  describe('reading navigation', () => {
+    it('should render left and right navigation arrows around the date and series', fakeAsync(() => {
+      component.detail = mockDetail;
+      fixture.detectChanges();
+      const arrows = fixture.nativeElement.querySelectorAll('.meta-primary .nav-arrow');
+      expect(arrows.length).toBe(2);
+      const leftIcon = arrows[0].querySelector('ion-icon');
+      const rightIcon = arrows[1].querySelector('ion-icon');
+      expect(leftIcon?.getAttribute('name')).toBe('chevron-back');
+      expect(rightIcon?.getAttribute('name')).toBe('chevron-forward');
+    }));
+
+    it('should place left arrow before the date and right arrow after the series', fakeAsync(() => {
+      component.detail = mockDetail;
+      fixture.detectChanges();
+      const primary = fixture.nativeElement.querySelector('.meta-primary');
+      const children = primary.children;
+      expect(children[0].classList.contains('nav-arrow')).toBe(true);
+      expect(children[1].classList.contains('meta-date')).toBe(true);
+      expect(children[children.length - 1].classList.contains('nav-arrow')).toBe(true);
+      expect(children[children.length - 2].classList.contains('meta-series')).toBe(true);
+    }));
+
+    it('should compute previous and next reading ids after loading detail', async () => {
+      component.detail = mockDetail;
+      await (component as any).loadNavigation();
+      expect(component.previousReadingId).toBe(4);
+      expect(component.nextReadingId).toBe(6);
+    });
+
+    it('should navigate to previous reading on goToPreviousReading', () => {
+      component.previousReadingId = 4;
+      component.goToPreviousReading();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/reading', 4]);
+    });
+
+    it('should navigate to next reading on goToNextReading', () => {
+      component.nextReadingId = 6;
+      component.goToNextReading();
+      expect(mockRouter.navigate).toHaveBeenCalledWith(['/reading', 6]);
+    });
+
+    it('should not navigate when previousReadingId is undefined', () => {
+      component.previousReadingId = undefined;
+      component.goToPreviousReading();
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should not navigate when nextReadingId is undefined', () => {
+      component.nextReadingId = undefined;
+      component.goToNextReading();
+      expect(mockRouter.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should leave previous undefined at the start of the series', async () => {
+      component.detail = { ...mockDetail, month: 1, day: 1 };
+      await (component as any).loadNavigation();
+      expect(component.previousReadingId).toBeUndefined();
+      expect(component.nextReadingId).toBeDefined();
+    });
+
+    it('should leave next undefined at the end of the series', async () => {
+      component.detail = { ...mockDetail, month: 12, day: 31 };
+      await (component as any).loadNavigation();
+      expect(component.previousReadingId).toBeDefined();
+      expect(component.nextReadingId).toBeUndefined();
+    });
+
+    it('should disable an arrow when the neighbouring reading is missing', async () => {
+      mockReadingService.getToday.mockImplementation(() => {
+        throw { status: 404 };
+      });
+      component.detail = mockDetail;
+      await (component as any).loadNavigation();
+      fixture.detectChanges();
+      expect(component.previousReadingId).toBeUndefined();
+      expect(component.nextReadingId).toBeUndefined();
+      const arrows = fixture.nativeElement.querySelectorAll('.meta-primary .nav-arrow');
+      expect((arrows[0] as HTMLButtonElement).disabled).toBe(true);
+      expect((arrows[1] as HTMLButtonElement).disabled).toBe(true);
     });
   });
 

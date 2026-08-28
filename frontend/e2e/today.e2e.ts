@@ -52,4 +52,18 @@ test.describe('Today page', () => {
     // Today page does NOT have 85% scroll gate — checkbox is always visible
     await expect(page.locator('.complete-section ion-checkbox')).toBeVisible();
   });
+
+  test('renders left and right navigation arrows around date and series', async ({ page }) => {
+    const arrows = page.locator('.meta-primary .nav-arrow');
+    await expect(arrows).toHaveCount(2);
+    await expect(arrows.nth(0)).toBeEnabled();
+    await expect(arrows.nth(1)).toBeEnabled();
+    await expect(arrows.nth(0).locator('ion-icon')).toHaveAttribute('name', 'chevron-back');
+    await expect(arrows.nth(1).locator('ion-icon')).toHaveAttribute('name', 'chevron-forward');
+  });
+
+  test('right arrow navigates from today to the next reading', async ({ page }) => {
+    await page.locator('.meta-primary .nav-arrow').nth(1).click();
+    await expect(page).toHaveURL(/\/reading\/102/);
+  });
 });

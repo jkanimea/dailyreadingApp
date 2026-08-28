@@ -49,7 +49,7 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       declarations: [TodayPage],
       imports: [IonicModule.forRoot(), SharedModule, HttpClientTestingModule],
       providers: [
-        { provide: ReadingService, useValue: { getToday: jest.fn().mockReturnValue(of({ id: 3, seriesId: 1 })), getFullReading: jest.fn().mockReturnValue(of(mockDetail)) } },
+        { provide: ReadingService, useValue: { getToday: jest.fn((_seriesId: number, _month: number, day: number) => { if (day === 7) return of({ id: 2, seriesId: 1 }); if (day === 9) return of({ id: 4, seriesId: 1 }); return of({ id: 3, seriesId: 1 }); }), getFullReading: jest.fn().mockReturnValue(of(mockDetail)) } },
         { provide: ProgressService, useValue: mockProgressService },
         { provide: PreferencesService, useValue: { getSeriesId: jest.fn().mockReturnValue(1), getTranslation: jest.fn().mockReturnValue('KJV'), seriesId$: of(1) } },
         { provide: Router, useValue: { navigate: jest.fn() } },
@@ -341,6 +341,43 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       const refSpans = fixture.nativeElement.querySelectorAll('.bible-ref');
       expect(refSpans.length).toBe(1);
       expect(refSpans[0].textContent).toBe('Acts 2:38');
+    });
+  });
+
+  describe('reading navigation', () => {
+    it('should render left and right navigation arrows', () => {
+      fixture.detectChanges();
+      const arrows = fixture.nativeElement.querySelectorAll('.meta-primary .nav-arrow');
+      expect(arrows.length).toBe(2);
+    });
+
+    it('should navigate to previous reading on goToPreviousReading', () => {
+      component.previousReadingId = 2;
+      const router = TestBed.inject(Router);
+      component.goToPreviousReading();
+      expect(router.navigate).toHaveBeenCalledWith(['/reading', 2]);
+    });
+
+    it('should navigate to next reading on goToNextReading', () => {
+      component.nextReadingId = 4;
+      const router = TestBed.inject(Router);
+      component.goToNextReading();
+      expect(router.navigate).toHaveBeenCalledWith(['/reading', 4]);
+    });
+
+    it('should not navigate when previousReadingId is undefined', () => {
+      component.previousReadingId = undefined;
+      const router = TestBed.inject(Router);
+      component.goToPreviousReading();
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('should compute prev/next ids based on today reading after loadToday', async () => {
+      component.detail = mockDetail;
+      // readingId is private; drive via loadToday which reads the mocked getToday id=3
+      await component.loadToday();
+      expect(component.previousReadingId).toBe(2);
+      expect(component.nextReadingId).toBe(4);
     });
   });
 

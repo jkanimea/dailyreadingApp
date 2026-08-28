@@ -9,6 +9,7 @@ import { ProgressService } from '../../core/services/progress.service';
 import { PreferencesService, BibleTranslation } from '../../core/services/preferences.service';
 import { LoggingService } from '../../core/services/logging.service';
 import { ReadingDetail } from '../../core/models/reading.model';
+import { shiftReadingDate } from '../../core/reading-nav';
 import { SharedModule } from '../../shared/shared.module';
 import { firstValueFrom } from 'rxjs';
 import { TtsService } from '../../core/services/tts.service';
@@ -72,9 +73,15 @@ interface BibleSection {
           <!-- Header info row -->
           <div class="reading-meta">
             <div class="meta-primary">
+              <button class="nav-arrow" (click)="goToPreviousReading()" [disabled]="!previousReadingId" aria-label="Previous reading">
+                <ion-icon name="chevron-back"></ion-icon>
+              </button>
               <span class="meta-date">{{ formatDate(detail.month, detail.day) }}</span>
               <span class="meta-sep">·</span>
               <span class="meta-series">{{ seriesName }}</span>
+              <button class="nav-arrow" (click)="goToNextReading()" [disabled]="!nextReadingId" aria-label="Next reading">
+                <ion-icon name="chevron-forward"></ion-icon>
+              </button>
             </div>
             <div class="meta-actions">
               @if (completed) {
@@ -281,6 +288,34 @@ interface BibleSection {
       font-size: 15px;
       font-weight: 600;
       color: var(--ion-color-medium);
+    }
+    .nav-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--ion-color-primary);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s ease, opacity 0.15s ease;
+    }
+    .nav-arrow ion-icon {
+      font-size: 20px;
+    }
+    .nav-arrow:not(:disabled):hover {
+      background: var(--ion-color-step-100, #eee);
+    }
+    .nav-arrow:not(:disabled):active {
+      background: var(--ion-color-step-150, #ddd);
+    }
+    .nav-arrow:disabled {
+      color: var(--ion-color-step-400, #bbb);
+      cursor: default;
     }
     .translation-segment {
       margin-bottom: 12px;
@@ -552,6 +587,8 @@ export class TodayPage {
 
   private seriesId = 1;
   private readingId = 0;
+  previousReadingId?: number;
+  nextReadingId?: number;
   private monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   @ViewChild('pageContent', { static: false }) content?: any;
 
@@ -645,6 +682,18 @@ export class TodayPage {
 
   goToSettings(): void {
     this.router.navigate(['/settings']);
+  }
+
+  goToPreviousReading(): void {
+    if (this.previousReadingId) {
+      this.router.navigate(['/reading', this.previousReadingId]);
+    }
+  }
+
+  goToNextReading(): void {
+    if (this.nextReadingId) {
+      this.router.navigate(['/reading', this.nextReadingId]);
+    }
   }
 
   onBibleRefClick(refs: string): void {
@@ -965,11 +1014,41 @@ export class TodayPage {
       this.seriesName = reading.seriesName;
       await this.loadDetail(this.readingId, this.translation);
       await this.checkCompleted();
+      await this.loadNavigation();
     } catch (e: unknown) {
       this.loggingService.error('TodayPage', 'loadToday', String(e));
       this.error = 'Failed to load today\'s reading. Make sure the API is running.';
     } finally {
       this.loading = false;
+    }
+  }
+
+  private async loadNavigation(): Promise<void> {
+    const detail = this.detail;
+    if (!detail?.seriesId) {
+      this.previousReadingId = undefined;
+      this.nextReadingId = undefined;
+      return;
+    }
+    const isStart = detail.month === 1 && detail.day === 1;
+    const isEnd = detail.month === 12 && detail.day === 31;
+    const prev = shiftReadingDate(detail.month, detail.day, -1);
+    const next = shiftReadingDate(detail.month, detail.day, 1);
+    this.previousReadingId = isStart
+      ? undefined
+      : await this.resolveNeighborId(detail.seriesId, prev.month, prev.day);
+    this.nextReadingId = isEnd
+      ? undefined
+      : await this.resolveNeighborId(detail.seriesId, next.month, next.day);
+  }
+
+  private async resolveNeighborId(seriesId: number, month: number, day: number): Promise<number | undefined> {
+    try {
+      const reading = await firstValueFrom(this.readingService.getToday(seriesId, month, day));
+      return reading?.id;
+    } catch (e: unknown) {
+      this.loggingService.warn('TodayPage', `No reading at ${month}/${day}: ${String(e)}`);
+      return undefined;
     }
   }
 }

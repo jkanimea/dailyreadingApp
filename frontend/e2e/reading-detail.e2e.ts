@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockAllRoutes, MOCK_PROGRESS } from './fixtures/mocks';
+import { mockAllRoutes, MOCK_PROGRESS, MOCK_READING_DETAIL } from './fixtures/mocks';
 import type { Route } from '@playwright/test';
 
 test.describe('Reading detail', () => {
@@ -70,6 +70,33 @@ test.describe('Reading detail', () => {
 
 // Journal section tests use a separate describe with a custom progress mock so
 // checkCompleted() finds reading 101 as completed+with notes — no dev-mode hacks needed.
+test.describe('Reading detail — navigation arrows', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockAllRoutes(page);
+    await page.goto('/tabs/reading/101');
+  });
+
+  test('renders left arrow before date and right arrow after series', async ({ page }) => {
+    const arrows = page.locator('.meta-primary .nav-arrow');
+    await expect(arrows).toHaveCount(2);
+    await expect(arrows.nth(0)).toBeEnabled();
+    await expect(arrows.nth(1)).toBeEnabled();
+    await expect(arrows.nth(0).locator('ion-icon')).toHaveAttribute('name', 'chevron-back');
+    await expect(arrows.nth(1).locator('ion-icon')).toHaveAttribute('name', 'chevron-forward');
+  });
+
+  test('right arrow navigates to next reading', async ({ page }) => {
+    await page.route('**/api/v1/reading/102/full**', (r: Route) =>
+      r.fulfill({ json: { ...MOCK_READING_DETAIL, id: 102, day: 15 } })
+    );
+    await page.route('**/api/v1/reading/102/summary', (r: Route) =>
+      r.fulfill({ json: { id: 102, summaryPoints: null } })
+    );
+    await page.locator('.meta-primary .nav-arrow').nth(1).click();
+    await expect(page).toHaveURL(/\/reading\/102/);
+  });
+});
+
 test.describe('Reading detail — journal section', () => {
   test.beforeEach(async ({ page }) => {
     await mockAllRoutes(page);
