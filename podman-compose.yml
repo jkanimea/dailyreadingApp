@@ -2,12 +2,14 @@ version: '3.8'
 
 services:
   sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    # Azure SQL Edge is multi-arch (arm64 + amd64). mssql/server:2022-latest is
+    # amd64-only and segfaults under podman's QEMU emulation on Apple Silicon.
+    image: mcr.microsoft.com/azure-sql-edge:latest
     container_name: encounter-daily-sql
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
-      - MSSQL_PID=Express
+      - MSSQL_SA_PASSWORD=YourStrong@Passw0rd
+      - MSSQL_PID=Developer
     ports:
       - "1433:1433"
     volumes:
