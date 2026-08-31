@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Promote alpha release to completed
+      - name: Promote track1 release to completed
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
@@ -34,16 +34,16 @@ jobs:
           r.raise_for_status()
           edit_id = r.json()["id"]
 
-          r = requests.get(f"{base}/{edit_id}/tracks/alpha", headers=headers, timeout=30)
-          print("Get alpha:", r.status_code)
+          r = requests.get(f"{base}/{edit_id}/tracks/track1", headers=headers, timeout=30)
+          print("Get track1:", r.status_code)
           r.raise_for_status()
           track = r.json()
 
           for rel in track.get("releases", []):
               rel["status"] = "completed"
 
-          r = requests.put(f"{base}/{edit_id}/tracks/alpha", headers=headers, json=track, timeout=30)
-          print("Update alpha:", r.status_code)
+          r = requests.put(f"{base}/{edit_id}/tracks/track1", headers=headers, json=track, timeout=30)
+          print("Update track1:", r.status_code)
           r.raise_for_status()
 
           r = requests.post(f"{base}/{edit_id}:commit", headers=headers, timeout=30)
