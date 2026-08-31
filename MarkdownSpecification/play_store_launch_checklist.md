@@ -74,7 +74,7 @@ Use this checklist to take the app from closed testing to a public Play Store re
 ## Key automation notes
 - New builds ship by tagging `v1.0.x` — the workflow builds/uploads to **alpha-as-draft**.
 - Use the **Release to Production** workflow (`Actions → Release to Production → Run workflow`) after production access is granted to upload the latest AAB to the `production` track.
-- Use the **Play Console Setup** workflow (`Actions → Play Console Setup → Run workflow`) after uploading to apply `completed` country targeting + rollout. If unexpected, apply it manually in the Console.
+- Use the **Play Console Setup** workflow (`Actions → Play Console Setup → Run workflow`) after uploading to promote the alpha release to `completed`. Country availability itself must be set once in the Play Console UI (Production → Countries/regions), since the API is GET-only for country availability.
 - VersionCode increments automatically, so no manual bumping is needed.
 
 ## Known gaps to close first

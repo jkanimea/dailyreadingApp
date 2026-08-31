@@ -81,13 +81,40 @@ Nothing in the repo could publish to the `production` track. Even after Google
 grants production access, there was no automation to promote the AAB. *(Fixed by
 adding `production-release.yml`.)*
 
+### Mistake 7 — The publish workflow was never runnable (4 stacked bugs)
+
+`play-console-setup.yml` could not have succeeded even when clicked. Diagnosed and
+fixed, in order:
+
+1. **Wrong OAuth scope** — `google-github-actions/auth` defaults to
+   `cloud-platform`; the Android Publisher API needs `androidpublisher` scope.
+   Fixed by minting the access token directly from the service-account key (same
+   JWT flow the working upload action uses).
+2. **IAM Credentials API disabled** — the `auth` action's `token_format:
+   access_token` path requires `iamcredentials.googleapis.com`, which is disabled
+   in project `dailyreadingapp-497700`. Bypassed by the direct-token approach.
+3. **Release-level country targeting is production-only** — the API rejects
+   `countryTargeting` on non-production tracks ("only for staged releases in the
+   production track").
+4. **Track country availability is unset and not API-settable** — the alpha track
+   reports `syncWithProduction: true`, but production has no country availability
+   configured, so committing a `completed` alpha release fails with **"Release in
+   track targeting no countries"**. The `edits.countryavailability` API is
+   **GET-only**; there is no update method. This one setting must be done in the
+   Play Console UI.
+
+**Status:** everything automatable is now working — the workflow authenticates,
+promotes the alpha release to `completed`, and only the final commit is rejected
+by the missing country-availability setting (one manual Play Console step).
+
 ---
 
 ## 3. The correct path forward (in order)
 
-1. **Publish the closed-test release.** Run
-   `Actions → Play Console Setup → Run workflow` (manual), or in Play Console set
-   the alpha/closed-testing release to `completed` with country targeting.
+1. **Set country availability in Play Console (one-time, manual — no API exists):**
+   Play Console → app → **Production → Countries/regions** (or for the closed test,
+   **Testing → Closed testing → Manage track → Countries/regions**), unsync from
+   production and select countries. Then re-run `Actions → Play Console Setup`.
    - Verify at `play.google.com/apps/testing/com.dailyreading.app` that a test
      build is actually installable.
 2. **Recruit 12 real testers** (email list or Google Group on the closed track).
@@ -104,7 +131,7 @@ adding `production-release.yml`.)*
 
 ## 4. Action items resulting from this journal
 
-- [ ] Run (and confirm success of) `Play Console Setup` to make the closed test installable.
+- [ ] Set country availability in Play Console UI (Production or Closed testing track), then re-run `Play Console Setup`.
 - [ ] Verify the opt-in link shows an installable build before recruiting testers again.
 - [ ] Recruit ≥12 engaged testers and track the 14-day window.
 - [ ] Keep the checklist's 12-tester/14-day wording (done) and stop treating "≥1" as valid.
