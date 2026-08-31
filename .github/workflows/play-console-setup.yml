@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Diagnose
+      - name: Promote alpha release to completed
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
@@ -25,20 +25,33 @@ jobs:
           )
           creds.refresh(Request())
           token = creds.token
+
           base = f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{package}/edits"
           headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
           r = requests.post(base, headers=headers, timeout=30)
+          print("Create edit:", r.status_code)
           r.raise_for_status()
           edit_id = r.json()["id"]
 
-          for tr in ["alpha", "production"]:
-              r = requests.get(f"{base}/{edit_id}/countryAvailability/{tr}", headers=headers, timeout=30)
-              print(f"countryAvailability/{tr}:", r.status_code)
-              print(json.dumps(r.json(), indent=2))
+          r = requests.get(f"{base}/{edit_id}/tracks/alpha", headers=headers, timeout=30)
+          print("Get alpha:", r.status_code)
+          r.raise_for_status()
+          track = r.json()
 
-          r = requests.get(f"{base}/{edit_id}/tracks", headers=headers, timeout=30)
-          print("TRACKS:", r.status_code)
-          print(json.dumps(r.json(), indent=2))
+          for rel in track.get("releases", []):
+              rel["status"] = "completed"
+
+          r = requests.put(f"{base}/{edit_id}/tracks/alpha", headers=headers, json=track, timeout=30)
+          print("Update alpha:", r.status_code)
+          r.raise_for_status()
+
+          r = requests.post(f"{base}/{edit_id}:commit", headers=headers, timeout=30)
+          print("Commit:", r.status_code, r.text)
+          if r.status_code >= 400:
+              print("NOTE: if commit reports 'no countries', set country availability in Play Console:")
+              print("  Production -> Countries/regions (or Closed testing -> Manage track -> Countries/regions),")
+              print("  then re-run this workflow.")
+          r.raise_for_status()
           print("=== Done! ===")
           PY
