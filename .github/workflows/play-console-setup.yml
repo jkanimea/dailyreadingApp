@@ -15,9 +15,11 @@ jobs:
           access_token_scopes: 'https://www.googleapis.com/auth/androidpublisher'
 
       - name: Setup Google Play API Access
+        env:
+          PLAY_API_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
           set -euo pipefail
-          TOKEN=$(gcloud auth print-access-token)
+          TOKEN="$PLAY_API_TOKEN"
           PACKAGE="com.dailyreading.app"
 
           # 1. Get the current edit (find the latest one)
