@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Setup Google Play API Access
+      - name: Diagnose
         env:
           GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
@@ -25,7 +25,6 @@ jobs:
           )
           creds.refresh(Request())
           token = creds.token
-
           base = f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{package}/edits"
           headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
@@ -33,10 +32,13 @@ jobs:
           r.raise_for_status()
           edit_id = r.json()["id"]
 
-          r = requests.get(f"{base}/{edit_id}/tracks/alpha", headers=headers, timeout=30)
-          r.raise_for_status()
-          track = r.json()
-          print("ALPHA TRACK DUMP:")
-          print(json.dumps(track, indent=2))
+          for tr in ["alpha", "production"]:
+              r = requests.get(f"{base}/{edit_id}/countryAvailability/{tr}", headers=headers, timeout=30)
+              print(f"countryAvailability/{tr}:", r.status_code)
+              print(json.dumps(r.json(), indent=2))
+
+          r = requests.get(f"{base}/{edit_id}/tracks", headers=headers, timeout=30)
+          print("TRACKS:", r.status_code)
+          print(json.dumps(r.json(), indent=2))
           print("=== Done! ===")
           PY
