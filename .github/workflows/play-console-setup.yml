@@ -41,7 +41,7 @@ jobs:
 
           for rel in track.get("releases", []):
               rel["status"] = "inProgress"
-              rel["userFraction"] = 1.0
+              rel["userFraction"] = 0.999999
               rel["countryTargeting"] = {
                   "includeRestOfWorld": True,
                   "countries": [],
