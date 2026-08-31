@@ -40,7 +40,12 @@ jobs:
           track = r.json()
 
           for rel in track.get("releases", []):
-              rel["status"] = "completed"
+              rel["status"] = "inProgress"
+              rel["userFraction"] = 1.0
+              rel["countryTargeting"] = {
+                  "includeRestOfWorld": True,
+                  "countries": [],
+              }
 
           r = requests.put(f"{base}/{edit_id}/tracks/alpha", headers=headers, json=track, timeout=30)
           print("Update alpha:", r.status_code, r.text)
