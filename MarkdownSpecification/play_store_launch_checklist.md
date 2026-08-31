@@ -45,13 +45,17 @@ Use this checklist to take the app from closed testing to a public Play Store re
 
 ## 4 — Closed testing → production path
 - [ ] Create/confirm the **closed testing** (alpha) release is a complete, draft<release@0> with an AppAB
-- [ ] Add at least **1 tester** (self) to the closed testing group and accept the opt-in link (Play requires closed testing to review files before promotion)
+- [ ] Add **≥12 testers** (via email or Google Group) to the closed testing track — new personal accounts created after Nov 13, 2023 must have **12 opted-in testers continuously for 14 days** before production access unlocks
+- [ ] Keep testers opted in **14 consecutive days** (opting out resets the clock; re-opting in restarts it)
+- [ ] Ensure testers actually **engage with the app** — Google evaluates engagement, not just the headcount
 - [ ] Enroll device / sign in to verify the build installs and runs against production API
 - [ ] (Optional but recommended) Use **Play App Signing** — Google manages the upload key / keystore (externally enabled)
+- [ ] When the Play Console Dashboard shows the criteria are met, click **"Apply for production access"** and answer the ~10-question questionnaire (recruitment, feedback, changes)
 - [ ] Review the "**Test with Google materials: closed testing requirements**" each release
 
-## 4 — Final production release
-- [ ] Promote the approved release from alpha → **production**
+## 5 — Final production release
+- [ ] Promote the approved release from alpha → **production** (after production access is granted)
+- [ ] Promote via `Actions → Release to Production → Run workflow` (uploads the latest AAB to the `production` track), or manually in Play Console
 - [ ] Ensure release is set to **`completed`** status (not just `draft`)
 - [ ] Set **country availability** (US/CA/GB/AU/IN/DE/FR/JP/BR/MX + rest of world), then a staged **user fraction (0→1)**
 - [ ] **Release notes / what's new** for the production version
@@ -59,7 +63,7 @@ Use this checklist to take the app from closed testing to a public Play Store re
 - [ ] Resolve the **advertising ID / account deletion** policy requirements before submission
 - [ ] **Submit for review** — Google typically reviews within a few days; user can click "Go live after review"
 
-## 5. Post-launch
+## 6. Post-launch
 - [ ] Verify production build serves from the live API URL (`https://mg-encounter.com/api/v1`)
 - [ ] Confirm `bypassAuth` is `false` for production
 - [ ] Enable automated backups (see §13 in `deployment_guide.md`)
@@ -69,12 +73,13 @@ Use this checklist to take the app from closed testing to a public Play Store re
 
 ## Key automation notes
 - New builds ship by tagging `v1.0.x` — the workflow builds/uploads to **alpha-as-draft**.
+- Use the **Release to Production** workflow (`Actions → Release to Production → Run workflow`) after production access is granted to upload the latest AAB to the `production` track.
 - Use the **Play Console Setup** workflow (`Actions → Play Console Setup → Run workflow`) after uploading to apply `completed` country targeting + rollout. If unexpected, apply it manually in the Console.
 - VersionCode increments automatically, so no manual bumping is needed.
 
 ## Known gaps to close first
-1. **Public privacy policy URL** (PRIVACY.md not hosted)
-2. **Public data-deletion URL** (DELETE_ACCOUNT.md not hosted)
+1. **Public privacy policy URL** (PRIVACY.md not hosted — now live at `https://mg-encounter.com/privacy`, confirmed 200)
+2. **Public data-deletion URL** (DELETE_ACCOUNT.md not hosted — now live at `https://mg-encounter.com/delete-account`, confirmed 200)
 3. **Store listing assets** — icon, feature graphic, screenshots
 4. **Product listing/data safety/rating forms** in Play Console
-5. **Closed testing** needs ≥1 tester + opt-in acceptance before production promotion
+5. **Closed testing** — new personal account (created after Nov 13, 2023) needs **≥12 testers opted in continuously for 14 days**, then apply for production access in the Play Console Dashboard

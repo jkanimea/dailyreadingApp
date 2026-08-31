@@ -1,0 +1,60 @@
+name: Release to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'GitHub release tag to promote (e.g. v1.1.16). Leave blank for the latest release.'
+        required: false
+        default: ''
+      status:
+        description: 'Release status for the production track.'
+        required: true
+        type: choice
+        default: 'completed'
+        options:
+          - completed
+          - inProgress
+          - draft
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release tag
+        id: resolve
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          fi
+          if [ -z "$TAG" ]; then
+            echo "ERROR: No release tag found" >&2
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Promoting release: $TAG -> production (${{ inputs.status }})"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download AAB from release
+        run: |
+          mkdir -p apk-output
+          gh release download "${{ steps.resolve.outputs.tag }}" --pattern '*.aab' --dir apk-output/
+          test -s apk-output/app-release.aab || { echo "ERROR: AAB download produced empty file"; exit 1; }
+          echo "AAB downloaded: $(wc -c < apk-output/app-release.aab) bytes"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Play Store (production)
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.dailyreading.app
+          releaseFiles: apk-output/app-release.aab
+          tracks: production
+          status: ${{ inputs.status }}
+          releaseName: Release ${{ steps.resolve.outputs.tag }}
