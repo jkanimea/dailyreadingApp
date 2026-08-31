@@ -30,29 +30,13 @@ jobs:
           headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
           r = requests.post(base, headers=headers, timeout=30)
-          print("Create edit:", r.status_code, r.text)
           r.raise_for_status()
           edit_id = r.json()["id"]
 
           r = requests.get(f"{base}/{edit_id}/tracks/alpha", headers=headers, timeout=30)
-          print("Get alpha:", r.status_code, r.text)
           r.raise_for_status()
           track = r.json()
-
-          for rel in track.get("releases", []):
-              rel["status"] = "inProgress"
-              rel["userFraction"] = 0.999999
-              rel["countryTargeting"] = {
-                  "includeRestOfWorld": True,
-                  "countries": [],
-              }
-
-          r = requests.put(f"{base}/{edit_id}/tracks/alpha", headers=headers, json=track, timeout=30)
-          print("Update alpha:", r.status_code, r.text)
-          r.raise_for_status()
-
-          r = requests.post(f"{base}/{edit_id}:commit", headers=headers, timeout=30)
-          print("Commit:", r.status_code, r.text)
-          r.raise_for_status()
+          print("ALPHA TRACK DUMP:")
+          print(json.dumps(track, indent=2))
           print("=== Done! ===")
           PY
