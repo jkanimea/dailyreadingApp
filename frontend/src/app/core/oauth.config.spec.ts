@@ -1,4 +1,4 @@
-import { GOOGLE_WEB_CLIENT_ID, FACEBOOK_APP_ID, FACEBOOK_CLIENT_TOKEN } from './oauth.config';
+import { GOOGLE_WEB_CLIENT_ID, FACEBOOK_APP_ID, FACEBOOK_CLIENT_TOKEN, FACEBOOK_KEY_HASH } from './oauth.config';
 
 describe('oauth.config', () => {
   it('should use the current Firebase project web client ID (not a stale migrated one)', () => {
@@ -19,5 +19,13 @@ describe('oauth.config', () => {
 
   it('should match the current Facebook client token', () => {
     expect(FACEBOOK_CLIENT_TOKEN).toBe('5ebf47a6cc789c1e3e02f964739e1e58');
+  });
+
+  it('should match the release keystore Facebook key hash (registered in the console)', () => {
+    // Native Android Facebook login fails with "This app has no Android key
+    // hashes configured" if this drifts (e.g. keystore rotation) and is not
+    // re-registered. entrypoint.sh also fails the build on drift.
+    expect(FACEBOOK_KEY_HASH).toBe('c3wOsuGwYemOTZ4xCPatTYtcGJw=');
+    expect(FACEBOOK_KEY_HASH).toMatch(/^[A-Za-z0-9+/]+={0,2}$/);
   });
 });

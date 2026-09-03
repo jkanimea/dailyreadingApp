@@ -126,6 +126,26 @@ if [ -n "${KEYSTORE_PATH:-}" ] && [ -f "$KEYSTORE_PATH" ]; then
     echo "  keytool -list -v -alias release -keystore \"$KEYSTORE_PATH\" -storepass \"\$KEYSTORE_PASSWORD\" | grep -E 'SHA1:|SHA256:'"
     echo "  keytool -exportcert -alias release -keystore \"$KEYSTORE_PATH\" -storepass \"\$KEYSTORE_PASSWORD\" | openssl sha1 -binary | openssl base64"
 
+    # Fail the build if the release key hash drifts from the value registered in
+    # the Facebook developer console (single source of truth: oauth.config.ts).
+    # Native Facebook login fails with "This app has no Android key hashes
+    # configured" when the keystore is rotated without re-registering its hash.
+    EXPECTED_FB_HASH=$(grep -oE "FACEBOOK_KEY_HASH = '[^']+'" "$FRONTEND_DIR/src/app/core/oauth.config.ts" | sed -E "s/.*'([^']+)'/\1/")
+    if [ -n "$EXPECTED_FB_HASH" ] && [ -n "$KEY_HASH" ]; then
+        if [ "$KEY_HASH" = "$EXPECTED_FB_HASH" ]; then
+            echo "OK: Facebook key hash ($KEY_HASH) matches oauth.config.ts"
+        else
+            echo "ERROR: Facebook key hash drift detected!"
+            echo "  keystore computed key hash = $KEY_HASH"
+            echo "  oauth.config.ts expected   = $EXPECTED_FB_HASH"
+            echo "  Register the new hash at https://developers.facebook.com/apps/1510105297476514/ (Settings -> Basic -> Android -> Key Hashes),"
+            echo "  then update FACEBOOK_KEY_HASH in frontend/src/app/core/oauth.config.ts."
+            exit 1
+        fi
+    else
+        echo "WARNING: could not read FACEBOOK_KEY_HASH or compute key hash — skipping Facebook key hash verification."
+    fi
+
     # Fail the build if the release SHA-1 is not registered in google-services.json.
     # Android's Credential Manager reports "Google Sign-In cancelled by user" when a
     # user taps an authenticated account whose signing certificate SHA-1 is missing

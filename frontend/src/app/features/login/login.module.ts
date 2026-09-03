@@ -237,7 +237,7 @@ export class LoginPage implements OnDestroy {
         });
       }
       this.googleInitialized = true;
-    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initGoogle', String(e)); /* will show error on button click */ }
+    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initGoogle', this.describeError(e)); /* will show error on button click */ }
   }
 
   private async initFacebook(): Promise<void> {
@@ -253,7 +253,7 @@ export class LoginPage implements OnDestroy {
         });
       }
       this.facebookInitialized = true;
-    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initFacebook', String(e)); /* will show error on button click */ }
+    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initFacebook', this.describeError(e)); /* will show error on button click */ }
   }
 
   private async initSocialLogin(): Promise<void> {
@@ -270,7 +270,7 @@ export class LoginPage implements OnDestroy {
         }
       });
       this.socialLoginInitialized = true;
-    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initSocialLogin', String(e)); }
+    } catch (e: unknown) { this.loggingService.error('LoginPage', 'initSocialLogin', this.describeError(e)); }
   }
 
   async loginWithGoogle(): Promise<void> {
@@ -333,7 +333,8 @@ export class LoginPage implements OnDestroy {
       await this.authService.storeTokens(res);
       this.router.navigate(['/series']);
     } catch (e) {
-      this.loggingService.error('LoginPage', 'loginWithGoogle', String(e));
+      this.loggingService.error('LoginPage', 'loginWithGoogle', this.describeError(e));
+      console.error('loginWithGoogle failed:', e);
       this.error = e instanceof Error ? e.message : 'Google sign-in failed.';
     } finally {
       this.loading = false;
@@ -377,6 +378,31 @@ export class LoginPage implements OnDestroy {
     }
   }
 
+  /** Formats any thrown value into a log-friendly string that preserves the
+   *  plugin's error `code` (e.g. `USER_CANCELLED`) alongside the message, so
+   *  native SDK failures — like Facebook's "no key hashes configured" — are not
+   *  flattened into a bare "Login cancelled" string. */
+  private describeError(e: unknown): string {
+    if (e instanceof Error) {
+      const code = (e as { code?: string }).code;
+      return code ? `[code=${code}] ${e.message}` : e.message;
+    }
+    return String(e);
+  }
+
+  /** Rejects if a native login dialog never settles (e.g. Facebook SDK shows a
+   *  blocking native dialog and the plugin promise neither resolves nor rejects).
+   *  Without this, a hung dialog produces no backend log at all. */
+  private withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+      promise.then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        (err) => { clearTimeout(timer); reject(err); }
+      );
+    });
+  }
+
   async loginWithFacebook(): Promise<void> {
     this.loading = true;
     this.error = undefined;
@@ -386,7 +412,11 @@ export class LoginPage implements OnDestroy {
       if (Capacitor.isNativePlatform()) {
         // Native Android/iOS — use @capgo/capacitor-social-login
         if (!this.socialLoginInitialized) await this.initSocialLogin();
-        const res = await SocialLogin.login({ provider: 'facebook', options: { permissions: ['public_profile', 'email'] } });
+        const res = await this.withTimeout(
+          SocialLogin.login({ provider: 'facebook', options: { permissions: ['public_profile', 'email'] } }),
+          120000,
+          'Facebook login'
+        );
         const token = res.result.accessToken?.token;
         if (!token) throw new Error('Facebook sign-in failed — no access token.');
         credential = token;
@@ -415,7 +445,8 @@ export class LoginPage implements OnDestroy {
       await this.authService.storeTokens(res);
       this.router.navigate(['/series']);
     } catch (e) {
-      this.loggingService.error('LoginPage', 'loginWithFacebook', String(e));
+      this.loggingService.error('LoginPage', 'loginWithFacebook', this.describeError(e));
+      console.error('loginWithFacebook failed:', e);
       this.error = e instanceof Error ? e.message : 'Facebook sign-in failed.';
     } finally {
       this.loading = false;

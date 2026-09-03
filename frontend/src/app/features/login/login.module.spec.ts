@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { LoggingService } from '../../core/services/logging.service';
 import { LoginPage } from './login.module';
 import { TokenResponse } from '../../core/models/user.model';
 import { Capacitor } from '@capacitor/core';
@@ -47,6 +48,7 @@ describe('LoginPage', () => {
 
   beforeEach(async () => {
     googleCredentialCallback = jest.fn() as any;
+    jest.spyOn(console, 'error').mockImplementation(() => {});
 
     googleIdMock = {
       initialize: jest.fn().mockImplementation((config: any) => {
@@ -89,6 +91,7 @@ describe('LoginPage', () => {
   afterEach(() => {
     delete (window as any).google;
     delete (window as any).FB;
+    jest.restoreAllMocks();
   });
 
   // ─── Version ──────────────────────────────────────────────────────────────
@@ -597,6 +600,46 @@ describe('LoginPage', () => {
         expect(component.error).toBe('Facebook login cancelled');
         expect(authService.login).not.toHaveBeenCalled();
         expect(component.loading).toBe(false);
+      });
+
+      it('should log native Facebook errors with their provider code', async () => {
+        const loggingService = TestBed.inject(LoggingService);
+        const logSpy = jest.spyOn(loggingService, 'error').mockImplementation(() => {});
+        (SocialLogin.login as jest.Mock).mockRejectedValue(
+          Object.assign(new Error('This app has no Android key hashes configured'), { code: 'FB_KEYHASH_MISSING' })
+        );
+
+        await component.loginWithFacebook();
+
+        expect(logSpy).toHaveBeenCalledWith(
+          'LoginPage',
+          'loginWithFacebook',
+          expect.stringContaining('[code=FB_KEYHASH_MISSING]')
+        );
+        expect(component.error).toBe('This app has no Android key hashes configured');
+        expect(authService.login).not.toHaveBeenCalled();
+        logSpy.mockRestore();
+      });
+
+      it('should time out when native Facebook login never settles', async () => {
+        jest.useFakeTimers();
+        try {
+          (SocialLogin.login as jest.Mock).mockReturnValue(new Promise(() => {}));
+
+          const p = component.loginWithFacebook();
+          await Promise.resolve();
+          await Promise.resolve();
+          await Promise.resolve();
+
+          jest.advanceTimersByTime(121000);
+
+          await p;
+          expect(component.error).toBe('Facebook login timed out after 120000ms');
+          expect(authService.login).not.toHaveBeenCalled();
+          expect(component.loading).toBe(false);
+        } finally {
+          jest.useRealTimers();
+        }
       });
 
       it('should initialize SocialLogin before first use on native', async () => {
