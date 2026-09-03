@@ -65,7 +65,7 @@ import { SyncService } from '../../core/services/sync.service';
                   <app-progress-bar [percentage]="state(s.id).percentage" [showLabel]="false"></app-progress-bar>
                   @if (state(s.id).percentage < 100) {
                     <div class="mode-buttons">
-                      <ion-button expand="block" (click)="continueReading($event, s)">Continue</ion-button>
+                      <ion-button expand="block" (click)="onSelect(s)">Continue</ion-button>
                       <ion-button fill="outline" color="danger" expand="block" (click)="reset($event, s)">Reset</ion-button>
                     </div>
                   }
