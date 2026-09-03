@@ -17,6 +17,46 @@ public class ReadingWorkflowTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetReadingByDayNumber_ReturnsRequestedSeriesPosition()
+    {
+        var response = await AnonymousClient.GetAsync("/api/v1/reading/series/1/day/3");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var reading = await DeserializeAsync<Dictionary<string, object>>(response);
+        reading.Should().ContainKey("id");
+        reading!["id"]!.ToString().Should().Be("3");
+    }
+
+    [Fact]
+    public async Task ResetSeries_KeepsNotesAndRemovesCompletion()
+    {
+        await Client.PutAsJsonAsync("/api/v1/progress/1/notes", new { notes = "Keep this note" });
+        await Client.PostAsync("/api/v1/progress/1/complete", null);
+
+        var response = await Client.PostAsJsonAsync("/api/v1/progress/series/1/reset", new { deleteNotes = false });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var progress = await DeserializeAsync<ProgressDto>(await Client.GetAsync("/api/v1/progress/1"));
+        progress!.IsCompleted.Should().BeFalse();
+        progress.Notes.Should().Be("Keep this note");
+    }
+
+    [Fact]
+    public async Task ResetSeriesWithDeleteNotes_RemovesProgressButKeepsBookmarks()
+    {
+        await Client.PutAsJsonAsync("/api/v1/progress/1/notes", new { notes = "Delete this note" });
+        await Client.PostAsync("/api/v1/progress/1/complete", null);
+        await Client.PostAsync("/api/v1/bookmark/1", null);
+
+        var response = await Client.PostAsJsonAsync("/api/v1/progress/series/1/reset", new { deleteNotes = true });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync("/api/v1/progress/1")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var bookmarks = await DeserializeAsync<List<object>>(await Client.GetAsync("/api/v1/bookmark"));
+        bookmarks.Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task GetFullReading_IncludesBibleAndEgwText()
     {
         var response = await Client.GetAsync("/api/v1/reading/1/full");

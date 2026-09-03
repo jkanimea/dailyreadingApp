@@ -58,7 +58,9 @@ describe('ReadingDetailPage — notes', () => {
 
     mockPrefs = {
       getSeriesId: jest.fn().mockReturnValue(2),
-      setSeriesId: jest.fn().mockResolvedValue(undefined)
+      setSeriesId: jest.fn().mockResolvedValue(undefined),
+      getSeriesMode: jest.fn().mockResolvedValue('calendar'),
+      getSeriesStartDate: jest.fn().mockResolvedValue(null)
     };
 
     mockProgressService = {

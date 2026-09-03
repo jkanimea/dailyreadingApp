@@ -98,7 +98,8 @@ public abstract class IntegrationTestBase : IAsyncLifetime
                 PrimaryBookPageEnd = i * 10 + 5,
                 FullTextPrimary = $"Primary text for reading {i}",
                 FullTextSecondary = i % 2 == 0 ? $"Secondary text for reading {i}" : null,
-                SummaryPoints = i % 2 == 0 ? $"Summary {i}" : null
+                SummaryPoints = i % 2 == 0 ? $"Summary {i}" : null,
+                SortOrder = i
             });
         }
         db.DailyReadings.AddRange(readings);

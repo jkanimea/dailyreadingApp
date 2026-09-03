@@ -242,6 +242,11 @@ export async function mockAllRoutes(page: Page): Promise<void> {
     if (day === 15) return r.fulfill({ json: { ...MOCK_READING_DETAIL, id: 102, day: 15 } });
     return r.fulfill({ json: MOCK_READING_DETAIL });
   });
+  await page.route('**/api/v1/reading/series/1/day/**', (r: Route) => {
+    const url = new URL(r.request().url());
+    const day = Number(url.pathname.split('/').pop());
+    return r.fulfill({ json: { ...MOCK_READING_DETAIL, id: 100 + day, day } });
+  });
 
   // Reading by ID — basic and full
   await page.route('**/api/v1/reading/101', (r: Route) =>

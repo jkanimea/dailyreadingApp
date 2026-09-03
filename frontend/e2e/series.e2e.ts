@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockAllRoutes } from './fixtures/mocks';
+import { mockAllRoutes, seedAuthToken } from './fixtures/mocks';
 
 test.describe('Series list', () => {
   test.beforeEach(async ({ page }) => {
@@ -37,5 +37,18 @@ test.describe('Series list', () => {
   test('shows second series book title', async ({ page }) => {
     // Template renders "Based on {title}" — author is not displayed separately
     await expect(page.locator('.series-card').nth(1)).toContainText('Steps to Christ');
+  });
+
+  test('allows selecting Start from Day 1 without selecting the card twice', async ({ page }) => {
+    await page.route('**/api/v1/progress/series/1/completed-count', (r) => r.fulfill({ json: 0 }));
+    await page.route('**/api/v1/progress/series/1/percentage', (r) => r.fulfill({ json: 0 }));
+    await seedAuthToken(page);
+    await page.goto('/series');
+
+    const card = page.locator('.series-card').first();
+    await card.getByRole('button', { name: 'Start from Day 1' }).click();
+    await expect(page.locator('ion-alert')).toContainText('Start from Day 1?');
+    await page.locator('ion-alert').getByRole('button', { name: 'Continue' }).click();
+    await expect(page).toHaveURL(/\/today/);
   });
 });

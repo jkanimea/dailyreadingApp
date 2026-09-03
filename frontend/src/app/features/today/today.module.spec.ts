@@ -49,9 +49,23 @@ describe('TodayPage — AI Summarize uses popup not inline', () => {
       declarations: [TodayPage],
       imports: [IonicModule.forRoot(), SharedModule, HttpClientTestingModule],
       providers: [
-        { provide: ReadingService, useValue: { getToday: jest.fn((_seriesId: number, _month: number, day: number) => { if (day === 7) return of({ id: 2, seriesId: 1 }); if (day === 9) return of({ id: 4, seriesId: 1 }); return of({ id: 3, seriesId: 1 }); }), getFullReading: jest.fn().mockReturnValue(of(mockDetail)) } },
+        { provide: ReadingService, useValue: {
+          getToday: jest.fn((_seriesId: number, _month: number, day: number) => {
+            if (day === 7) return of({ id: 2, seriesId: 1 });
+            if (day === 9) return of({ id: 4, seriesId: 1 });
+            return of({ id: 3, seriesId: 1 });
+          }),
+          getForMode: jest.fn().mockReturnValue(of({ ...mockDetail })),
+          getFullReading: jest.fn().mockReturnValue(of(mockDetail))
+        } },
         { provide: ProgressService, useValue: mockProgressService },
-        { provide: PreferencesService, useValue: { getSeriesId: jest.fn().mockReturnValue(1), getTranslation: jest.fn().mockReturnValue('KJV'), seriesId$: of(1) } },
+        { provide: PreferencesService, useValue: {
+          getSeriesId: jest.fn().mockReturnValue(1),
+          getTranslation: jest.fn().mockReturnValue('KJV'),
+          getSeriesMode: jest.fn().mockResolvedValue('calendar'),
+          getSeriesStartDate: jest.fn().mockResolvedValue(null),
+          seriesId$: of(1)
+        } },
         { provide: Router, useValue: { navigate: jest.fn() } },
         { provide: AlertController, useValue: mockAlertCtrl },
         { provide: AuthService, useValue: { user$: new BehaviorSubject(null) } }

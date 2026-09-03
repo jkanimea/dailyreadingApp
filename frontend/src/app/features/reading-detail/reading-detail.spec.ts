@@ -59,6 +59,7 @@ describe('ReadingDetailPage', () => {
         if (day === 22) return of({ id: 6, seriesId: 2 });
         return of({ id: 3, seriesId: 2 });
       }),
+      getForMode: jest.fn().mockReturnValue(of({ id: 3, seriesId: 2 })),
       getFullReading: jest.fn().mockReturnValue(of(mockDetail)),
       getSummary: jest.fn().mockReturnValue(of({ id: 5, summaryPoints: '- Test summary' }))
     };
@@ -70,6 +71,8 @@ describe('ReadingDetailPage', () => {
     mockPrefs = {
       getSeriesId: jest.fn().mockReturnValue(2),
       setSeriesId: jest.fn().mockResolvedValue(undefined),
+      getSeriesMode: jest.fn().mockResolvedValue('calendar'),
+      getSeriesStartDate: jest.fn().mockResolvedValue(null),
       getTranslation: jest.fn().mockReturnValue('KJV'),
       setTranslation: jest.fn().mockResolvedValue(undefined)
     };
@@ -583,7 +586,7 @@ describe('ReadingDetailPage', () => {
       await (component as any).onSeriesSelected(1);
 
       expect(mockPrefs.setSeriesId).toHaveBeenCalledWith(1);
-      expect(mockReadingService.getToday).toHaveBeenCalledWith(1, expect.any(Number), expect.any(Number));
+      expect(mockReadingService.getForMode).toHaveBeenCalledWith(1, 'calendar', null, undefined, expect.any(Date));
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/reading', 3]);
     });
 
@@ -597,6 +600,7 @@ describe('ReadingDetailPage', () => {
 
     it('should navigate to /today on missing reading', async () => {
       mockReadingService.getToday.mockReturnValue(of(null));
+      mockReadingService.getForMode.mockReturnValue(of(null));
       await (component as any).onSeriesSelected(3);
 
       expect(mockRouter.navigate).toHaveBeenCalledWith(['/today']);
