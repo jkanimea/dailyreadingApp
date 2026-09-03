@@ -2,6 +2,7 @@ using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces;
 using EncounterDaily.Core.Interfaces.Services;
+using Microsoft.EntityFrameworkCore;
 
 namespace EncounterDaily.Services
 {
@@ -33,13 +34,18 @@ namespace EncounterDaily.Services
         {
             var series = await _unitOfWork.Series.GetSeriesWithBooksAsync(seriesId);
 
+            var totalReadings = _unitOfWork.Readings is null
+                ? 0
+                : await _unitOfWork.Readings.Query().CountAsync(r => r.SeriesId == seriesId);
+
             return new SeriesConfig
             {
                 SeriesId = seriesId,
                 PrimaryBookTitle = series?.PrimaryBook?.Title ?? "Unknown",
                 SecondaryBookTitle = series?.SecondaryBook?.Title,
                 HasSecondaryReading = series?.SecondaryBookId.HasValue ?? false,
-                DateRangeStart = "01-01"
+                DateRangeStart = "01-01",
+                TotalReadings = totalReadings
             };
         }
     }
