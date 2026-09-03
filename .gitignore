@@ -110,6 +110,9 @@ dev-rsa-key.pem
 # opencode local config
 .claude/
 
+# Local Playwright MCP browser snapshots
+.playwright-mcp/
+
 # Generated seed data
 seed-import.sql
 
