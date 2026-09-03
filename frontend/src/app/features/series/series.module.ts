@@ -1,6 +1,6 @@
 import { NgModule, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonicModule } from '@ionic/angular';
+import { IonicModule, AlertController } from '@ionic/angular';
 import { RouterModule, Routes, Router } from '@angular/router';
 import { Component, OnInit } from '@angular/core';
 import { SeriesService } from '../../core/services/series.service';
@@ -9,6 +9,9 @@ import { Series } from '../../core/models/series.model';
 import { LoggingService } from '../../core/services/logging.service';
 import { firstValueFrom } from 'rxjs';
 import { SharedModule } from '../../shared/shared.module';
+import { ProgressService } from '../../core/services/progress.service';
+import { AuthService } from '../../core/services/auth.service';
+import { SyncService } from '../../core/services/sync.service';
 
 @Component({
   template: `
@@ -57,6 +60,20 @@ import { SharedModule } from '../../shared/shared.module';
                 }
                 @if (s.description) {
                   <p class="series-desc">{{ s.description }}</p>
+                }
+                @if (isGuest) {
+                  <p class="series-desc">Sign in to track progress</p>
+                } @else if (state(s.id).mode) {
+                  <p class="progress-caption">{{ state(s.id).completed }}{{ state(s.id).total ? ' / ' + state(s.id).total : '' }} · {{ state(s.id).percentage }}%</p>
+                  <app-progress-bar [percentage]="state(s.id).percentage" [showLabel]="false"></app-progress-bar>
+                  <ion-badge>{{ state(s.id).percentage >= 100 ? 'Completed' : state(s.id).mode === 'day1' ? 'Day 1' : 'Calendar' }}</ion-badge>
+                  @if (state(s.id).percentage < 100) {
+                    <ion-button fill="outline" color="danger" expand="block" (click)="reset($event, s)">Reset</ion-button>
+                  }
+                } @else {
+                  <p class="series-desc">Not started</p>
+                  <ion-button expand="block" (click)="choose($event, s, 'day1')">Start from Day 1</ion-button>
+                  <ion-button fill="outline" expand="block" (click)="choose($event, s, 'calendar')">Calendar</ion-button>
                 }
               </div>
               <ion-icon name="chevron-forward" class="series-chevron"></ion-icon>
@@ -132,13 +149,19 @@ class SeriesPage implements OnInit {
   private seriesService = inject(SeriesService);
   private prefs = inject(PreferencesService);
   private loggingService = inject(LoggingService);
+  private progress = inject(ProgressService);
+  private auth = inject(AuthService);
+  private sync = inject(SyncService);
+  private alert = inject(AlertController);
 
   series: Series[] = [];
   loading = false;
   error?: string;
+  isGuest = false;
+  private states = new Map<number, { mode: string | null; completed: number; percentage: number; total?: number }>();
 
   ngOnInit(): void {
-    this.loadSeries();
+    this.auth.isGuest().then(guest => { this.isGuest = guest; this.loadSeries(); });
   }
 
   private async loadSeries(): Promise<void> {
@@ -146,6 +169,22 @@ class SeriesPage implements OnInit {
     this.error = undefined;
     try {
       this.series = await firstValueFrom(this.seriesService.getAll());
+      await this.prefs.migrateSeriesModes(this.series.map(s => s.id), async id => {
+        if (this.isGuest) return false;
+        return (await firstValueFrom(this.progress.getCompletedCount(id))) > 0;
+      });
+      await Promise.all(this.series.map(async s => {
+        const mode = await this.prefs.getSeriesMode(s.id);
+        const state = { mode, completed: 0, percentage: 0, total: undefined as number | undefined };
+        if (!this.isGuest) {
+          [state.completed, state.percentage] = await Promise.all([
+            firstValueFrom(this.progress.getCompletedCount(s.id)),
+            firstValueFrom(this.progress.getCompletionPercentage(s.id))
+          ]);
+        }
+        try { state.total = (await firstValueFrom(this.seriesService.getConfig(s.id))).totalReadings; } catch { /* optional */ }
+        this.states.set(s.id, state);
+      }));
     } catch (e: unknown) {
       this.loggingService.error('SeriesPage', 'loadSeries', e instanceof Error ? e.message : String(e));
       this.error = 'Failed to load series. Make sure the API is running.';
@@ -154,6 +193,40 @@ class SeriesPage implements OnInit {
     }
   }
 
+    state(id: number) { return this.states.get(id) ?? { mode: null, completed: 0, percentage: 0 }; }
+
+    async choose(event: Event, s: Series, mode: 'day1' | 'calendar'): Promise<void> {
+      event.stopPropagation();
+      const confirmation = await this.alert.create({
+        header: mode === 'day1' ? 'Start from Day 1?' : 'Use calendar day?',
+        message: 'This choice is locked until you reset the series.',
+        buttons: [{ text: 'Cancel', role: 'cancel' }, { text: 'Continue', handler: () => true }]
+      });
+      await confirmation.present();
+      const result = await confirmation.onDidDismiss();
+      if (result.role === 'cancel') return;
+      await this.prefs.setSeriesMode(s.id, mode);
+      await this.prefs.setSeriesStartDate(s.id, new Date().toISOString().slice(0, 10));
+      this.states.set(s.id, { ...this.state(s.id), mode });
+      await this.onSelect(s);
+    }
+
+    async reset(event: Event, s: Series): Promise<void> {
+      event.stopPropagation();
+      const confirmation = await this.alert.create({
+        header: `Reset "${s.name}"?`,
+        message: 'This clears your reading progress. Journal notes are kept by default.',
+        inputs: [{ name: 'deleteNotes', type: 'checkbox', label: 'Also delete my journal notes' }],
+        buttons: [{ text: 'Cancel', role: 'cancel' }, { text: 'Reset', role: 'destructive' }]
+      });
+      await confirmation.present();
+      const result = await confirmation.onDidDismiss();
+      if (result.role === 'cancel') return;
+      await this.prefs.clearSeriesState(s.id);
+      await this.sync.clearSeries(s.id);
+      if (!this.isGuest) await firstValueFrom(this.progress.resetSeries(s.id, !!result.data?.values?.deleteNotes)).catch(() => undefined);
+      this.states.set(s.id, { mode: null, completed: 0, percentage: 0, total: this.state(s.id).total });
+    }
   goToSettings(): void {
     this.router.navigate(['/settings']);
   }

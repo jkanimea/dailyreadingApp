@@ -59,6 +59,37 @@ namespace EncounterDaily.Tests.UnitTests.Repositories
         }
 
         [Fact]
+        public async Task GetByDayNumberAsync_ShouldReturnReadingOrderedBySortOrder()
+        {
+            using var context = _fixture.CreateInMemoryContext();
+            var repo = _fixture.CreateReadingRepository(context);
+            var book = new Book { Title = "B", Author = "A" };
+            context.Books.Add(book);
+            await context.SaveChangesAsync();
+            var series = new Series { Name = "S", ShortName = "S", PrimaryBookId = book.Id, SortOrder = 1 };
+            context.Series.Add(series);
+            await context.SaveChangesAsync();
+            context.DailyReadings.AddRange(
+                new DailyReading { SeriesId = series.Id, SortOrder = 2, BibleReading = "Second", PrimaryBookPageRange = "P", PrimaryBookPageStart = 1, PrimaryBookPageEnd = 1 },
+                new DailyReading { SeriesId = series.Id, SortOrder = 1, BibleReading = "First", PrimaryBookPageRange = "P", PrimaryBookPageStart = 1, PrimaryBookPageEnd = 1 });
+            await context.SaveChangesAsync();
+
+            var result = await repo.GetByDayNumberAsync(series.Id, 1);
+
+            result!.BibleReading.Should().Be("First");
+            result.Series.Should().NotBeNull();
+        }
+
+        [Fact]
+        public async Task GetByDayNumberAsync_ShouldReturnNull_WhenOutOfRange()
+        {
+            using var context = _fixture.CreateInMemoryContext();
+            var repo = _fixture.CreateReadingRepository(context);
+
+            (await repo.GetByDayNumberAsync(1, 1)).Should().BeNull();
+        }
+
+        [Fact]
         public async Task GetBySeriesMonthAsync_ShouldReturnReadingsOrderedByDay()
         {
             using var context = _fixture.CreateInMemoryContext();

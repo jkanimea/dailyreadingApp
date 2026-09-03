@@ -10,5 +10,6 @@ namespace EncounterDaily.Core.Interfaces.Repositories
         Task<double> GetCompletionPercentageAsync(int userId, int seriesId);
         Task<int> GetCompletedCountAsync(int userId, int seriesId);
         Task<IEnumerable<UserProgress>> GetJournalEntriesAsync(int userId, int seriesId);
+        Task ResetSeriesAsync(int userId, int seriesId, bool deleteNotes);
     }
 }

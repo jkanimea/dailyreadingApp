@@ -28,6 +28,14 @@ namespace EncounterDaily.API.Controllers
             return Ok(items);
         }
 
+        [HttpPost("series/{seriesId}/reset")]
+        public async Task<ActionResult> ResetSeries(int seriesId, [FromBody] ResetSeriesRequest? request = null)
+        {
+            var userId = GetUserId();
+            await _progressService.ResetSeriesAsync(userId, seriesId, request?.DeleteNotes ?? false);
+            return Ok();
+        }
+
         [HttpGet("series/{seriesId}/streak")]
         public async Task<ActionResult<int>> GetStreak(int seriesId)
         {

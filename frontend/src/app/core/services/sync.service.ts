@@ -74,6 +74,11 @@ export class SyncService {
     return this.getQueue().then(q => q.length);
   }
 
+  async clearSeries(seriesId: number): Promise<void> {
+    const queue = await this.getQueue();
+    await this.storage.set(this.QUEUE_KEY, queue.filter(item => item.seriesId !== seriesId));
+  }
+
   private async processQueue(): Promise<void> {
     if (this.isSyncing) return;
     this.isSyncing = true;

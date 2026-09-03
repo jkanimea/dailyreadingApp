@@ -97,5 +97,24 @@ namespace EncounterDaily.Infrastructure.Repositories
                     .ThenBy(p => p.DailyReading.Day)
                 .ToListAsync();
         }
+
+        public async Task ResetSeriesAsync(int userId, int seriesId, bool deleteNotes)
+        {
+            var progress = await _dbSet
+                .Where(p => p.UserId == userId && p.SeriesId == seriesId)
+                .ToListAsync();
+
+            if (deleteNotes)
+            {
+                _dbSet.RemoveRange(progress);
+                return;
+            }
+
+            foreach (var item in progress)
+            {
+                item.IsCompleted = false;
+                item.CompletedAt = null;
+            }
+        }
     }
 }

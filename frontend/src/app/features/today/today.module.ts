@@ -10,6 +10,7 @@ import { PreferencesService, BibleTranslation } from '../../core/services/prefer
 import { LoggingService } from '../../core/services/logging.service';
 import { ReadingDetail } from '../../core/models/reading.model';
 import { shiftReadingDate } from '../../core/reading-nav';
+import { dayNumberSinceLocal } from '../../core/local-date';
 import { SharedModule } from '../../shared/shared.module';
 import { firstValueFrom } from 'rxjs';
 import { TtsService } from '../../core/services/tts.service';
@@ -1009,7 +1010,9 @@ export class TodayPage {
       this.seriesId = this.prefs.getSeriesId();
       this.translation = this.prefs.getTranslation();
       const now = new Date();
-      const reading = await firstValueFrom(this.readingService.getToday(this.seriesId, now.getMonth() + 1, now.getDate()));
+      const mode = await this.prefs.getSeriesMode(this.seriesId);
+      const startDate = await this.prefs.getSeriesStartDate(this.seriesId);
+      const reading = await firstValueFrom(this.readingService.getForMode(this.seriesId, mode, startDate, undefined, now));
       this.readingId = reading.id;
       this.seriesName = reading.seriesName;
       await this.loadDetail(this.readingId, this.translation);
@@ -1030,6 +1033,16 @@ export class TodayPage {
       this.nextReadingId = undefined;
       return;
     }
+    const mode = await this.prefs.getSeriesMode(detail.seriesId);
+    if (mode === 'day1') {
+      const startDate = await this.prefs.getSeriesStartDate(detail.seriesId);
+      if (startDate) {
+        const position = dayNumberSinceLocal(startDate, undefined, new Date());
+        this.previousReadingId = position <= 1 ? undefined : await this.resolveNeighborDay(detail.seriesId, position - 1);
+        this.nextReadingId = await this.resolveNeighborDay(detail.seriesId, position + 1);
+        return;
+      }
+    }
     const isStart = detail.month === 1 && detail.day === 1;
     const isEnd = detail.month === 12 && detail.day === 31;
     const prev = shiftReadingDate(detail.month, detail.day, -1);
@@ -1040,6 +1053,11 @@ export class TodayPage {
     this.nextReadingId = isEnd
       ? undefined
       : await this.resolveNeighborId(detail.seriesId, next.month, next.day);
+  }
+
+  private async resolveNeighborDay(seriesId: number, day: number): Promise<number | undefined> {
+    try { return (await firstValueFrom(this.readingService.getByDay(seriesId, day)))?.id; }
+    catch { return undefined; }
   }
 
   private async resolveNeighborId(seriesId: number, month: number, day: number): Promise<number | undefined> {

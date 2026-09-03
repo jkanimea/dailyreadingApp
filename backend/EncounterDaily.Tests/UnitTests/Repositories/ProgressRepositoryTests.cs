@@ -88,6 +88,61 @@ namespace EncounterDaily.Tests.UnitTests.Repositories
         }
 
         [Fact]
+        public async Task ResetSeriesAsync_ShouldKeepNotesAndBookmarksByDefault()
+        {
+            using var context = _fixture.CreateInMemoryContext();
+            var repo = _fixture.CreateProgressRepository(context);
+            var user = new User { Email = "reset@b.com", Provider = "google", ProviderId = "reset", DisplayName = "Reset" };
+            var book = new Book { Title = "B", Author = "A" };
+            context.Users.Add(user);
+            context.Books.Add(book);
+            await context.SaveChangesAsync();
+            var series = new Series { Name = "Reset", ShortName = "RS", PrimaryBookId = book.Id, SortOrder = 1 };
+            context.Series.Add(series);
+            await context.SaveChangesAsync();
+            var reading = new DailyReading { SeriesId = series.Id, Month = 1, Day = 1, BibleReading = "R", PrimaryBookPageRange = "P", PrimaryBookPageStart = 1, PrimaryBookPageEnd = 1 };
+            context.DailyReadings.Add(reading);
+            await context.SaveChangesAsync();
+            context.UserProgress.Add(new UserProgress { UserId = user.Id, SeriesId = series.Id, DailyReadingId = reading.Id, IsCompleted = true, CompletedAt = DateTime.UtcNow, Notes = "keep" });
+            context.UserBookmarks.Add(new UserBookmark { UserId = user.Id, SeriesId = series.Id, DailyReadingId = reading.Id });
+            await context.SaveChangesAsync();
+
+            await repo.ResetSeriesAsync(user.Id, series.Id, false);
+            await context.SaveChangesAsync();
+
+            var progress = await context.UserProgress.SingleAsync();
+            progress.IsCompleted.Should().BeFalse();
+            progress.CompletedAt.Should().BeNull();
+            progress.Notes.Should().Be("keep");
+            (await context.UserBookmarks.CountAsync()).Should().Be(1);
+        }
+
+        [Fact]
+        public async Task ResetSeriesAsync_ShouldDeleteProgressWhenDeleteNotesIsTrue()
+        {
+            using var context = _fixture.CreateInMemoryContext();
+            var repo = _fixture.CreateProgressRepository(context);
+            var user = new User { Email = "delete@b.com", Provider = "google", ProviderId = "delete", DisplayName = "Delete" };
+            var book = new Book { Title = "B", Author = "A" };
+            context.Users.Add(user);
+            context.Books.Add(book);
+            await context.SaveChangesAsync();
+            var series = new Series { Name = "Delete", ShortName = "DS", PrimaryBookId = book.Id, SortOrder = 1 };
+            context.Series.Add(series);
+            await context.SaveChangesAsync();
+            var reading = new DailyReading { SeriesId = series.Id, Month = 1, Day = 1, BibleReading = "R", PrimaryBookPageRange = "P", PrimaryBookPageStart = 1, PrimaryBookPageEnd = 1 };
+            context.DailyReadings.Add(reading);
+            await context.SaveChangesAsync();
+            context.UserProgress.Add(new UserProgress { UserId = user.Id, SeriesId = series.Id, DailyReadingId = reading.Id, Notes = "remove" });
+            await context.SaveChangesAsync();
+
+            await repo.ResetSeriesAsync(user.Id, series.Id, true);
+            await context.SaveChangesAsync();
+
+            (await context.UserProgress.CountAsync()).Should().Be(0);
+        }
+
+        [Fact]
         public async Task GetCompletionPercentageAsync_ShouldReturnCorrectPercentage()
         {
             using var context = _fixture.CreateInMemoryContext();

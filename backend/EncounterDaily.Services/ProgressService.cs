@@ -148,6 +148,12 @@ namespace EncounterDaily.Services
             }).OrderBy(j => j.Month).ThenBy(j => j.Day);
         }
 
+        public async Task ResetSeriesAsync(int userId, int seriesId, bool deleteNotes = false)
+        {
+            await _unitOfWork.Progress.ResetSeriesAsync(userId, seriesId, deleteNotes);
+            await _unitOfWork.CompleteAsync();
+        }
+
         private static ProgressDto MapToDto(UserProgress p)
         {
             return new ProgressDto

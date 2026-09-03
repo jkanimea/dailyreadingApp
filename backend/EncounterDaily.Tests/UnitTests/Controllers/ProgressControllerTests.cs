@@ -87,5 +87,23 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
 
             result.Should().BeOfType<NoContentResult>();
         }
+
+        [Fact]
+        public async Task ResetSeries_ShouldUseDefaultToKeepNotes()
+        {
+            var result = await _controller.ResetSeries(7);
+
+            result.Should().BeOfType<OkResult>();
+            _mockService.Verify(s => s.ResetSeriesAsync(1, 7, false), Times.Once);
+        }
+
+        [Fact]
+        public async Task ResetSeries_ShouldPassDeleteNotes()
+        {
+            var result = await _controller.ResetSeries(7, new ResetSeriesRequest { DeleteNotes = true });
+
+            result.Should().BeOfType<OkResult>();
+            _mockService.Verify(s => s.ResetSeriesAsync(1, 7, true), Times.Once);
+        }
     }
 }

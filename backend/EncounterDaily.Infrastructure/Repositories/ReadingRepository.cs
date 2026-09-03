@@ -23,6 +23,17 @@ namespace EncounterDaily.Infrastructure.Repositories
                 .FirstOrDefaultAsync(r => r.SeriesId == seriesId && r.Month == month && r.Day == day);
         }
 
+        public async Task<DailyReading?> GetByDayNumberAsync(int seriesId, int dayNumber)
+        {
+            return await _dbSet
+                .Where(r => r.SeriesId == seriesId)
+                .OrderBy(r => r.SortOrder)
+                .Skip(dayNumber - 1)
+                .Take(1)
+                .Include(r => r.Series)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<IEnumerable<DailyReading>> GetBySeriesMonthAsync(int seriesId, int month)
         {
             return await _dbSet

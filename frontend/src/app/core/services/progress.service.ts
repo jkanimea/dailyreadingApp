@@ -30,6 +30,10 @@ export class ProgressService {
     return this.api.get<number>(`/progress/series/${seriesId}/completed-count`);
   }
 
+  resetSeries(seriesId: number, deleteNotes = false): Observable<void> {
+    return this.api.post<void>(`/progress/series/${seriesId}/reset`, { deleteNotes });
+  }
+
   markComplete(readingId: number): Observable<ProgressDto> {
     return this.api.post<ProgressDto>(`/progress/${readingId}/complete`);
   }

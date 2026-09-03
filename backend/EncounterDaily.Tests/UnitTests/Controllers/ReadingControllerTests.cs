@@ -68,6 +68,36 @@ namespace EncounterDaily.Tests.UnitTests.Controllers
         }
 
         [Fact]
+        public async Task GetByDayNumber_ShouldReturnOk_WhenFound()
+        {
+            _mockService.Setup(s => s.GetByDayNumberAsync(1, 1))
+                .ReturnsAsync(new DailyReading { Id = 2, SeriesId = 1, BibleReading = "Day 1" });
+
+            var result = await _controller.GetByDayNumber(1, 1);
+
+            result.Result.Should().BeOfType<OkObjectResult>();
+        }
+
+        [Fact]
+        public async Task GetByDayNumber_ShouldReturnBadRequest_WhenLessThanOne()
+        {
+            var result = await _controller.GetByDayNumber(1, 0);
+
+            result.Result.Should().BeOfType<BadRequestObjectResult>();
+            _mockService.Verify(s => s.GetByDayNumberAsync(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        }
+
+        [Fact]
+        public async Task GetByDayNumber_ShouldReturnNotFound_WhenOutOfRange()
+        {
+            _mockService.Setup(s => s.GetByDayNumberAsync(1, 99)).ReturnsAsync((DailyReading?)null);
+
+            var result = await _controller.GetByDayNumber(1, 99);
+
+            result.Result.Should().BeOfType<NotFoundResult>();
+        }
+
+        [Fact]
         public async Task GetBySeriesMonth_ShouldReturnOk()
         {
             _mockService.Setup(s => s.GetBySeriesMonthAsync(1, 1)).ReturnsAsync(new List<DailyReading>());

@@ -174,5 +174,14 @@ namespace EncounterDaily.Tests.UnitTests.Services
 
             await _service.UnmarkCompleteAsync(1, 999);
         }
+
+        [Fact]
+        public async Task ResetSeriesAsync_ShouldResetProgressAndKeepNotesByDefault()
+        {
+            await _service.ResetSeriesAsync(1, 2);
+
+            _mockProgressRepo.Verify(r => r.ResetSeriesAsync(1, 2, false), Times.Once);
+            _mockUow.Verify(u => u.CompleteAsync(), Times.Once);
+        }
     }
 }

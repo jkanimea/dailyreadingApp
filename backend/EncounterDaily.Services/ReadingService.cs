@@ -19,6 +19,11 @@ namespace EncounterDaily.Services
             return await _unitOfWork.Readings.GetBySeriesDateAsync(seriesId, month, day);
         }
 
+        public async Task<DailyReading?> GetByDayNumberAsync(int seriesId, int dayNumber)
+        {
+            return await _unitOfWork.Readings.GetByDayNumberAsync(seriesId, dayNumber);
+        }
+
         public async Task<IEnumerable<DailyReading>> GetBySeriesMonthAsync(int seriesId, int month)
         {
             return await _unitOfWork.Readings.GetBySeriesMonthAsync(seriesId, month);

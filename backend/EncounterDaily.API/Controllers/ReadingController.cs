@@ -2,6 +2,7 @@ using EncounterDaily.API.Services;
 using EncounterDaily.Core.DTOs.Readings;
 using EncounterDaily.Core.Entities;
 using EncounterDaily.Core.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EncounterDaily.API.Controllers
@@ -49,6 +50,17 @@ namespace EncounterDaily.API.Controllers
             if (item == null)
                 return NotFound();
             return Ok(item);
+        }
+
+        [HttpGet("series/{seriesId}/day/{dayNumber}")]
+        [AllowAnonymous]
+        public async Task<ActionResult<DailyReadingDto>> GetByDayNumber(int seriesId, int dayNumber)
+        {
+            if (dayNumber < 1)
+                return BadRequest(new { message = "Day number must be at least 1." });
+
+            var reading = await _readingService.GetByDayNumberAsync(seriesId, dayNumber);
+            return reading == null ? NotFound() : Ok(MapToDto(reading));
         }
 
         [HttpGet("series/{seriesId}/month/{month}")]
@@ -110,5 +122,19 @@ namespace EncounterDaily.API.Controllers
             await _bibleSeedService.SeedMissingTranslationsAsync();
             return Ok(new { message = "Bible seed completed" });
         }
+
+        private static DailyReadingDto MapToDto(DailyReading reading) => new()
+        {
+            Id = reading.Id,
+            SeriesId = reading.SeriesId,
+            SeriesName = reading.Series?.Name ?? string.Empty,
+            Month = reading.Month,
+            Day = reading.Day,
+            BibleReading = reading.BibleReading,
+            PrimaryBookPageRange = reading.PrimaryBookPageRange,
+            SecondaryBookPageRange = reading.SecondaryBookPageRange,
+            HasSecondaryReading = reading.SecondaryBookPageRange != null,
+            SortOrder = reading.SortOrder
+        };
     }
 }

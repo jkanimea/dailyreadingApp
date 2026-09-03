@@ -5,11 +5,13 @@ import { OfflineStorageService } from './offline-storage.service';
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type FontSize = 'small' | 'medium' | 'large';
 export type BibleTranslation = 'KJV' | 'ASV' | 'WEB';
+export type SeriesMode = 'day1' | 'calendar';
 
 const PREFS_THEME = 'prefs_theme';
 const PREFS_FONT_SIZE = 'prefs_font_size';
 const PREFS_SERIES_ID = 'prefs_series_id';
 const PREFS_TRANSLATION = 'prefs_translation';
+const PREFS_MIGRATED = 'prefs_series_migrated_v1';
 
 @Injectable({ providedIn: 'root' })
 export class PreferencesService {
@@ -76,6 +78,40 @@ export class PreferencesService {
   async setTranslation(t: BibleTranslation): Promise<void> {
     this.translationSubject.next(t);
     await this.storage.set(PREFS_TRANSLATION, t);
+  }
+
+  async getSeriesMode(id: number): Promise<SeriesMode | null> {
+    return this.storage.get<SeriesMode>(`prefs_series_mode_${id}`);
+  }
+
+  async setSeriesMode(id: number, mode: SeriesMode): Promise<void> {
+    await this.storage.set(`prefs_series_mode_${id}`, mode);
+  }
+
+  async getSeriesStartDate(id: number): Promise<string | null> {
+    return this.storage.get<string>(`prefs_series_start_${id}`);
+  }
+
+  async setSeriesStartDate(id: number, date: string): Promise<void> {
+    await this.storage.set(`prefs_series_start_${id}`, date);
+  }
+
+  async clearSeriesState(id: number): Promise<void> {
+    await Promise.all([
+      this.storage.remove(`prefs_series_mode_${id}`),
+      this.storage.remove(`prefs_series_start_${id}`)
+    ]);
+  }
+
+  /** Idempotently preserves legacy users' calendar assignment. */
+  async migrateSeriesModes(seriesIds: number[], hasData: (id: number) => Promise<boolean>): Promise<void> {
+    if (await this.storage.get<boolean>(PREFS_MIGRATED)) return;
+    for (const id of seriesIds) {
+      if ((await this.getSeriesMode(id)) == null && await hasData(id)) {
+        await this.setSeriesMode(id, 'calendar');
+      }
+    }
+    await this.storage.set(PREFS_MIGRATED, true);
   }
 
   private applyTheme(mode: ThemeMode): void {

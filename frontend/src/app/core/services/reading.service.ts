@@ -3,6 +3,8 @@ import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
 import { DailyReading, ReadingDetail, ReadingSummary } from '../models/reading.model';
 import { HttpParams } from '@angular/common/http';
+import { SeriesMode } from './preferences.service';
+import { dayNumberSinceLocal } from '../local-date';
 
 @Injectable({ providedIn: 'root' })
 export class ReadingService {
@@ -19,6 +21,17 @@ export class ReadingService {
 
   getByDate(seriesId: number, month: number, day: number): Observable<DailyReading> {
     return this.api.get<DailyReading>(`/reading/series/${seriesId}/date/${month}/${day}`);
+  }
+
+  getByDay(seriesId: number, dayNumber: number): Observable<DailyReading> {
+    return this.api.get<DailyReading>(`/reading/series/${seriesId}/day/${dayNumber}`);
+  }
+
+  getForMode(seriesId: number, mode: SeriesMode | null, startDate?: string | null, totalReadings?: number, date = new Date()): Observable<DailyReading> {
+    if (mode === 'day1' && startDate) {
+      return this.getByDay(seriesId, dayNumberSinceLocal(startDate, totalReadings, date));
+    }
+    return this.getToday(seriesId, date.getMonth() + 1, date.getDate());
   }
 
   getByMonth(seriesId: number, month: number): Observable<DailyReading[]> {

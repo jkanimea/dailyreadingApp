@@ -14,6 +14,7 @@ import { shiftReadingDate } from '../../core/reading-nav';
 import { firstValueFrom, Subscription } from 'rxjs';
 import { TtsService } from '../../core/services/tts.service';
 import { createBibleRefRegex } from '../../core/bible-refs';
+import { dayNumberSinceLocal } from '../../core/local-date';
 
 const bibleRefRe = createBibleRefRegex();
 
@@ -834,7 +835,9 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
     await this.prefs.setSeriesId(seriesId);
     try {
       const now = new Date();
-      const reading = await firstValueFrom(this.readingService.getToday(seriesId, now.getMonth() + 1, now.getDate()));
+      const mode = await this.prefs.getSeriesMode(seriesId);
+      const startDate = await this.prefs.getSeriesStartDate(seriesId);
+      const reading = await firstValueFrom(this.readingService.getForMode(seriesId, mode, startDate, undefined, now));
       if (reading?.id) {
         this.router.navigate(['/reading', reading.id]);
         return;
@@ -1099,6 +1102,16 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
       this.nextReadingId = undefined;
       return;
     }
+    const mode = await this.prefs.getSeriesMode(detail.seriesId);
+    if (mode === 'day1') {
+      const startDate = await this.prefs.getSeriesStartDate(detail.seriesId);
+      if (startDate) {
+        const position = dayNumberSinceLocal(startDate);
+        this.previousReadingId = position <= 1 ? undefined : await this.resolveNeighborDay(detail.seriesId, position - 1);
+        this.nextReadingId = await this.resolveNeighborDay(detail.seriesId, position + 1);
+        return;
+      }
+    }
     const isStart = detail.month === 1 && detail.day === 1;
     const isEnd = detail.month === 12 && detail.day === 31;
     const prev = shiftReadingDate(detail.month, detail.day, -1);
@@ -1119,6 +1132,11 @@ export class ReadingDetailPage extends BaseReadingPageComponent implements OnDes
       this.loggingService.warn('ReadingDetailPage', `No reading at ${month}/${day}: ${String(e)}`);
       return undefined;
     }
+  }
+
+  private async resolveNeighborDay(seriesId: number, day: number): Promise<number | undefined> {
+    try { return (await firstValueFrom(this.readingService.getByDay(seriesId, day)))?.id; }
+    catch { return undefined; }
   }
 
   private async checkCompleted(readingId: number): Promise<void> {

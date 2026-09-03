@@ -2,6 +2,7 @@ import { DestroyRef, Directive, inject } from '@angular/core';
 import { ReadingService } from '../../core/services/reading.service';
 import { DailyReading, ReadingDetail, ReadingSummary } from '../../core/models/reading.model';
 import { LoggingService } from '../../core/services/logging.service';
+import { PreferencesService } from '../../core/services/preferences.service';
 
 @Directive()
 export abstract class BaseReadingPageComponent {
@@ -15,6 +16,7 @@ export abstract class BaseReadingPageComponent {
 
   protected readingService = inject(ReadingService);
   protected loggingService = inject(LoggingService);
+  protected preferences = inject(PreferencesService);
 
   ionViewWillEnter(): void {
     this.load();
@@ -27,7 +29,9 @@ export abstract class BaseReadingPageComponent {
     this.error = undefined;
     try {
       const now = new Date();
-      this.reading = await this.readingService.getToday(seriesId, now.getMonth() + 1, now.getDate()).toPromise();
+      const mode = await this.preferences.getSeriesMode(seriesId);
+      const startDate = await this.preferences.getSeriesStartDate(seriesId);
+      this.reading = await this.readingService.getForMode(seriesId, mode, startDate, undefined, now).toPromise();
     } catch (e: unknown) {
       this.loggingService.error('BaseReadingPageComponent', 'loadReading', String(e));
       this.error = 'Failed to load reading';
