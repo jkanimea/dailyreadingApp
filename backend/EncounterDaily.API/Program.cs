@@ -344,14 +344,24 @@ public class DevAuthSchemeOptions : AuthenticationSchemeOptions { }
 
 public class DevAuthHandler : AuthenticationHandler<DevAuthSchemeOptions>
 {
-    public DevAuthHandler(IOptionsMonitor<DevAuthSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
-        : base(options, logger, encoder) { }
+    private readonly IConfiguration _configuration;
+
+    public DevAuthHandler(
+        IOptionsMonitor<DevAuthSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        IConfiguration configuration)
+        : base(options, logger, encoder)
+    {
+        _configuration = configuration;
+    }
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        var userId = _configuration.GetValue<int?>("DevMode:UserId") ?? 1;
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, "2"),
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Name, "Jack Kanimea"),
             new Claim(ClaimTypes.Email, "jkanimea@gmail.com"),
             new Claim("role", "User")
