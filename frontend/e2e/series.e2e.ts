@@ -47,6 +47,8 @@ test.describe('Series list', () => {
   });
 
   test('allows selecting Start from Day 1 without selecting the card twice', async ({ page }) => {
+    // Keep the series unstarted so migration does not assign the legacy calendar mode.
+    await page.route('**/api/v1/progress/series/1', (r) => r.fulfill({ json: [] }));
     await page.route('**/api/v1/progress/series/1/completed-count', (r) => r.fulfill({ json: 0 }));
     await page.route('**/api/v1/progress/series/1/percentage', (r) => r.fulfill({ json: 0 }));
     await seedAuthToken(page);
