@@ -69,10 +69,14 @@ import { SyncService } from '../../core/services/sync.service';
                   }
                 } @else {
                   <p class="series-desc">Not started</p>
-                  <div class="mode-buttons">
-                    <ion-button expand="block" (click)="choose($event, s, 'day1')">Start from Day 1</ion-button>
-                    <ion-button fill="outline" expand="block" (click)="choose($event, s, 'calendar')">Calendar</ion-button>
-                  </div>
+                  @if (pendingStartId === s.id) {
+                    <div class="start-actions">
+                      <ion-button expand="block" (click)="continueStart($event, s)">Continue</ion-button>
+                      <ion-button fill="outline" color="danger" expand="block" (click)="cancelStart($event)">Reset</ion-button>
+                    </div>
+                  } @else {
+                    <ion-button expand="block" (click)="start($event, s)">Start</ion-button>
+                  }
                 }
               </div>
               <ion-icon name="chevron-forward" class="series-chevron"></ion-icon>
@@ -111,21 +115,21 @@ import { SyncService } from '../../core/services/sync.service';
       color: var(--ion-text-color);
       text-align: center;
     }
-    .mode-buttons {
+    .start-actions {
       display: flex;
       gap: 8px;
     }
-    .mode-buttons ion-button {
+    .start-actions ion-button {
       flex: 1;
       min-width: 0;
       --padding-start: 8px;
       --padding-end: 8px;
     }
     @media (max-width: 576px) {
-      .mode-buttons {
+      .start-actions {
         display: block;
       }
-      .mode-buttons ion-button {
+      .start-actions ion-button {
         display: block;
         width: 100%;
         margin-left: 0;
@@ -165,6 +169,7 @@ class SeriesPage implements OnInit {
   loading = false;
   error?: string;
   isGuest = false;
+  pendingStartId?: number;
   private states = new Map<number, { mode: string | null; completed: number; percentage: number; total?: number }>();
 
   ngOnInit(): void {
@@ -206,20 +211,23 @@ class SeriesPage implements OnInit {
 
     state(id: number) { return this.states.get(id) ?? { mode: null, completed: 0, percentage: 0 }; }
 
-    async choose(event: Event, s: Series, mode: 'day1' | 'calendar'): Promise<void> {
+    start(event: Event, s: Series): void {
       event.stopPropagation();
-      const confirmation = await this.alert.create({
-        header: mode === 'day1' ? 'Start from Day 1?' : 'Use calendar day?',
-        message: 'This choice is locked until you reset the series.',
-        buttons: [{ text: 'Cancel', role: 'cancel' }, { text: 'Continue', handler: () => true }]
-      });
-      await confirmation.present();
-      const result = await confirmation.onDidDismiss();
-      if (result.role === 'cancel') return;
-      await this.prefs.setSeriesMode(s.id, mode);
+      this.pendingStartId = s.id;
+    }
+
+    async continueStart(event: Event, s: Series): Promise<void> {
+      event.stopPropagation();
+      await this.prefs.setSeriesMode(s.id, 'calendar');
       await this.prefs.setSeriesStartDate(s.id, new Date().toISOString().slice(0, 10));
-      this.states.set(s.id, { ...this.state(s.id), mode });
+      this.states.set(s.id, { ...this.state(s.id), mode: 'calendar' });
+      this.pendingStartId = undefined;
       await this.onSelect(s);
+    }
+
+    cancelStart(event: Event): void {
+      event.stopPropagation();
+      this.pendingStartId = undefined;
     }
 
     async reset(event: Event, s: Series): Promise<void> {

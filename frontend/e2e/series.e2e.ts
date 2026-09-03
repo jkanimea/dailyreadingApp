@@ -46,7 +46,7 @@ test.describe('Series list', () => {
     await expect(page.locator('.series-card').first()).toContainText('27.4%');
   });
 
-  test('allows selecting Start from Day 1 without selecting the card twice', async ({ page }) => {
+  test('shows Continue and Reset after selecting Start', async ({ page }) => {
     // Keep the series unstarted so migration does not assign the legacy calendar mode.
     await page.route('**/api/v1/progress/series/1', (r) => r.fulfill({ json: [] }));
     await page.route('**/api/v1/progress/series/1/completed-count', (r) => r.fulfill({ json: 0 }));
@@ -55,9 +55,10 @@ test.describe('Series list', () => {
     await page.goto('/series');
 
     const card = page.locator('.series-card').first();
-    await card.getByRole('button', { name: 'Start from Day 1' }).click();
-    await expect(page.locator('ion-alert')).toContainText('Start from Day 1?');
-    await page.locator('ion-alert').getByRole('button', { name: 'Continue' }).click();
+    await card.getByRole('button', { name: 'Start' }).click();
+    await expect(card.getByRole('button', { name: 'Continue' })).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Reset' })).toBeVisible();
+    await card.getByRole('button', { name: 'Continue' }).click();
     await expect(page).toHaveURL(/\/today/);
   });
 });
