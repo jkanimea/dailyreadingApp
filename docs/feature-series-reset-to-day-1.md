@@ -296,6 +296,16 @@ need to reset this series (which clears your reading progress).")
    `GET /reading/series/{seriesId}/day/{dayNumber}` returning `DailyReadingDto` (reuse
    `MapToDto`), `NotFound` when null, `BadRequest` when `dayNumber < 1`.
 
+5. **Progress reset endpoint** — `POST /progress/series/{seriesId}/reset` with body
+   `{ deleteNotes: bool }`. Touches `ProgressController.cs`, `IProgressService` +
+   `ProgressService.cs`, and `ProgressRepository.cs`. Full semantics in §11.1. Two hard
+   requirements beyond §11.1:
+   - **User isolation:** the query must filter by the authenticated `userId` (from the JWT, as
+     `MarkCompleteAsync` already does). It must be impossible for one user's reset to touch
+     another user's `UserProgress` rows.
+   - **Idempotent + atomic:** run in a single `CompleteAsync()` unit of work; resetting a series
+     with no progress rows returns 200 with no side effects.
+
 > Progress percentage/completed-count already exist on the backend; no change needed there.
 
 ---
@@ -312,11 +322,21 @@ need to reset this series (which clears your reading progress).")
    - add `getByDay(seriesId, dayNumber)` → `GET /reading/series/{id}/day/{dayNumber}`.
 
 3. **Series list page** (`frontend/src/app/features/series/series.module.ts`):
-   - fetch each series' `totalReadings` + progress (`getCompletionPercentage`, `getCompletedCount`),
+   - fetch each series' `totalReadings` + progress (`getCompletionPercentage`, `getCompletedCount`)
+     **only for signed-in users** — for guests, skip these calls and show "Sign in to track progress"
+     (see §11.2). Never let a guest card fire authenticated progress requests (they 401).
    - render the enhanced card (Section 6),
+   - **event isolation:** the mode/Reset buttons must call `$event.stopPropagation()` so tapping a
+     button does **not** also trigger the card body's `onSelect(s)` navigation. Keep the card body
+     tap = enter reading; buttons = their own action only.
+   - **duplicate-click protection:** disable the buttons (or a `pending` flag) while a mode choice
+     or reset request is in-flight, so a double-tap can't fire two resets / two mode writes.
    - wire "Start from Day 1" / "Use calendar day" buttons to set the mode + start date, then
      navigate into the reading,
-   - wire Reset button → confirmation dialog → clear progress + mode/start date.
+   - wire Reset button → confirmation dialog → clear progress + mode/start date,
+   - **refresh after completion/reset:** when the page is re-entered (or after a completion/reset
+     action), re-fetch progress so the card bar/`{completed}/{total}` and the mode badge/lock state
+     are current (§11.15).
 
 4. **Reading assignment** — apply the mode branch in all three load paths:
    - `frontend/src/app/features/base/base-reading-page-component.ts` `loadReading`,
@@ -331,6 +351,16 @@ need to reset this series (which clears your reading progress).")
 5. **Progress indicator** — reuse `<app-progress-bar>`. On the series card show **completion**
    (`{completed}/{total} · {pct}%`, from `getCompletionPercentage`/`getCompletedCount`); on the
    reading screen show **position** (`Day {N} of {total}`, from the mode + `totalReadings`). See §6.4.
+
+6. **`SyncService`** (`frontend/src/app/core/services/sync.service.ts`):
+   - add a `resetSeries` action to `SyncQueueItem` + `actionHandlers` that calls
+     `POST /progress/series/{id}/reset` (with `deleteNotes`),
+   - add `enqueueReset(seriesId, deleteNotes)` and, on reset, purge stale `markComplete`/
+     `unmarkComplete` entries for that series (§11.11).
+
+7. **Guest guard** — in the series list page, do not call `getCompletionPercentage`/
+   `getCompletedCount` for guests (they 401); show "Sign in to track progress" instead (§11.2).
+   Guest reading (anonymous `getToday`/`getByDay`) and local reset still work.
 
 ---
 
@@ -448,11 +478,19 @@ Tapping the card body (existing `onSelect`) can navigate into a series whose mod
 - **Decision:** entering with no chosen mode behaves as **calendar** (legacy). The explicit
   choice is only made via the "Start from Day 1" / "Calendar" buttons. Keep `onSelect` unchanged.
 
-### 11.11 Reset while offline
-Reset must work offline and not corrupt the sync queue.
-- **Decision:** Reset clears local state (mode/start-date) immediately and empties that series'
-  entries from the offline `SyncService` queue; the backend `POST /progress/series/{id}/reset`
-  (with the `deleteNotes` flag) runs on next online sync.
+### 11.11 Reset while offline (new `resetSeries` sync action)
+Reset must work offline and not corrupt the sync queue. `SyncService` currently supports only
+`markComplete` / `unmarkComplete` / `addBookmark` / `removeBookmark` — it has **no** reset action.
+- **Decision:** add a `resetSeries` action to `SyncService` (`SyncQueueItem.action`, a handler
+  that calls `POST /progress/series/{id}/reset` with the `deleteNotes` flag, and an
+  `enqueueReset(seriesId, deleteNotes)` helper).
+- On Reset: clear local state (mode/start-date) immediately, then:
+  1. **remove stale queued actions** for that series (any queued `markComplete`/`unmarkComplete`
+     for its reading ids) so they can't re-apply after the reset, and
+  2. **enqueue `resetSeries`** so the backend reset runs now (online) or retries on reconnect
+     (offline).
+- The `deleteNotes` choice travels with the queued action so the deferred reset honors the
+  user's checkbox selection.
 
 ### 11.12 Date math must use local calendar days (not UTC)
 Day-number math `N = (today − startDate).days + 1` must use **local calendar dates** (truncate each
@@ -470,6 +508,14 @@ paths (§8.4), not the calendar view.
 The new `GET /reading/series/{id}/day/{n}` must have the **same auth as `getToday`** (anonymous —
 reading content is public), so guests can also fetch a day reading. Do not add `[Authorize]` to it.
 
+### 11.15 Progress refresh & state consistency
+The card can show stale progress/lock state after a completion or reset elsewhere in the app.
+- **Decision:** re-fetch each series' progress (and mode) whenever the series list page is
+  entered (`ionViewWillEnter`) **and** immediately after a mode-choose or reset action completes.
+- After a completion, `getCompletionPercentage`/`getCompletedCount` must reflect the new count, and
+  the mode badge stays locked (§11.6). After a reset, the card must return to "not chosen" (no
+  badge, no progress). Do not cache progress across these events.
+
 ---
 
 ## 12. Tests required (per AGENTS.md — every change ships with tests)
@@ -485,7 +531,15 @@ reading content is public), so guests can also fetch a day reading. Do not add `
 - `series.module.ts` — renders "not chosen" (two buttons) vs "locked" (badge + Reset) vs
   "completed"; Reset confirmation flow clears mode/start-date + triggers progress clear; migration
   sets calendar only when completion exists and never overwrites an existing mode.
+- `series.module.ts` — mode/Reset buttons call `$event.stopPropagation()` (tapping a button does
+  **not** trigger card `onSelect` navigation); duplicate-click guard disables buttons while a
+  choice/reset is in-flight.
+- `series.module.ts` — guests do **not** call progress endpoints and see "Sign in to track progress".
+- `SyncService` — `enqueueReset` adds a `resetSeries` item; the reset handler purges stale
+  `markComplete`/`unmarkComplete` items for that series and replays `resetSeries` on reconnect.
 - Navigation branch — day-1 prev/next uses `getByDay(n∓1)` and stops at Day 1 / last day.
+- Progress refresh — after a completion/reset the card re-fetches progress and shows the correct
+  `{completed}/{total}` and lock state.
 
 ### 12.2 Backend unit & integration tests (xUnit)
 - `ReadingRepository.GetByDayNumberAsync` — returns the Nth reading by `SortOrder`; returns `null`
@@ -494,6 +548,11 @@ reading content is public), so guests can also fetch a day reading. Do not add `
   `dayNumber < 1`.
 - New `POST /progress/series/{id}/reset` — with `deleteNotes=false` clears `IsCompleted` for that
   series' rows but keeps `Notes`; with `deleteNotes=true` deletes the rows; bookmarks untouched.
+- **Idempotency** — resetting a series with no progress rows returns 200 and changes nothing.
+- **User isolation** — resetting as user A does not modify user B's `UserProgress` rows (and vice
+  versa); a reset request without a valid JWT is rejected.
+- **No data loss (migration)** — the migration defaults an existing user to `calendar` and does not
+  delete/modify any progress, notes, or bookmarks.
 - `SeriesConfig.totalReadings` equals actual reading count (data-integrity test).
 
 ### 12.3 End-to-end tests (Playwright)
@@ -505,7 +564,24 @@ Existing harness: `frontend/playwright.config.ts` + `frontend/e2e/`; run `npm ru
 - Reopen series list → no re-prompt (mode locked), Reset button present.
 - Reset → confirmation dialog → confirm → card returns to "not chosen" with progress cleared.
 - Choose "Calendar" → lands on today's calendar reading (unchanged behavior).
-- Existing-progress migration: a user with prior completion sees "Calendar" badge (no prompt).
+- Existing-progress migration: a user with prior completion sees "Calendar" badge (no prompt) and
+  their progress/notes/bookmarks are still intact.
+- Guest: sees "Sign in to track progress" instead of a %; can still read a series; reset clears
+  local state without hitting authenticated endpoints.
 - Navigation: in day-1 mode, prev/next move by day number (Day 1 has no previous).
 
 Run `npm test` (frontend) and `dotnet test backend/` before pushing.
+
+---
+
+## 13. Delivery order (critical → polish)
+
+Implement in this order so no milestone leaves the app in a broken state:
+
+1. **P0 — data safety & correctness:** backend reset API (§7.5, §11.1), day-number endpoint +
+   day-1 assignment + navigation (§7.1–4, §8.4, §11.3, §11.12), existing-user migration (§11.4).
+2. **P1 — reset reliability:** offline `resetSeries` sync action (§11.11, §8.6), guest guard
+   (§11.2, §8.7).
+3. **P2 — UI:** series card UI + interactions (§6, §8.3), progress refresh (§11.15).
+4. **P3 — validation & polish:** full test suite (§12), responsive polish (§6.8), and document the
+   device-local limitation (§11.9) and guest behavior (§11.2).
