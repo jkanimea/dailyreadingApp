@@ -39,6 +39,13 @@ test.describe('Series list', () => {
     await expect(page.locator('.series-card').nth(1)).toContainText('Steps to Christ');
   });
 
+  test('shows existing completed days out of the configured total', async ({ page }) => {
+    await seedAuthToken(page);
+    await page.goto('/series');
+
+    await expect(page.locator('.series-card').first()).toContainText('27.4%');
+  });
+
   test('allows selecting Start from Day 1 without selecting the card twice', async ({ page }) => {
     await page.route('**/api/v1/progress/series/1/completed-count', (r) => r.fulfill({ json: 0 }));
     await page.route('**/api/v1/progress/series/1/percentage', (r) => r.fulfill({ json: 0 }));

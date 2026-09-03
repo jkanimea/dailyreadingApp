@@ -50,9 +50,6 @@ import { SyncService } from '../../core/services/sync.service';
           <p class="section-label" style="padding-left: 4px;">Choose a series to read</p>
           @for (s of series; track s.id) {
             <div class="series-card" (click)="onSelect(s)">
-              <div class="series-card-icon">
-                <ion-icon name="book-outline"></ion-icon>
-              </div>
               <div class="series-card-body">
                 <h3>{{ s.name }}</h3>
                 @if (s.primaryBook) {
@@ -64,7 +61,7 @@ import { SyncService } from '../../core/services/sync.service';
                 @if (isGuest) {
                   <p class="series-desc">Sign in to track progress</p>
                 } @else if (state(s.id).mode) {
-                  <p class="progress-caption">{{ state(s.id).completed }}{{ state(s.id).total ? ' / ' + state(s.id).total : '' }} · {{ state(s.id).percentage }}%</p>
+                  <p class="progress-caption">{{ state(s.id).percentage }}%</p>
                   <app-progress-bar [percentage]="state(s.id).percentage" [showLabel]="false"></app-progress-bar>
                   <ion-badge>{{ state(s.id).percentage >= 100 ? 'Completed' : state(s.id).mode === 'day1' ? 'Day 1' : 'Calendar' }}</ion-badge>
                   @if (state(s.id).percentage < 100) {
@@ -72,8 +69,10 @@ import { SyncService } from '../../core/services/sync.service';
                   }
                 } @else {
                   <p class="series-desc">Not started</p>
-                  <ion-button expand="block" (click)="choose($event, s, 'day1')">Start from Day 1</ion-button>
-                  <ion-button fill="outline" expand="block" (click)="choose($event, s, 'calendar')">Calendar</ion-button>
+                  <div class="mode-buttons">
+                    <ion-button expand="block" (click)="choose($event, s, 'day1')">Start from Day 1</ion-button>
+                    <ion-button fill="outline" expand="block" (click)="choose($event, s, 'calendar')">Calendar</ion-button>
+                  </div>
                 }
               </div>
               <ion-icon name="chevron-forward" class="series-chevron"></ion-icon>
@@ -88,7 +87,6 @@ import { SyncService } from '../../core/services/sync.service';
     .series-card {
       display: flex;
       align-items: center;
-      gap: 14px;
       padding: 16px;
       margin-bottom: 12px;
       background: var(--card-bg, var(--ion-background-color));
@@ -101,29 +99,38 @@ import { SyncService } from '../../core/services/sync.service';
     .series-card:active {
       transform: scale(0.99);
     }
-    .series-card-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-primary-shade));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .series-card-icon ion-icon {
-      font-size: 24px;
-      color: #fff;
-    }
     .series-card-body {
       flex: 1;
       min-width: 0;
+      text-align: center;
     }
     .series-card-body h3 {
       font-size: 16px;
       font-weight: 700;
       margin: 0 0 2px;
       color: var(--ion-text-color);
+      text-align: center;
+    }
+    .mode-buttons {
+      display: flex;
+      gap: 8px;
+    }
+    .mode-buttons ion-button {
+      flex: 1;
+      min-width: 0;
+      --padding-start: 8px;
+      --padding-end: 8px;
+    }
+    @media (max-width: 576px) {
+      .mode-buttons {
+        display: block;
+      }
+      .mode-buttons ion-button {
+        display: block;
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+      }
     }
     .series-book {
       font-size: 13px;
@@ -179,12 +186,14 @@ class SeriesPage implements OnInit {
         const mode = await this.prefs.getSeriesMode(s.id);
         const state = { mode, completed: 0, percentage: 0, total: undefined as number | undefined };
         if (!this.isGuest) {
-          [state.completed, state.percentage] = await Promise.all([
-            firstValueFrom(this.progress.getCompletedCount(s.id)),
-            firstValueFrom(this.progress.getCompletionPercentage(s.id))
-          ]);
+          state.completed = await firstValueFrom(this.progress.getCompletedCount(s.id));
         }
         try { state.total = (await firstValueFrom(this.seriesService.getConfig(s.id))).totalReadings; } catch { /* optional */ }
+        if (state.total) {
+          state.percentage = Math.round((state.completed / state.total) * 1000) / 10;
+        } else if (!this.isGuest) {
+          state.percentage = await firstValueFrom(this.progress.getCompletionPercentage(s.id));
+        }
         this.states.set(s.id, state);
       }));
     } catch (e: unknown) {
