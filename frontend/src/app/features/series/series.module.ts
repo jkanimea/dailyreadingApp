@@ -63,9 +63,11 @@ import { SyncService } from '../../core/services/sync.service';
                 } @else if (state(s.id).mode) {
                   <p class="progress-caption">{{ state(s.id).percentage }}%</p>
                   <app-progress-bar [percentage]="state(s.id).percentage" [showLabel]="false"></app-progress-bar>
-                  <ion-badge>{{ state(s.id).percentage >= 100 ? 'Completed' : state(s.id).mode === 'day1' ? 'Day 1' : 'Calendar' }}</ion-badge>
                   @if (state(s.id).percentage < 100) {
-                    <ion-button fill="outline" color="danger" expand="block" (click)="reset($event, s)">Reset</ion-button>
+                    <div class="mode-buttons">
+                      <ion-button expand="block" (click)="continueReading($event, s)">Continue</ion-button>
+                      <ion-button fill="outline" color="danger" expand="block" (click)="reset($event, s)">Reset</ion-button>
+                    </div>
                   }
                 } @else {
                   <p class="series-desc">Not started</p>
