@@ -44,8 +44,9 @@ means **existing users' reading progress must not be erased** by this feature.
    notes too" checkbox).
 5. The "Day 1 vs Calendar" choice is **per series** and **locked** after first choice until the
    series is reset. (Finishing a series does not unlock the mode — §11.6.)
-6. Existing users who already have reading progress must keep it (default them to the current
-   "Calendar" behavior; do not silently reset).
+6. Existing users must **not lose any data** — journal notes, reading progress, and bookmarks are
+   all preserved. On first run they are defaulted to **"Calendar"** (their existing behavior);
+   they are never silently reset.
 7. UI must be professional and mobile-friendly (it is an Ionic/Capacitor mobile app).
 
 ---
@@ -125,10 +126,12 @@ offline):
 
 - The mode key being **absent** = "not yet chosen" → the UI shows the Day-1/Calendar choice.
 - Once set, it is **locked** until reset (§9).
-- **Migration for existing users:** on first run of this feature, if a series has existing
-  completed progress (see `ProgressService.getCompletedCount(seriesId) > 0`), default its mode
-  to `'calendar'` (preserve current reading) and mark it chosen. If no progress exists, leave
-  it "not chosen" so the user can pick.
+- **Migration for existing users (no data loss):** an existing user's journal notes and reading
+  progress are **never** modified or erased by this feature. On first run, any user who already
+  has data for a series (progress, journal notes, or bookmarks) has that series' mode defaulted
+  to **`'calendar'`** — because calendar is their existing behavior — and marked chosen. Only a
+  brand-new series with **no** prior data of any kind is left "not chosen" so the user can pick
+  Day 1 vs Calendar.
 
 > **Out of scope for v1:** syncing mode/start-day to the backend `UserSeriesPreference` for
 > signed-in users (cross-device continuity). Do not implement in v1 — see §11.9.
@@ -353,7 +356,8 @@ need to reset this series (which clears your reading progress).")
       are kept unless the checkbox was selected.
 - [ ] Each series card shows a completion progress bar + `{completed}/{total} · {pct}%` that
       updates as readings are completed (finish Day 1 → shows `1/{total}` and the matching %).
-- [ ] Existing users with prior progress default to **Calendar** mode and are **not** reset.
+- [ ] Existing users with any prior data (progress, journal notes, or bookmarks) default to
+      **Calendar** mode and **lose nothing** — no data is erased on first run of this feature.
 - [ ] Works for guest and signed-in users.
 - [ ] Calendar date browsing (the existing calendar view) is unchanged.
 
@@ -396,9 +400,11 @@ reading is fetched by day number, so prev/next must be **Day N-1 / Day N+1**, no
 ### 11.4 Migration placement & idempotency
 - **Decision:** run the "existing users default to calendar" migration **once**, guarded by a
   persisted flag (e.g. `prefs_series_migrated_v1`). For each series: if it already has a stored
-  mode, skip; else if the user has existing completion (signed-in: `getCompletedCount(seriesId) > 0`;
-  guest: any queued completion), set mode = `'calendar'`; else leave "not chosen". Never overwrite
-  a user's explicit choice.
+  mode, skip; else if the user has **any** existing data for that series (signed-in: completion
+  count > 0, or any journal note, or any bookmark; guest: any queued completion or note), set mode
+  = `'calendar'` (preserving their existing reading behavior and data); else leave "not chosen".
+  Never overwrite a user's explicit choice. Migration is **read-only** — it never deletes or
+  modifies progress, notes, or bookmarks.
 
 ### 11.5 Two different "progress" numbers
 "Day N of 365" (position) and "completed/total" (completion) are different metrics; the card and
