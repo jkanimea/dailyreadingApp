@@ -92,7 +92,7 @@ import { GOOGLE_WEB_CLIENT_ID, FACEBOOK_APP_ID, FACEBOOK_CLIENT_TOKEN } from '..
       font-size: 30px;
       font-weight: 800;
       margin: 0 0 10px;
-      color: var(--ion-text-color);
+      color: #ffffff;
       letter-spacing: -0.5px;
     }
     .app-subtitle {

@@ -169,10 +169,12 @@ class SeriesPage implements OnInit {
     this.error = undefined;
     try {
       this.series = await firstValueFrom(this.seriesService.getAll());
-      await this.prefs.migrateSeriesModes(this.series.map(s => s.id), async id => {
-        if (this.isGuest) return false;
-        return (await firstValueFrom(this.progress.getCompletedCount(id))) > 0;
-      });
+      if (!this.isGuest) {
+        await this.prefs.migrateSeriesModes(this.series.map(s => s.id), async id => {
+          const progress = await firstValueFrom(this.progress.getSeriesProgress(id));
+          return progress.length > 0;
+        });
+      }
       await Promise.all(this.series.map(async s => {
         const mode = await this.prefs.getSeriesMode(s.id);
         const state = { mode, completed: 0, percentage: 0, total: undefined as number | undefined };
